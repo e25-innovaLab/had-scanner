@@ -1,4 +1,4 @@
-# Docs Scanner - Frontend
+# Had Scanner - Frontend
 
 Accessibility scanner for teaching materials. A teacher uploads a PDF or pastes text, gets an orientative diagnosis across six dimensions, and reviews AI-proposed adaptations one by one.
 
