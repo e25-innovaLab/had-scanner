@@ -1,4 +1,4 @@
-# Docs Scanner - Backend
+# Had Scanner - Backend
 
 Backend API for analyzing teaching materials and providing accessibility diagnostics.
 
