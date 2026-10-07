@@ -1,4 +1,4 @@
-# docs-scanner
+# had-scanner
 
 Herramienta de accesibilidad para documentos docentes.
 
