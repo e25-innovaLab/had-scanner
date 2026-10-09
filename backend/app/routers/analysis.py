@@ -13,7 +13,8 @@ router = APIRouter(
     "/{material_id}/analysis"
 )
 def analyze_material_endpoint(material_id: int):
-    file_path = "/app/data/CLASE 1.pdf"
+    # file_path = "/app/data/CLASE 1.pdf"
+    file_path = "/app/data/CV Fernando Blanco 2026.pdf"
 
     try:
         return analyze_material(file_path)
