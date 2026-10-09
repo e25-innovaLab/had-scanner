@@ -71,3 +71,8 @@ def create_material(
             saved_file_path.unlink()
 
         raise
+
+def get_all_materials(
+        db: Session
+) -> list[Material]:
+    return material_repository.get_all(db=db)

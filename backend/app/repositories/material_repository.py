@@ -25,3 +25,8 @@ def create(
     db.refresh(material)
 
     return material
+
+def get_all(db: Session) -> list[Material]:
+    statement = select(Material).order_by(Material.id)
+
+    return list(db.scalars(statement).all())
