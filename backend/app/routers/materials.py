@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.schemas.material import MaterialResponse, MaterialListResponse
-from app.services.material_service import create_material, get_all_materials
+from app.schemas.material import MaterialResponse, MaterialListResponse, MaterialDetailResponse
+from app.services.material_service import create_material, get_all_materials, get_material_by_id
 
 
 router = APIRouter(
@@ -41,3 +41,17 @@ def get_materials(
         "materials": materials,
         "total": len(materials),
     }
+
+@router.get(
+    "/{material_id}",
+    response_model=MaterialDetailResponse,
+    status_code=200,
+)
+def get_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+):
+    return get_material_by_id(
+        db=db,
+        material_id=material_id,
+    )

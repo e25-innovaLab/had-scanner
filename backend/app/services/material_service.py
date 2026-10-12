@@ -76,3 +76,20 @@ def get_all_materials(
         db: Session
 ) -> list[Material]:
     return material_repository.get_all(db=db)
+
+def get_material_by_id(
+    db: Session,
+    material_id: int,
+) -> Material:
+    material = material_repository.get_by_id(
+        db=db,
+        material_id=material_id,
+    )
+
+    if material is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Material with id {material_id} not found",
+        )
+
+    return material
