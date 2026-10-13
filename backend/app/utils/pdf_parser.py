@@ -294,13 +294,19 @@ def extract_document(file_path: str) -> dict[str, Any]:
     document = json.loads(document_json)
     body_font_size = _get_body_font_size(document.get("pages", []))
 
-    pages = [
-        {
-            "page_number": page.get("page_number"),
-            "elements": _reconstruct_page(page, body_font_size),
-        }
-        for page in document.get("pages", [])
-    ]
+    pages = []
+
+    for page in document.get("pages", []):
+        page_number = page.get("page_number", 1)
+        elements = _reconstruct_page(page, body_font_size)
+
+        for index, element in enumerate(elements):
+            element["element_id"] = f"p{page_number}-e{index + 1}"
+
+        pages.append({
+            "page_number": page_number,
+            "elements": elements,
+        })
 
     return {
         "filename": document.get("filename"),
