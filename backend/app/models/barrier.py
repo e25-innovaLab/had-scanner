@@ -70,3 +70,7 @@ class Barrier(Base):
         back_populates="barriers",
     )
 
+    evidences: Mapped[list["BarrierEvidence"]] = relationship(
+        back_populates="barrier",
+        cascade="all, delete-orphan",
+    )

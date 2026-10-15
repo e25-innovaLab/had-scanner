@@ -43,3 +43,8 @@ class Analysis(Base):
         back_populates="analysis",
         cascade="all, delete-orphan",
     )
+
+    document_elements: Mapped[list["DocumentElement"]] = relationship(
+        back_populates="analysis",
+        cascade="all, delete-orphan",
+    )

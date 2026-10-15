@@ -8,6 +8,10 @@ from alembic import context
 
 from app.database.base import Base
 from app.models.material import Material
+from app.models.analysis import Analysis
+from app.models.barrier import Barrier
+from app.models.document_element import DocumentElement
+from app.models.barrier_evidence import BarrierEvidence
 
 
 # Alembic Config object
