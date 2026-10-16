@@ -29,9 +29,6 @@ a través de `src/lib/api/client.ts`.
 al crear un análisis. No es la fuente de verdad en runtime de Revisar /
 Adaptar / Detalle.
 
-`src/lib/barrier-session.ts` quedó como legado; el flujo principal ya
-no lo usa.
-
 ---
 
 ## Conceptos clave: `analysisId` + `barrierId`
@@ -71,7 +68,6 @@ frontend/
 │   └── lib/
 │       ├── api/                # client, types, store, seed, service
 │       ├── aula.ts             # seed + constantes de UI
-│       ├── barrier-session.ts  # legado (sin uso en el flujo)
 │       └── utils.ts
 └── docs/
     ├── frontend-explicado.md   # este archivo
@@ -84,7 +80,7 @@ frontend/
 
 ## Navegación (React Router)
 
-Las URLs son las mismas que en el producto Next; el árbol se define en
+El árbol se define en
 `src/App.tsx` con layouts anidados.
 
 | URL | Componente principal |
