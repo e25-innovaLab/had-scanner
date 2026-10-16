@@ -17,13 +17,16 @@ export function ResultadoStep() {
   const [applied, setApplied] = useState<string[]>([])
   const [summary, setSummary] = useState({ accepted: 0, discarded: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => Boolean(analysisId))
+  const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId)
+
+  if (analysisId !== prevAnalysisId) {
+    setPrevAnalysisId(analysisId)
+    setLoading(Boolean(analysisId))
+  }
 
   useEffect(() => {
-    if (!analysisId) {
-      setLoading(false)
-      return
-    }
+    if (!analysisId) return
     let cancelled = false
     void (async () => {
       try {

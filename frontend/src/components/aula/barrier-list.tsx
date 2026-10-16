@@ -42,13 +42,16 @@ export function BarrierList({
   const [openId, setOpenId] = useState<string>("comprension")
   const [pages, setPages] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => Boolean(analysisId))
+  const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId)
+
+  if (analysisId !== prevAnalysisId) {
+    setPrevAnalysisId(analysisId)
+    setLoading(Boolean(analysisId))
+  }
 
   useEffect(() => {
-    if (!analysisId) {
-      setLoading(false)
-      return
-    }
+    if (!analysisId) return
     let cancelled = false
     void (async () => {
       try {

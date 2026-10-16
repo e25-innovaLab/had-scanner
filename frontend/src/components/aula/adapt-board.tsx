@@ -60,8 +60,14 @@ export function AdaptBoard({
     entryId: string
     kind: "generate" | "edit"
   } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => Boolean(analysisId))
   const [error, setError] = useState<string | null>(null)
+  const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId)
+
+  if (analysisId !== prevAnalysisId) {
+    setPrevAnalysisId(analysisId)
+    setLoading(Boolean(analysisId))
+  }
 
   const load = useCallback(async () => {
     if (!analysisId) return
@@ -73,10 +79,7 @@ export function AdaptBoard({
   }, [analysisId])
 
   useEffect(() => {
-    if (!analysisId) {
-      setLoading(false)
-      return
-    }
+    if (!analysisId) return
     let cancelled = false
     void (async () => {
       try {

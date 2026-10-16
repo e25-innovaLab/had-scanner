@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { DbShape } from "@/lib/api/types"

@@ -7,7 +7,8 @@ import { Info, RotateCcw, Sparkles } from "lucide-react"
 import { IntentMeter } from "@/components/aula/intent-meter"
 import { MissingAnalysis } from "@/components/aula/missing-analysis"
 import { Pill } from "@/components/aula/pill"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button-variants"
 import { Card } from "@/components/ui/card"
 import {
   Dialog,

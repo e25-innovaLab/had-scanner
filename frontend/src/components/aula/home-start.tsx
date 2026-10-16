@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -21,11 +21,9 @@ import {
 
 export function HomeStart() {
   const navigate = useNavigate()
-  const [resume, setResume] = useState<FlowResume | null>(null)
-
-  useEffect(() => {
-    setResume(readFlowResume())
-  }, [])
+  const [resume, setResume] = useState<FlowResume | null>(() =>
+    readFlowResume()
+  )
 
   function startFresh() {
     clearFlowResume()

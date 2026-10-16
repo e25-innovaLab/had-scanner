@@ -13,5 +13,13 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["mock/**/*.ts", "src/lib/**/*.ts"]
+  "include": [
+    "mock/**/*.ts",
+    "src/lib/api/service.ts",
+    "src/lib/api/store.ts",
+    "src/lib/api/seed.ts",
+    "src/lib/api/types.ts",
+    "src/lib/aula.ts"
+  ]
 }
+
