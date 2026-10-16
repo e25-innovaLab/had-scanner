@@ -1,12 +1,12 @@
 # had-scanner
 
-Herramienta de accesibilidad para documentos docentes.
+Herramienta de accesibilidad para documentos docentes (VERA).
 
 ## Estructura
 
 ```
-docs-scanner/
-├── frontend/          # React + TypeScript + Tailwind CSS
+had-scanner/
+├── frontend/          # Vite + React + TypeScript + Tailwind
 ├── backend/           # FastAPI + Docker
 ├── docs/              # Documentación y evidencia de investigación
 └── .github/           # Configuración de la org
@@ -14,9 +14,9 @@ docs-scanner/
 
 ## Stack
 
-- **Frontend:** React, TypeScript, Tailwind CSS
+- **Frontend:** Vite, React, TypeScript, React Router, Tailwind CSS
 - **Backend:** Docker, FastAPI (Python)
-- **IA:** Gemini API
+- **IA:** Gemini API (planificado; el front usa mock local por ahora)
 
 ## Getting Started (Frontend)
 
@@ -26,24 +26,29 @@ pnpm install
 pnpm dev
 ```
 
-Abrí [http://localhost:3000](http://localhost:3000).
+- UI: [http://localhost:5173](http://localhost:5173)
+- Mock API: [http://localhost:3001](http://localhost:3001) (proxied como `/api` desde Vite)
+
+Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/docs/`](./frontend/docs/).
 
 ## Getting Started (Backend)
 
 ### Requerimientos
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- Docker Compose está incluido en las versiones actuales de Docker Desktop.
 
-> **Importante:** Docker Desktop debe estar abierto y ejecutándose antes de utilizar los comandos de Docker.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose incluido)
 
-### Ejecutanto el proyecto
+> **Importante:** Docker Desktop debe estar abierto antes de usar los comandos de Docker.
+
+### Ejecutando el proyecto
 
 ```bash
 cd backend
 docker compose up --build
 ```
 
-Documentación de la API [http://localhost:8000/docs](http://localhost:8000/docs).
+Documentación de la API: [http://localhost:8000/docs](http://localhost:8000/docs).
+
+Hoy el backend cubre upload/listado de materiales; el flujo completo de análisis en el front corre contra el mock hasta integrar FastAPI.
 
 ## Licencia
 
