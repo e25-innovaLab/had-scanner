@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -20,7 +20,7 @@ import {
 } from "@/lib/api/url"
 
 export function HomeStart() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [resume, setResume] = useState<FlowResume | null>(null)
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function HomeStart() {
   function startFresh() {
     clearFlowResume()
     setResume(null)
-    router.push("/analisis/cargar")
+    navigate("/analisis/cargar")
   }
 
   const continueHref = resume
@@ -55,7 +55,7 @@ export function HomeStart() {
             <Button
               className="h-10 px-4"
               nativeButton={false}
-              render={<Link href={continueHref} />}
+              render={<Link to={continueHref} />}
             >
               Continuar
             </Button>

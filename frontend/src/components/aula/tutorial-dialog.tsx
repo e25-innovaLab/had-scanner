@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -32,7 +32,7 @@ export function TutorialDialog() {
                 {index + 1}
               </span>
               <span className="pt-0.5">
-                <Link href={step.href} className="font-medium hover:underline">
+                <Link to={step.href} className="font-medium hover:underline">
                   {step.label}
                 </Link>
               </span>

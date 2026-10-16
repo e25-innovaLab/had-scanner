@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { Link } from "react-router-dom"
+import { useLocation, useSearchParams } from "react-router-dom"
 import { Check } from "lucide-react"
 import { SideNav } from "@/components/shell/side-nav"
 import { resolveAnalysisId, withAnalysisId } from "@/lib/api/url"
@@ -9,8 +9,8 @@ import { FLOW_STEPS } from "@/lib/aula"
 import { cn } from "@/lib/utils"
 
 export function FlowNav() {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
   const currentIndex = Math.max(
     0,
@@ -25,7 +25,7 @@ export function FlowNav() {
         return (
           <Link
             key={step.href}
-            href={withAnalysisId(step.href, analysisId)}
+            to={withAnalysisId(step.href, analysisId)}
             aria-current={state === "current" ? "step" : undefined}
             className={cn(
               "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors",

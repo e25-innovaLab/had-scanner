@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -42,7 +42,7 @@ export function IaFab() {
             variant="outline"
             className="h-10"
             nativeButton={false}
-            render={<Link href="/analisis/cargar" />}
+            render={<Link to="/analisis/cargar" />}
           >
             Iniciar un análisis
           </Button>

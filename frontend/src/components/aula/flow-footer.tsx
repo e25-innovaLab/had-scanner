@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { Link } from "react-router-dom"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -16,13 +16,13 @@ export function FlowFooter({
   return (
     <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
       <Link
-        href={backHref}
+        to={backHref}
         className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 px-4")}
       >
         {backLabel}
       </Link>
       <Link
-        href={nextHref}
+        to={nextHref}
         className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}
       >
         {nextLabel}

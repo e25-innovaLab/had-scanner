@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams } from "react-router-dom"
 import { Check, Circle, CircleAlert } from "lucide-react"
 import { MissingAnalysis } from "@/components/aula/missing-analysis"
 import { Pill } from "@/components/aula/pill"
@@ -25,7 +25,7 @@ function formatSize(bytes: number) {
 }
 
 export function AnalysisChecklist() {
-  const searchParams = useSearchParams()
+  const [searchParams] = useSearchParams()
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
   const [rows, setRows] = useState<Row[]>([])
   const [fileName, setFileName] = useState("Material")

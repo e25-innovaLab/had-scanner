@@ -413,16 +413,6 @@ export const DETAIL_BARRIERS: DetailBarrier[] = BARRIERS.filter(
   })
 )
 
-/** Misma propuesta que usa Detalle — única fuente para Adaptar y Detalle. */
-export function getProposalForBarrier(barrierId: string): string {
-  const barrier = DETAIL_BARRIERS.find((item) => item.barrierId === barrierId)
-  return barrier?.aiProposal ?? barrier?.editedProposal ?? ""
-}
-
-export function getDetailBarrier(barrierId: string): DetailBarrier | undefined {
-  return DETAIL_BARRIERS.find((item) => item.barrierId === barrierId)
-}
-
 export const RESULT_FILES = [
   {
     name: "Unidad_3_adaptado.pdf",

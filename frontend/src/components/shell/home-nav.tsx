@@ -1,13 +1,13 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { Link } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import { SideNav } from "@/components/shell/side-nav"
 import { HOME_LINKS } from "@/lib/aula"
 import { cn } from "@/lib/utils"
 
 export function HomeNav() {
-  const pathname = usePathname()
+  const { pathname } = useLocation()
 
   return (
     <SideNav label="Secciones">
@@ -16,7 +16,7 @@ export function HomeNav() {
         return (
           <Link
             key={link.href}
-            href={link.href}
+            to={link.href}
             aria-current={active ? "page" : undefined}
             className={cn(
               "shrink-0 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors",

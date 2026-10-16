@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { Link } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Info, RotateCcw, Sparkles } from "lucide-react"
 import { IntentMeter } from "@/components/aula/intent-meter"
 import { MissingAnalysis } from "@/components/aula/missing-analysis"
@@ -44,8 +44,8 @@ export function DetailEditor({
 }: {
   initialRemaining: number
 }) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
   const startsWithoutProposal = searchParams.get("origen") === "manual"
   const desde = searchParams.get("desde")
@@ -178,7 +178,7 @@ export function DetailEditor({
   }
 
   function goToResultado() {
-    router.push(withAnalysisId("/analisis/resultado", analysisId))
+    navigate(withAnalysisId("/analisis/resultado", analysisId))
   }
 
   async function persistDraft(value: string) {
@@ -354,7 +354,7 @@ export function DetailEditor({
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          href={withAnalysisId("/analisis/adaptar", analysisId)}
+          to={withAnalysisId("/analisis/adaptar", analysisId)}
           className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}
         >
           ← Volver a Adaptar
@@ -574,7 +574,7 @@ export function DetailEditor({
           variant="outline"
           className="h-10 px-4"
           onClick={() =>
-            router.push(withAnalysisId("/analisis/adaptar", analysisId))
+            navigate(withAnalysisId("/analisis/adaptar", analysisId))
           }
         >
           Cancelar

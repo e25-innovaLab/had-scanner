@@ -10,8 +10,9 @@ import type {
 const DEFAULT_BASE = ""
 
 function baseUrl() {
-  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_BASE_URL) {
-    return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")
+  const env = import.meta.env.VITE_API_BASE_URL
+  if (typeof env === "string" && env.length > 0) {
+    return env.replace(/\/$/, "")
   }
   return DEFAULT_BASE
 }
@@ -36,7 +37,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         : { "Content-Type": "application/json" }),
       ...init?.headers,
     },
-    cache: "no-store",
   })
 
   const text = await res.text()

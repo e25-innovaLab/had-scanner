@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { Link } from "react-router-dom"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -11,7 +11,7 @@ export function MissingAnalysis({ step }: { step: string }) {
         <code className="text-xs">analysisId</code> en la URL (API simulada).
       </p>
       <Link
-        href="/analisis/cargar"
+        to="/analisis/cargar"
         className={cn(buttonVariants({ size: "lg" }), "mt-4 inline-flex h-10 px-4")}
       >
         Ir a Cargar

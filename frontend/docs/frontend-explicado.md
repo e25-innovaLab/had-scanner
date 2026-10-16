@@ -1,8 +1,8 @@
 # VERA Frontend — Explicado fácil
 
-Este documento describe **cómo está armado hoy** el frontend en
-`figmaToFrontend`: rutas de Next.js, componentes, datos vía API simulada
-y cómo se sincronizan las pantallas.
+Este documento describe **cómo está armado hoy** el frontend Vite +
+React + TypeScript: rutas con React Router, componentes, datos vía API
+simulada (Express) y cómo se sincronizan las pantallas.
 
 Contrato HTTP (endpoints, persistencia JSON, seed): ver
 [`api-simulada.md`](./api-simulada.md).
@@ -14,16 +14,16 @@ Contrato HTTP (endpoints, persistencia JSON, seed): ver
 En el PDF de arquitectura ideal, **la verdad vive en el backend (DB)** y
 viaja por URL con un `analysisId`.
 
-Hoy el frontend ya habla con una **API simulada** (Route Handlers de
-Next + JSON en disco). La UI no importa el catálogo de barreras
-directo: hace `fetch` a través de `src/lib/api/client.ts`.
+Hoy el frontend habla con una **API simulada** (Express + JSON en
+disco). La UI no importa el catálogo de barreras directo: hace `fetch`
+a través de `src/lib/api/client.ts`.
 
 | Ideal (PDF) | Este repo (hoy) |
 | --- | --- |
 | `analysisId` en la URL | Sí — query `?analysisId=` (también en `sessionStorage` como respaldo de nav) |
-| Datos en PostgreSQL | JSON en `.next/cache/vera-db.json` |
+| Datos en PostgreSQL | JSON en `data/vera-db.json` |
 | Decisiones / borradores en DB | Persistidos vía `/api/analyses/...` |
-| `POST` / `GET` a la API | `client.ts` → Route Handlers en `src/app/api/...` |
+| `POST` / `GET` a la API | `client.ts` → proxy Vite → `mock/server.ts` |
 
 `src/lib/aula.ts` es el **seed** (catálogo mock) que clona el servidor
 al crear un análisis. No es la fuente de verdad en runtime de Revisar /
@@ -51,34 +51,41 @@ no lo usa.
 ## Mapa del proyecto
 
 ```text
-figmaToFrontend/
-├── src/app/
-│   ├── layout.tsx
-│   ├── globals.css
-│   ├── (inicio)/                 # /, /ayuda, /configuracion
-│   ├── (flujo)/analisis/         # pasos del análisis
-│   └── api/analyses/             # API simulada (Route Handlers)
-├── src/components/
-│   ├── aula/                     # UI del flujo
-│   ├── shell/                    # Header, navs
-│   └── ui/                       # shadcn / Base UI
-├── src/lib/
-│   ├── api/                      # client, types, store, seed, service
-│   ├── aula.ts                   # seed + constantes de UI
-│   ├── barrier-session.ts        # legado (casi sin uso)
-│   └── utils.ts
+frontend/
+├── index.html
+├── vite.config.ts              # alias @/, proxy /api → :3001
+├── mock/
+│   └── server.ts               # API simulada (Express)
+├── data/
+│   └── vera-db.json            # persistencia del mock (gitignored)
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx                 # BrowserRouter + Routes
+│   ├── index.css
+│   ├── layouts/                # root, home, analisis
+│   ├── pages/                  # pantallas (inicio + flujo)
+│   ├── components/
+│   │   ├── aula/               # UI del flujo
+│   │   ├── shell/              # Header, navs
+│   │   └── ui/                 # shadcn / Base UI
+│   └── lib/
+│       ├── api/                # client, types, store, seed, service
+│       ├── aula.ts             # seed + constantes de UI
+│       ├── barrier-session.ts  # legado (sin uso en el flujo)
+│       └── utils.ts
 └── docs/
-    ├── frontend-explicado.md     # este archivo
-    └── api-simulada.md           # contrato HTTP
+    ├── frontend-explicado.md   # este archivo
+    └── api-simulada.md         # contrato HTTP
 ```
 
-**Stack:** Next.js 16 (App Router) + React 19 + Tailwind 4 + pnpm.
+**Stack:** Vite + React 19 + TypeScript + React Router + Tailwind 4 + pnpm.
 
 ---
 
-## Navegación (App Router)
+## Navegación (React Router)
 
-Los route groups `(inicio)` y `(flujo)` **no** aparecen en la URL.
+Las URLs son las mismas que en el producto Next; el árbol se define en
+`src/App.tsx` con layouts anidados.
 
 | URL | Componente principal |
 | --- | --- |
@@ -93,8 +100,8 @@ Los route groups `(inicio)` y `(flujo)` **no** aparecen en la URL.
 
 Cómo se navega:
 
-1. `<Link>` / `FlowNav` / `AnalysisFlowFooter` (agregan `analysisId`).
-2. `useRouter().push(...)` al ir a Detalle con query params.
+1. `<Link to=...>` / `FlowNav` / `AnalysisFlowFooter` (agregan `analysisId`).
+2. `navigate(...)` (React Router) al ir a Detalle con query params.
 3. `useSearchParams()` en pasos del flujo y en Detalle.
 
 ---
@@ -151,10 +158,10 @@ CTA a Cargar; tutorial con `FLOW_STEPS`.
 
 | Pieza | Rol hoy | Con API real |
 | --- | --- | --- |
-| `client.ts` | `fetch` tipado | **Se queda**; `NEXT_PUBLIC_API_BASE_URL` → FastAPI |
+| `client.ts` | `fetch` tipado | **Se queda**; `VITE_API_BASE_URL` → FastAPI |
 | `types.ts` / `url.ts` | Contrato + helpers de URL | **Se quedan** (ajustando tipos si hace falta) |
 | `store.ts`, `service.ts`, `seed.ts` | JSON + lógica fake | **Se borran** |
-| `src/app/api/analyses/**` | Route Handlers | **Se borran** |
+| `mock/server.ts` | Express | **Se borra** |
 
 Detalle del contrato y mapeo a backend: [`api-simulada.md`](./api-simulada.md).
 
@@ -180,7 +187,7 @@ Sigue exportando:
 | --- | --- |
 | `AppHeader`, `HomeNav`, `SideNav` | Nav de inicio |
 | `FlowNav` | Pasos del flujo; preserva `analysisId` |
-| `IaFab` | No montado en layouts actuales |
+| `IaFab` | Montado en `RootLayout` |
 
 ### Aula
 
@@ -200,7 +207,7 @@ Sigue exportando:
 ```text
                  POST /api/analyses  →  analysisId
                               │
-              seed (aula.ts) en el servidor
+              seed (aula.ts) en el servidor mock
                               │
          AdaptBoard  ←── GET/POST /api/... ──→  DetailEditor
                               │
@@ -212,20 +219,20 @@ Sigue exportando:
 
 ## Cuando haya una API real (FastAPI u otra)
 
-1. Apuntar `NEXT_PUBLIC_API_BASE_URL` al host del backend.
-2. Eliminar `src/app/api/**` y la lógica de store/seed local.
+1. Apuntar `VITE_API_BASE_URL` al host del backend.
+2. Eliminar `mock/` y la lógica de store/seed local.
 3. Mantener pantallas y `client.ts` si el contrato de paths/body se
    conserva (o adaptar solo el client).
 4. El upload real debería enviar el archivo (multipart), no solo
    `fileName` / `fileSize`.
-5. Optimizaciones del JSON local (no escribir en cada poll, DB fuera
-   del watcher) **no se trasladan** al front: son del mock.
+5. Optimizaciones del JSON local (no escribir en cada poll) **no se
+   trasladan** al front: son del mock.
 
 ---
 
 ## Resumen
 
-1. **App Router** + layouts por grupo de rutas.
+1. **React Router** + layouts en `src/layouts/`.
 2. **Verdad del flujo** en la API simulada + `analysisId` en URL.
 3. **Pages delgadas**, lógica en componentes de `aula/`.
 4. **`aula.ts`** = seed y constantes; no estado de runtime del flujo.
@@ -239,4 +246,4 @@ Sigue exportando:
 2. `src/lib/api/client.ts` — llamadas del front
 3. `src/lib/aula.ts` — seed / constantes
 4. `src/components/aula/adapt-board.tsx` / `detail-editor.tsx`
-5. `src/app/(flujo)/analisis/layout.tsx` + `flow-nav.tsx`
+5. `src/App.tsx` + `src/layouts/analisis-layout.tsx` + `flow-nav.tsx`

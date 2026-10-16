@@ -1,24 +1,26 @@
-# API simulada (Route Handlers + JSON)
+# API simulada (Express + JSON)
 
-Documentación del **contrato HTTP** que usa el frontend hoy.
+Documentación del **contrato HTTP** que usa el frontend Vite hoy.
 Para la arquitectura de pantallas y componentes, ver
 [`frontend-explicado.md`](./frontend-explicado.md).
 
 ## Cómo funciona
 
 - El browser llama `fetch("/api/...")` vía `src/lib/api/client.ts`.
-- Los handlers viven en `src/app/api/analyses/...`.
-- Persistencia: `.next/cache/vera-db.json` (fuera del watcher de
-  `next dev`). Override: env `VERA_DB_PATH`.
-- Si existe un `data/db.json` legacy, se migra una vez al path nuevo.
+- Vite (`:5173`) hace **proxy** de `/api` → Express mock (`:3001`).
+- Los handlers viven en `mock/server.ts` y delegan en
+  `src/lib/api/service.ts`.
+- Persistencia: `data/vera-db.json`. Override: env `VERA_DB_PATH`.
 - Seed al crear análisis: `src/lib/api/seed.ts` clona el catálogo de
   `src/lib/aula.ts`.
+
+Arranque conjunto: `pnpm dev` (concurrently: mock + Vite).
 
 ### Poll de status (perf)
 
 `GET .../status` **no escribe** en cada request: calcula el progreso
 en memoria a partir de `analyzingStartedAt` y solo persiste al pasar a
-`ready`. Así se evita el bucle write → recompile de Turbopack → remount.
+`ready`.
 
 `updateDb` tampoco reescribe el archivo si el JSON no cambió.
 
@@ -27,7 +29,7 @@ en memoria a partir de `analyzingStartedAt` y solo persiste al pasar a
 ## Contrato (endpoints actuales)
 
 Prefijo local: `/api`. El client puede anteponer
-`NEXT_PUBLIC_API_BASE_URL` (vacío = mismo origen).
+`VITE_API_BASE_URL` (vacío = mismo origen vía proxy).
 
 | Método | Ruta | Uso en UI |
 | --- | --- | --- |
@@ -53,7 +55,7 @@ Son del orden de **~12 endpoints**, alineados al PDF Front-Back.
 
 ```ts
 // src/lib/api/client.ts
-// base = process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
+// base = import.meta.env.VITE_API_BASE_URL ?? ""
 api.createAnalysis(...)
 api.getStatus(analysisId)
 api.listBarriers(analysisId)
@@ -71,14 +73,15 @@ Cuando el backend real esté listo:
 
 | Acción | Detalle |
 | --- | --- |
-| Config | `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` (o el host real) |
-| Borrar | `src/app/api/**`, `store.ts`, `service.ts`, `seed.ts` (lógica fake) |
+| Config | `VITE_API_BASE_URL=http://localhost:8000` (o el host real) |
+| Borrar | `mock/`, `store.ts`, `service.ts`, `seed.ts` (lógica fake) |
 | Conservar | `client.ts`, `types.ts`, `url.ts` y las pantallas |
 | Paths | Ideal: mismos paths relativos (`/analyses`, `/analyses/:id/status`, …). Si el backend no usa prefijo `/api`, el base URL o el client lo absorben. |
+| Scripts | Quitar `dev:mock` / concurrently; `pnpm dev` solo Vite |
 
 ### Mapeo sugerido (simulada → real)
 
-| Simulada (Next) | Real (ejemplo FastAPI) |
+| Simulada (Vite + Express) | Real (ejemplo FastAPI) |
 | --- | --- |
 | `POST /api/analyses` | `POST /analyses` (multipart PDF real) |
 | `GET /api/analyses/:id/status` | `GET /analyses/:id/status` (job/worker) |
@@ -88,8 +91,8 @@ Cuando el backend real esté listo:
 | `POST .../accept\|discard\|reopen` | mismos verbos |
 | `POST .../export` + `GET .../exports` | cola de export + URLs firmadas (S3/MinIO) |
 
-Las optimizaciones del JSON local (mtime, `.next/cache`) **no** se
-portan al front: el backend decide cómo persistir y cuándo escribir.
+Las optimizaciones del JSON local **no** se portan al front: el
+backend decide cómo persistir y cuándo escribir.
 
 ### Diferencias esperadas respecto al mock
 
@@ -105,5 +108,5 @@ portan al front: el backend decide cómo persistir y cuándo escribir.
 
 1. `src/lib/api/client.ts`
 2. `src/lib/api/service.ts` / `store.ts` / `seed.ts`
-3. `src/app/api/analyses/**`
+3. `mock/server.ts`
 4. [`frontend-explicado.md`](./frontend-explicado.md)

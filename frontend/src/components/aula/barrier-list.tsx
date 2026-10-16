@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams } from "react-router-dom"
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { MissingAnalysis } from "@/components/aula/missing-analysis"
 import { Pill } from "@/components/aula/pill"
@@ -36,7 +36,7 @@ export function BarrierList({
     dimensionsTotal: number
   }) => void
 } = {}) {
-  const searchParams = useSearchParams()
+  const [searchParams] = useSearchParams()
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
   const [groups, setGroups] = useState<BarrierGroupDto[]>([])
   const [openId, setOpenId] = useState<string>("comprension")

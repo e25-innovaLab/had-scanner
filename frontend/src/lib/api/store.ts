@@ -2,16 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { DbShape } from "@/lib/api/types"
 
-/**
- * Fuera del árbol fuente: `.next` ya lo ignora el watcher de `next dev`.
- * Evita el bucle write → recompile → remount → poll.
- * Fallback legacy: `data/db.json` se migra una vez si existe.
- */
 const DB_PATH =
   process.env.VERA_DB_PATH ??
-  path.join(process.cwd(), ".next", "cache", "vera-db.json")
-
-const LEGACY_DB_PATH = path.join(process.cwd(), "data", "db.json")
+  path.join(process.cwd(), "data", "vera-db.json")
 
 const EMPTY_DB: DbShape = {
   analyses: [],
@@ -27,14 +20,7 @@ async function ensureDbFile() {
   try {
     await readFile(DB_PATH, "utf8")
   } catch {
-    let initial = EMPTY_DB
-    try {
-      const legacy = await readFile(LEGACY_DB_PATH, "utf8")
-      initial = JSON.parse(legacy) as DbShape
-    } catch {
-      // sin legacy
-    }
-    await writeFile(DB_PATH, JSON.stringify(initial, null, 2), "utf8")
+    await writeFile(DB_PATH, JSON.stringify(EMPTY_DB, null, 2), "utf8")
   }
 }
 
@@ -70,11 +56,9 @@ async function writeDb(db: DbShape) {
 }
 
 type UpdateOptions = {
-  /** Si es false, no escribe a disco (solo útil si el mutator no debe persistir). */
   persist?: boolean
 }
 
-/** Mutación serializada; no reescribe el archivo si el JSON no cambió. */
 export function updateDb<T>(
   mutator: (db: DbShape) => T,
   options: UpdateOptions = {}

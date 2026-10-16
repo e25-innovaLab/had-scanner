@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { Link } from "react-router-dom"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, Pencil, Sparkles } from "lucide-react"
 import { IntentMeter } from "@/components/aula/intent-meter"
 import { MissingAnalysis } from "@/components/aula/missing-analysis"
@@ -48,9 +48,9 @@ export function AdaptBoard({
 }: {
   onCountsChange?: (counts: AdaptCounts) => void
 } = {}) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
 
   const [barriers, setBarriers] = useState<ApiBarrier[]>([])
@@ -152,7 +152,7 @@ export function AdaptBoard({
     setOverlay({ entryId: entry.id, kind: "edit" })
     window.setTimeout(() => {
       void api.reopen(analysisId, entry.id).finally(() => {
-        router.push(
+        navigate(
           withAnalysisId(
             `/analisis/detalle?origen=ia&desde=editar&barrera=${encodeURIComponent(entry.id)}&intentos=${left}`,
             analysisId
@@ -176,7 +176,7 @@ export function AdaptBoard({
       void (async () => {
         try {
           const { barrier } = await api.createProposal(analysisId, entry.id)
-          router.push(
+          navigate(
             withAnalysisId(
               `/analisis/detalle?origen=ia&desde=generar&barrera=${encodeURIComponent(entry.id)}&intentos=${barrier.remainingAttempts}`,
               analysisId
@@ -287,7 +287,7 @@ export function AdaptBoard({
               nativeButton={false}
               render={
                 <Link
-                  href={withAnalysisId("/analisis/resultado", analysisId)}
+                  to={withAnalysisId("/analisis/resultado", analysisId)}
                 />
               }
             >
@@ -475,7 +475,7 @@ export function AdaptBoard({
                     nativeButton={false}
                     render={
                       <Link
-                        href={withAnalysisId(
+                        to={withAnalysisId(
                           `/analisis/detalle?origen=manual&barrera=${encodeURIComponent(entry.id)}`,
                           analysisId
                         )}
@@ -508,7 +508,7 @@ export function AdaptBoard({
                     nativeButton={false}
                     render={
                       <Link
-                        href={withAnalysisId(
+                        to={withAnalysisId(
                           `/analisis/detalle?origen=ia&barrera=${encodeURIComponent(entry.id)}&intentos=${left}`,
                           analysisId
                         )}

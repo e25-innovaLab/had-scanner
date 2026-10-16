@@ -1,6 +1,6 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
+import { useSearchParams } from "react-router-dom"
 import { FlowFooter } from "@/components/aula/flow-footer"
 import { resolveAnalysisId, withAnalysisId } from "@/lib/api/url"
 
@@ -15,7 +15,7 @@ export function AnalysisFlowFooter({
   nextHref: string
   nextLabel: string
 }) {
-  const searchParams = useSearchParams()
+  const [searchParams] = useSearchParams()
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
 
   return (
