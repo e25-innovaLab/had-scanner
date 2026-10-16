@@ -6,7 +6,7 @@ Herramienta de accesibilidad para documentos docentes.
 
 ```
 docs-scanner/
-├── frontend/          # Next.js + TypeScript + Tailwind CSS
+├── frontend/          # React + TypeScript + Tailwind CSS
 ├── backend/           # FastAPI + Docker
 ├── docs/              # Documentación y evidencia de investigación
 └── .github/           # Configuración de la org
@@ -14,7 +14,7 @@ docs-scanner/
 
 ## Stack
 
-- **Frontend:** Next.js, TypeScript, Tailwind CSS
+- **Frontend:** React, TypeScript, Tailwind CSS
 - **Backend:** Docker, FastAPI (Python)
 - **IA:** Gemini API
 
@@ -22,8 +22,8 @@ docs-scanner/
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Abrí [http://localhost:3000](http://localhost:3000).
