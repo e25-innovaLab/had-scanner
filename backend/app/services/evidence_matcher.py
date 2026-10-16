@@ -1,22 +1,17 @@
-
 import re
 import unicodedata
 from difflib import SequenceMatcher
 from typing import Any
 
-
 MIN_SIMILARITY = 0.88
 MIN_SCORE_DIFFERENCE = 0.08
-
 
 def normalize_text(text: str) -> str:
     """Normalize text for comparison without changing the original evidence."""
     text = unicodedata.normalize("NFKC", text).lower()
 
-    # Remove common bullet characters.
     text = re.sub(r"^[\s•●▪◦\-*]+", "", text)
 
-    # Ignore punctuation and normalize whitespace.
     text = re.sub(r"[^\w\s]", " ", text)
     return " ".join(text.split())
 
@@ -35,10 +30,7 @@ def types_are_compatible(
     if evidence_type == element_type:
         return True
 
-    # Gemini may describe a heading as generic text.
     return evidence_type == "text" and element_type == "heading"
-
-
 
 def calculate_similarity(anchor: str, element_text: str) -> float:
     """Compare an evidence anchor with an extracted element."""
@@ -49,19 +41,15 @@ def calculate_similarity(anchor: str, element_text: str) -> float:
     if anchor == element_text:
         return 1.0
 
-    # First, try a literal substring match.
     if anchor in element_text or element_text in anchor:
         return 0.98
 
-    # Code extraction can remove spaces around imports, keywords,
-    # JSX tags and punctuation. Compare compact representations too.
     compact_anchor = re.sub(r"\s+", "", anchor)
     compact_element = re.sub(r"\s+", "", element_text)
 
     if compact_anchor in compact_element:
         return 0.98
 
-    # Finally, use approximate similarity for minor differences.
     return SequenceMatcher(
         None,
         anchor,
@@ -96,7 +84,6 @@ def associate_evidence_elements(
         ],
     }
 
-    # Copy barriers and evidence dictionaries so the input is not modified.
     result["barriers"] = []
 
     elements_by_page: dict[int, list[dict[str, Any]]] = {}
@@ -175,8 +162,6 @@ def associate_evidence_elements(
 
             best = candidates[0]
 
-            # Exact normalized matches are accepted. Approximate matches
-            # must pass a conservative similarity threshold.
             if best["similarity"] < MIN_SIMILARITY:
                 updated_evidence.append(updated)
                 continue
@@ -184,7 +169,6 @@ def associate_evidence_elements(
             if len(candidates) > 1:
                 second = candidates[1]
 
-                # If both candidates are similarly plausible, do not guess.
                 if best["score"] - second["score"] < MIN_SCORE_DIFFERENCE:
                     updated["match_status"] = "ambiguous"
                     updated_evidence.append(updated)

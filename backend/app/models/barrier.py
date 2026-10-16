@@ -74,3 +74,13 @@ class Barrier(Base):
         back_populates="barrier",
         cascade="all, delete-orphan",
     )
+
+    title: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False,
+    )
+
+    justification: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )

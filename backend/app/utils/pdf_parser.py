@@ -8,11 +8,6 @@ from collections import Counter
 TEXT_TYPES = {"text"}
 IMAGE_TYPES = {"picture"}
 
-# Lo siguiente devuelve exáctamente el analisis de pymupdf4llm
-# def extract_document(file_path: str) -> dict:
-#     document_json = pymupdf4llm.to_json(file_path)
-#     return json.loads(document_json)
-
 def _extract_text(box: dict[str, Any]) -> str:
     """Extract text while preserving spaces between spans."""
     lines = []
@@ -67,7 +62,6 @@ def _make_element(
     text = _extract_text(box)
     font_info = _get_font_info(box)
 
-    # Clasificar el elemento según su contenido y formato.
     classified_type, heading_level = _classify_element(
         box,
         text,
@@ -92,7 +86,6 @@ def _make_element(
     if heading_level is not None:
         element["heading_level"] = heading_level
 
-    # Estos campos se utilizan internamente para reconstruir el texto.
     element["_font_size"] = _font_size(box)
     element["_line_height"] = _line_height(box)
 
@@ -136,26 +129,20 @@ def _can_merge(
     previous_text = previous.get("text", "").rstrip()
     current_text = current.get("text", "").lstrip()
 
-    # Do not merge after a likely sentence or paragraph ending.
     if previous_text.endswith((".", "!", "?", ":", ";")):
         return False
 
-    # A continuation commonly starts with lowercase text,
-    # as in "...como componentes" followed by "y estados...".
     if not current_text or not current_text[0].islower():
         return False
 
     previous_width = px1 - px0
     current_width = cx1 - cx0
 
-    # Normal case: similar horizontal alignment and width.
     same_layout = (
         abs(px0 - cx0) <= 12
         and abs(previous_width - current_width) <= 30
     )
 
-    # Wrapped paragraph: text starts beside an image and
-    # continues below it with a wider line.
     wrapped_layout = (
         cx0 < px0 - 30
         and current_width > previous_width + 80
@@ -163,8 +150,6 @@ def _can_merge(
     )
 
     return same_layout or wrapped_layout or (
-        # Also allow a clear textual continuation when the
-        # layout changes, provided the vertical gap is small.
         vertical_gap <= max(
             12.0,
             1.5 * max(
@@ -218,7 +203,6 @@ def _reconstruct_page(
     text_elements: list[dict[str, Any]] = []
     picture_elements: list[dict[str, Any]] = []
 
-    # Clasificar los elementos iniciales y separar las imágenes.
     for box in boxes:
         element = _make_element(
             box,
@@ -231,7 +215,6 @@ def _reconstruct_page(
         else:
             text_elements.append(element)
 
-    # Reconstruir párrafos a partir de bloques de texto compatibles.
     reconstructed: list[dict[str, Any]] = []
 
     for element in text_elements:
@@ -252,7 +235,6 @@ def _reconstruct_page(
         else:
             reconstructed.append(element)
 
-    # Reincorporar imágenes sin interrumpir la reconstrucción del texto.
     for picture in picture_elements:
         picture_bbox = picture["bbox"]
         inserted = False
@@ -271,7 +253,6 @@ def _reconstruct_page(
         if not inserted:
             reconstructed.append(picture)
 
-    # Ordenar por posición vertical y horizontal.
     reconstructed.sort(
         key=lambda element: (
             element["bbox"][1],
@@ -280,7 +261,6 @@ def _reconstruct_page(
         )
     )
 
-    # Eliminar los metadatos internos del resultado final.
     for element in reconstructed:
         element.pop("_font_size", None)
         element.pop("_line_height", None)
@@ -397,7 +377,6 @@ def _classify_element(
     original_type = box.get("boxclass", "text")
     text_stripped = text.strip()
 
-    # Preserve semantically clear types from the original parser.
     if original_type == "picture":
         return "picture", None
 
@@ -410,7 +389,6 @@ def _classify_element(
     if _looks_like_list(text_stripped, box):
         return "list-item", None
 
-    # Use PyMuPDF4LLM's heading information where available.
     if original_type in {"title", "section-header"}:
         level = box.get("header_level")
         if not isinstance(level, int) or level < 1 or level > 6:
@@ -419,7 +397,6 @@ def _classify_element(
 
     size = font_info["max_fontsize"]
 
-    # Large typography is a heading candidate, not proof by itself.
     if body_font_size > 0 and size >= body_font_size * 1.5:
         return "title", 1
 

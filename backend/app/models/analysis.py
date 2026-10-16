@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
-
 class Analysis(Base):
     __tablename__ = "analysis"
 
@@ -40,11 +39,6 @@ class Analysis(Base):
     )
 
     barriers: Mapped[list["Barrier"]] = relationship(
-        back_populates="analysis",
-        cascade="all, delete-orphan",
-    )
-
-    document_elements: Mapped[list["DocumentElement"]] = relationship(
         back_populates="analysis",
         cascade="all, delete-orphan",
     )

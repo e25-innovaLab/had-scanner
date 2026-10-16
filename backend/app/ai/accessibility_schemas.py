@@ -1,7 +1,5 @@
 from typing import Literal
-
 from pydantic import BaseModel, Field
-
 
 class AccessibilityEvidence(BaseModel):
     page: int = Field(ge=1)

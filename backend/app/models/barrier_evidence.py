@@ -1,3 +1,4 @@
+
 from sqlalchemy import (
     ForeignKey,
     Integer,
@@ -24,13 +25,19 @@ class BarrierEvidence(Base):
         index=True,
     )
 
-    document_element_id: Mapped[int | None] = mapped_column(
-        ForeignKey(
-            "document_element.id",
-            ondelete="SET NULL",
-        ),
+    element_id: Mapped[str | None] = mapped_column(
+        String(50),
         nullable=True,
-        index=True,
+    )
+
+    page: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    element_type: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
     )
 
     anchor: Mapped[str] = mapped_column(
@@ -51,10 +58,4 @@ class BarrierEvidence(Base):
 
     barrier: Mapped["Barrier"] = relationship(
         back_populates="evidences",
-    )
-
-    document_element: Mapped["DocumentElement | None"] = (
-        relationship(
-            back_populates="barrier_evidences",
-        )
     )

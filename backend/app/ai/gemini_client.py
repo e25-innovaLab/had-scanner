@@ -83,20 +83,8 @@ def analyze_pdf_with_gemini(file_path: str) -> dict:
     uploaded_file = None
 
     try:
-        # 1. Subir el PDF original a Gemini.
         uploaded_file = client.files.upload(file=str(pdf_path))
 
-        # 2. Contar los tokens de entrada antes del análisis.
-        token_count = client.models.count_tokens(
-            model=GEMINI_MODEL,
-            contents=[ACCESSIBILITY_PROMPT, uploaded_file],
-        )
-
-        estimated_input_tokens = getattr(
-            token_count, "total_tokens", None
-        )
-
-        # 3. Analizar el PDF y solicitar una salida JSON estructurada.
         response = client.models.generate_content(
             model=GEMINI_MODEL,
             contents=[ACCESSIBILITY_PROMPT, uploaded_file],
@@ -113,77 +101,19 @@ def analyze_pdf_with_gemini(file_path: str) -> dict:
                 "Gemini returned an empty accessibility analysis."
             )
 
-        # 4. Validar que la respuesta cumpla el esquema esperado.
         analysis = AccessibilityAnalysis.model_validate_json(
             response.text
         )
 
-        # 5. Recuperar las métricas reales de uso.
-        usage = response.usage_metadata
-
-        prompt_tokens = getattr(
-            usage, "prompt_token_count", None
-        )
-        output_tokens = getattr(
-            usage, "candidates_token_count", None
-        )
-        total_tokens = getattr(
-            usage, "total_token_count", None
-        )
-        thoughts_tokens = getattr(
-            usage, "thoughts_token_count", 0
-        ) or 0
-        cached_tokens = getattr(
-            usage, "cached_content_token_count", 0
-        ) or 0
-
-        # Límite de entrada del modelo, si la API lo informa.
-        try:
-            model_info = client.models.get(model=GEMINI_MODEL)
-            input_limit = getattr(
-                model_info, "input_token_limit", None
-            )
-        except Exception:
-            input_limit = None
-
-        remaining_input_capacity = None
-
-        if input_limit is not None and prompt_tokens is not None:
-            remaining_input_capacity = max(
-                0, input_limit - prompt_tokens
-            )
-
         return {
             "analysis": analysis.model_dump(),
-            "token_usage": {
-                "input_tokens_estimated_before_request": (
-                    estimated_input_tokens
-                ),
-                "input_tokens_used": prompt_tokens,
-                "output_tokens_used": output_tokens,
-                "thoughts_tokens_used": thoughts_tokens,
-                "cached_tokens_used": cached_tokens,
-                "total_tokens_used": total_tokens,
-                "model_input_token_limit": input_limit,
-                "remaining_input_capacity_estimate": (
-                    remaining_input_capacity
-                ),
-                "note": (
-                    "La capacidad restante es una estimación del "
-                    "espacio de entrada del modelo, no del saldo "
-                    "ni de la cuota disponible de la API."
-                ),
-            },
         }
 
     finally:
-        # Limpiar el archivo remoto cuando termine este análisis.
         if uploaded_file is not None:
             try:
                 client.files.delete(name=uploaded_file.name)
             except Exception:
-                # No ocultar el resultado ni el error original
-                # si falla la limpieza del archivo remoto.
                 pass
 
         client.close()
