@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.repositories import material_repository
 from app.schemas.analysis import AnalysisResponse
 from app.services.analysis_service import create_material_analysis
 
@@ -16,7 +17,6 @@ router = APIRouter(
     tags=["Analysis"],
 )
 
-
 @router.post(
     "/{material_id}/analysis",
     response_model=AnalysisResponse,
@@ -26,8 +26,18 @@ def analyze_material_endpoint(
     material_id: int,
     db: Session = Depends(get_db),
 ):
-    # Ruta temporal para las pruebas.
-    file_path = "/app/data/CLASE 1 (2).pdf"
+    material = material_repository.get_by_id(
+        db=db,
+        material_id=material_id,
+    )
+
+    if material is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Material not found",
+        )
+
+    file_path = material.file_path
 
     try:
         return create_material_analysis(
