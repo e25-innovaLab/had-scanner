@@ -30,3 +30,14 @@ def get_all(db: Session) -> list[Material]:
     statement = select(Material).order_by(Material.id)
 
     return list(db.scalars(statement).all())
+
+def get_by_id(
+    db: Session,
+    material_id: int,
+) -> Material | None:
+    statement = select(Material).where(
+        Material.id == material_id,
+        Material.status == "uploaded",
+    )
+
+    return db.scalar(statement)
