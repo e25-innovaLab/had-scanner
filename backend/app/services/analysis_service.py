@@ -20,7 +20,6 @@ def analyze_material(file_path: str) -> dict:
     return {
         **document,
         "accessibility_analysis": accessibility_analysis,
-        "token_usage": gemini_result["token_usage"],
     }
 
 
