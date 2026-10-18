@@ -1,13 +1,13 @@
-import { Info } from "lucide-react"
-import { HomeStart } from "@/components/aula/home-start"
-import { TutorialDialog } from "@/components/aula/tutorial-dialog"
+import { Info } from 'lucide-react';
+import { HomeStart } from '@/components/aula/home-start';
+import { TutorialDialog } from '@/components/aula/tutorial-dialog';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from '@/components/ui/card';
 
 export function HomePage() {
   return (
@@ -59,5 +59,5 @@ export function HomePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

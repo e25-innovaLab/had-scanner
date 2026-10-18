@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import { useCallback, useState } from "react"
-import { BarrierList } from "@/components/aula/barrier-list"
-import { AnalysisFlowFooter } from "@/components/aula/analysis-flow-footer"
-import { Card, CardContent } from "@/components/ui/card"
+import { useCallback, useState } from 'react';
+import { BarrierList } from '@/components/aula/barrier-list';
+import { AnalysisFlowFooter } from '@/components/aula/analysis-flow-footer';
+import { Card, CardContent } from '@/components/ui/card';
 
 export function RevisarStep() {
   const [stats, setStats] = useState({
@@ -11,31 +11,31 @@ export function RevisarStep() {
     highSeverity: 0,
     dimensionsAffected: 0,
     dimensionsTotal: 6,
-  })
+  });
 
   const onStats = useCallback(
     (next: {
-      total: number
-      highSeverity: number
-      dimensionsAffected: number
-      dimensionsTotal: number
+      total: number;
+      highSeverity: number;
+      dimensionsAffected: number;
+      dimensionsTotal: number;
     }) => {
-      setStats(next)
+      setStats(next);
     },
     []
-  )
+  );
 
   const cards = [
-    { value: String(stats.total), label: "Barreras totales" },
+    { value: String(stats.total), label: 'Barreras totales' },
     {
       value: String(stats.highSeverity),
-      label: "En dimensiones de severidad alta",
+      label: 'En dimensiones de severidad alta',
     },
     {
       value: `${stats.dimensionsAffected}/${stats.dimensionsTotal}`,
-      label: "Dimensiones afectadas",
+      label: 'Dimensiones afectadas',
     },
-  ]
+  ];
 
   return (
     <>
@@ -43,7 +43,9 @@ export function RevisarStep() {
         {cards.map((stat) => (
           <Card key={stat.label} className="items-center text-center">
             <CardContent className="space-y-1">
-              <p className="text-3xl font-semibold tracking-tight">{stat.value}</p>
+              <p className="text-3xl font-semibold tracking-tight">
+                {stat.value}
+              </p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
             </CardContent>
           </Card>
@@ -56,5 +58,5 @@ export function RevisarStep() {
         nextLabel="Siguiente: Adaptar"
       />
     </>
-  )
+  );
 }

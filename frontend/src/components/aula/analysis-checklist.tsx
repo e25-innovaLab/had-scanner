@@ -1,71 +1,73 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
-import { Check, Circle, CircleAlert } from "lucide-react"
-import { MissingAnalysis } from "@/components/aula/missing-analysis"
-import { Pill } from "@/components/aula/pill"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { api } from "@/lib/api/client"
-import type { DimensionProgressStatus } from "@/lib/api/types"
-import { resolveAnalysisId } from "@/lib/api/url"
-import { cn } from "@/lib/utils"
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Check, Circle, CircleAlert } from 'lucide-react';
+import { MissingAnalysis } from '@/components/aula/missing-analysis';
+import { Pill } from '@/components/aula/pill';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { api } from '@/lib/api/client';
+import type { DimensionProgressStatus } from '@/lib/api/types';
+import { resolveAnalysisId } from '@/lib/api/url';
+import { cn } from '@/lib/utils';
 
 type Row = {
-  id: string
-  label: string
-  status: DimensionProgressStatus
-}
+  id: string;
+  label: string;
+  status: DimensionProgressStatus;
+};
 
 function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function AnalysisChecklist() {
-  const [searchParams] = useSearchParams()
-  const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
-  const [rows, setRows] = useState<Row[]>([])
-  const [fileName, setFileName] = useState("Material")
-  const [fileSize, setFileSize] = useState(0)
-  const [status, setStatus] = useState<string>("analyzing")
-  const [error, setError] = useState<string | null>(null)
+  const [searchParams] = useSearchParams();
+  const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const [rows, setRows] = useState<Row[]>([]);
+  const [fileName, setFileName] = useState('Material');
+  const [fileSize, setFileSize] = useState(0);
+  const [status, setStatus] = useState<string>('analyzing');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!analysisId) return
-    let cancelled = false
-    let timer: number | undefined
+    if (!analysisId) return;
+    let cancelled = false;
+    let timer: number | undefined;
 
     async function poll() {
       try {
-        const data = await api.getStatus(analysisId!)
-        if (cancelled) return
-        setRows(data.dimensionProgress)
-        setFileName(data.originalFileName)
-        setFileSize(data.originalFileSize)
-        setStatus(data.status)
-        setError(null)
+        const data = await api.getStatus(analysisId!);
+        if (cancelled) return;
+        setRows(data.dimensionProgress);
+        setFileName(data.originalFileName);
+        setFileSize(data.originalFileSize);
+        setStatus(data.status);
+        setError(null);
         // Listo: dejamos de pollar. El docente avanza con "Siguiente: Revisar".
-        if (data.status === "ready" || data.status === "failed") return
-        timer = window.setTimeout(() => void poll(), 700)
+        if (data.status === 'ready' || data.status === 'failed') return;
+        timer = window.setTimeout(() => void poll(), 700);
       } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : "Error al consultar estado")
-        timer = window.setTimeout(() => void poll(), 1500)
+        if (cancelled) return;
+        setError(
+          err instanceof Error ? err.message : 'Error al consultar estado'
+        );
+        timer = window.setTimeout(() => void poll(), 1500);
       }
     }
 
-    void poll()
+    void poll();
     return () => {
-      cancelled = true
-      if (timer) window.clearTimeout(timer)
-    }
-  }, [analysisId])
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [analysisId]);
 
   if (!analysisId) {
-    return <MissingAnalysis step="analizar el material" />
+    return <MissingAnalysis step="analizar el material" />;
   }
 
   return (
@@ -79,12 +81,12 @@ export function AnalysisChecklist() {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{fileName}</p>
             <p className="text-xs text-muted-foreground">
-              {fileSize ? formatSize(fileSize) : "—"}
+              {fileSize ? formatSize(fileSize) : '—'}
             </p>
           </div>
         </div>
         <Pill tone="muted">
-          {status === "ready" ? "Listo" : "Analizando..."}
+          {status === 'ready' ? 'Listo' : 'Analizando...'}
         </Pill>
       </Card>
 
@@ -104,17 +106,17 @@ export function AnalysisChecklist() {
               <StatusIcon status={row.status} />
               <span
                 className={cn(
-                  row.status === "pending" && "text-muted-foreground"
+                  row.status === 'pending' && 'text-muted-foreground'
                 )}
               >
                 {row.label}
               </span>
-              {row.status === "running" ? (
+              {row.status === 'running' ? (
                 <span className="text-muted-foreground">analizando...</span>
               ) : null}
-              {row.status === "error" ? (
+              {row.status === 'error' ? (
                 <span className="text-danger-foreground">
-                  no se pudo analizar —{" "}
+                  no se pudo analizar —{' '}
                   <Button
                     type="button"
                     variant="link"
@@ -123,7 +125,7 @@ export function AnalysisChecklist() {
                       setRows((current) =>
                         current.map((item) =>
                           item.id === row.id
-                            ? { ...item, status: "done" }
+                            ? { ...item, status: 'done' }
                             : item
                         )
                       )
@@ -138,28 +140,25 @@ export function AnalysisChecklist() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function StatusIcon({ status }: { status: DimensionProgressStatus }) {
-  if (status === "done") {
+  if (status === 'done') {
     return (
-      <Check
-        className="size-4 text-success-foreground"
-        aria-hidden="true"
-      />
-    )
+      <Check className="size-4 text-success-foreground" aria-hidden="true" />
+    );
   }
-  if (status === "error") {
+  if (status === 'error') {
     return (
       <CircleAlert
         className="size-4 text-danger-foreground"
         aria-hidden="true"
       />
-    )
+    );
   }
-  if (status === "running") {
-    return <span className="px-0.5 text-muted-foreground">...</span>
+  if (status === 'running') {
+    return <span className="px-0.5 text-muted-foreground">...</span>;
   }
-  return <Circle className="size-4 text-muted-foreground" aria-hidden="true" />
+  return <Circle className="size-4 text-muted-foreground" aria-hidden="true" />;
 }

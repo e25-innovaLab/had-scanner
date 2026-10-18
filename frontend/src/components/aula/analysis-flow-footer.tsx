@@ -1,8 +1,8 @@
-"use client"
+'use client';
 
-import { useSearchParams } from "react-router-dom"
-import { FlowFooter } from "@/components/aula/flow-footer"
-import { resolveAnalysisId, withAnalysisId } from "@/lib/api/url"
+import { useSearchParams } from 'react-router-dom';
+import { FlowFooter } from '@/components/aula/flow-footer';
+import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 
 export function AnalysisFlowFooter({
   backHref,
@@ -10,13 +10,13 @@ export function AnalysisFlowFooter({
   nextHref,
   nextLabel,
 }: {
-  backHref: string
-  backLabel?: string
-  nextHref: string
-  nextLabel: string
+  backHref: string;
+  backLabel?: string;
+  nextHref: string;
+  nextLabel: string;
 }) {
-  const [searchParams] = useSearchParams()
-  const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
+  const [searchParams] = useSearchParams();
+  const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
 
   return (
     <FlowFooter
@@ -25,5 +25,5 @@ export function AnalysisFlowFooter({
       nextHref={withAnalysisId(nextHref, analysisId)}
       nextLabel={nextLabel}
     />
-  )
+  );
 }

@@ -1,16 +1,16 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
-import { AnalisisLayout } from "@/layouts/analisis-layout"
-import { HomeLayout } from "@/layouts/home-layout"
-import { RootLayout } from "@/layouts/root-layout"
-import { AdaptarPage } from "@/pages/analisis/adaptar-page"
-import { AnalizarPage } from "@/pages/analisis/analizar-page"
-import { CargarPage } from "@/pages/analisis/cargar-page"
-import { DetallePage } from "@/pages/analisis/detalle-page"
-import { ResultadoPage } from "@/pages/analisis/resultado-page"
-import { RevisarPage } from "@/pages/analisis/revisar-page"
-import { AyudaPage } from "@/pages/ayuda-page"
-import { ConfiguracionPage } from "@/pages/configuracion-page"
-import { HomePage } from "@/pages/home-page"
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AnalisisLayout } from '@/layouts/analisis-layout';
+import { HomeLayout } from '@/layouts/home-layout';
+import { RootLayout } from '@/layouts/root-layout';
+import { AdaptarPage } from '@/pages/analisis/adaptar-page';
+import { AnalizarPage } from '@/pages/analisis/analizar-page';
+import { CargarPage } from '@/pages/analisis/cargar-page';
+import { DetallePage } from '@/pages/analisis/detalle-page';
+import { ResultadoPage } from '@/pages/analisis/resultado-page';
+import { RevisarPage } from '@/pages/analisis/revisar-page';
+import { AyudaPage } from '@/pages/ayuda-page';
+import { ConfiguracionPage } from '@/pages/configuracion-page';
+import { HomePage } from '@/pages/home-page';
 
 export default function App() {
   return (
@@ -35,5 +35,5 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

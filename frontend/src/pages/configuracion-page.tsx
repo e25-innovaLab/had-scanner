@@ -1,4 +1,4 @@
-import { SettingsForm } from "@/components/aula/settings-form"
+import { SettingsForm } from '@/components/aula/settings-form';
 
 export function ConfiguracionPage() {
   return (
@@ -8,11 +8,11 @@ export function ConfiguracionPage() {
           Configuración
         </h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-          Estás usando VERA sin cuenta. Estos datos no se conservan al cerrar
-          la sesión.
+          Estás usando VERA sin cuenta. Estos datos no se conservan al cerrar la
+          sesión.
         </p>
       </header>
       <SettingsForm />
     </div>
-  )
+  );
 }

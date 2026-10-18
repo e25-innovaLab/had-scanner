@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link } from 'react-router-dom';
 
 export function AppHeader() {
   return (
@@ -11,7 +11,9 @@ export function AppHeader() {
           >
             V
           </span>
-          <span className="truncate font-semibold tracking-tight">Aula Virtual</span>
+          <span className="truncate font-semibold tracking-tight">
+            Aula Virtual
+          </span>
           <span className="text-muted-foreground" aria-hidden="true">
             /
           </span>
@@ -21,5 +23,5 @@ export function AppHeader() {
         </Link>
       </div>
     </header>
-  )
+  );
 }

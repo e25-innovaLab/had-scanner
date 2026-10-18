@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { Link } from "react-router-dom"
-import { Button } from "@/components/ui/button"
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 
 export function IaFab() {
   return (
@@ -49,5 +49,5 @@ export function IaFab() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

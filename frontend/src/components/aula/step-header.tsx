@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
-import { Pill } from "@/components/aula/pill"
+import type { ReactNode } from 'react';
+import { Pill } from '@/components/aula/pill';
 
 export function StepHeader({
   step,
@@ -8,11 +8,11 @@ export function StepHeader({
   description,
   extra,
 }: {
-  step: string
-  actor: string
-  title: string
-  description: string
-  extra?: ReactNode
+  step: string;
+  actor: string;
+  title: string;
+  description: string;
+  extra?: ReactNode;
 }) {
   return (
     <header className="mb-6 space-y-3">
@@ -30,5 +30,5 @@ export function StepHeader({
         </p>
       </div>
     </header>
-  )
+  );
 }

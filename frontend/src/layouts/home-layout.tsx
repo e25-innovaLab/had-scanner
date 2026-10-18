@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom"
-import { HomeNav } from "@/components/shell/home-nav"
+import { Outlet } from 'react-router-dom';
+import { HomeNav } from '@/components/shell/home-nav';
 
 export function HomeLayout() {
   return (
@@ -11,5 +11,5 @@ export function HomeLayout() {
         </div>
       </main>
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
-import { Outlet } from "react-router-dom"
-import { FlowResumeTracker } from "@/components/aula/flow-resume-tracker"
-import { FlowNav } from "@/components/shell/flow-nav"
+import { Outlet } from 'react-router-dom';
+import { FlowResumeTracker } from '@/components/aula/flow-resume-tracker';
+import { FlowNav } from '@/components/shell/flow-nav';
 
 export function AnalisisLayout() {
   return (
@@ -11,5 +11,5 @@ export function AnalisisLayout() {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

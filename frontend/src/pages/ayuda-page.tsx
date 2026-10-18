@@ -1,22 +1,22 @@
-import { Link } from "react-router-dom"
-import { buttonVariants } from "@/components/ui/button-variants"
+import { Link } from 'react-router-dom';
+import { buttonVariants } from '@/components/ui/button-variants';
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { FLOW_STEPS } from "@/lib/aula"
-import { cn } from "@/lib/utils"
+} from '@/components/ui/card';
+import { FLOW_STEPS } from '@/lib/aula';
+import { cn } from '@/lib/utils';
 
 const HELP = [
-  "Subí un PDF, Word, PowerPoint (máx. 50 MB) o pegá el texto del material.",
-  "El sistema revisa solo las 6 dimensiones. No hace falta intervenir.",
-  "Leé el diagnóstico: barreras, severidad y dónde aparecen. Todavía no hay adaptación.",
-  "Pedí una propuesta solo en las barreras que elijas. Aceptá, editá o descartá.",
-  "Ajustá el texto, pedí otra versión o seguí a mano si se agotan los intentos.",
-  "Descargá el material adaptado y el informe. El original queda intacto.",
-]
+  'Subí un PDF, Word, PowerPoint (máx. 50 MB) o pegá el texto del material.',
+  'El sistema revisa solo las 6 dimensiones. No hace falta intervenir.',
+  'Leé el diagnóstico: barreras, severidad y dónde aparecen. Todavía no hay adaptación.',
+  'Pedí una propuesta solo en las barreras que elijas. Aceptá, editá o descartá.',
+  'Ajustá el texto, pedí otra versión o seguí a mano si se agotan los intentos.',
+  'Descargá el material adaptado y el informe. El original queda intacto.',
+];
 
 export function AyudaPage() {
   return (
@@ -35,7 +35,7 @@ export function AyudaPage() {
           <Card key={step.href}>
             <CardHeader>
               <CardTitle>
-                {String(index + 1).padStart(2, "0")} · {step.label}
+                {String(index + 1).padStart(2, '0')} · {step.label}
               </CardTitle>
               <CardDescription>{HELP[index]}</CardDescription>
             </CardHeader>
@@ -44,10 +44,10 @@ export function AyudaPage() {
       </div>
       <Link
         to="/analisis/cargar"
-        className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}
+        className={cn(buttonVariants({ size: 'lg' }), 'h-10 px-4')}
       >
         Comenzar un análisis
       </Link>
     </div>
-  )
+  );
 }

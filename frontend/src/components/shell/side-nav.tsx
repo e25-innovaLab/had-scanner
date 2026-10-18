@@ -1,11 +1,11 @@
-import type { ReactNode } from "react"
+import type { ReactNode } from 'react';
 
 export function SideNav({
   label,
   children,
 }: {
-  label: string
-  children: ReactNode
+  label: string;
+  children: ReactNode;
 }) {
   return (
     <nav
@@ -14,5 +14,5 @@ export function SideNav({
     >
       {children}
     </nav>
-  )
+  );
 }

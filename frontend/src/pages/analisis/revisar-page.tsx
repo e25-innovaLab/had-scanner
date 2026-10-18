@@ -1,5 +1,5 @@
-import { StepHeader } from "@/components/aula/step-header"
-import { RevisarStep } from "@/pages/analisis/revisar-step"
+import { StepHeader } from '@/components/aula/step-header';
+import { RevisarStep } from '@/pages/analisis/revisar-step';
 
 export function RevisarPage() {
   return (
@@ -12,5 +12,5 @@ export function RevisarPage() {
       />
       <RevisarStep />
     </div>
-  )
+  );
 }

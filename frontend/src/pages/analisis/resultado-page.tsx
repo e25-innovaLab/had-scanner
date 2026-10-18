@@ -1,5 +1,5 @@
-import { StepHeader } from "@/components/aula/step-header"
-import { ResultadoStep } from "@/pages/analisis/resultado-step"
+import { StepHeader } from '@/components/aula/step-header';
+import { ResultadoStep } from '@/pages/analisis/resultado-step';
 
 export function ResultadoPage() {
   return (
@@ -12,5 +12,5 @@ export function ResultadoPage() {
       />
       <ResultadoStep />
     </div>
-  )
+  );
 }

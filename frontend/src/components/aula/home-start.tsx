@@ -1,39 +1,39 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Link } from "react-router-dom"
-import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from '@/components/ui/card';
 import {
   clearFlowResume,
   readFlowResume,
   resumeStepLabel,
   withAnalysisId,
   type FlowResume,
-} from "@/lib/api/url"
+} from '@/lib/api/url';
 
 export function HomeStart() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [resume, setResume] = useState<FlowResume | null>(() =>
     readFlowResume()
-  )
+  );
 
   function startFresh() {
-    clearFlowResume()
-    setResume(null)
-    navigate("/analisis/cargar")
+    clearFlowResume();
+    setResume(null);
+    navigate('/analisis/cargar');
   }
 
   const continueHref = resume
     ? withAnalysisId(resume.path, resume.analysisId)
-    : null
+    : null;
 
   return (
     <div className="space-y-4">
@@ -42,7 +42,7 @@ export function HomeStart() {
           <CardHeader>
             <CardTitle>Continuar análisis</CardTitle>
             <CardDescription>
-              Hay un trabajo guardado en este navegador. Último paso:{" "}
+              Hay un trabajo guardado en este navegador. Último paso:{' '}
               <span className="font-medium text-foreground">
                 {resumeStepLabel(resume.path)}
               </span>
@@ -73,19 +73,16 @@ export function HomeStart() {
         <CardHeader>
           <CardTitle>+ Nuevo análisis</CardTitle>
           <CardDescription>
-            Subí un PDF, Word, PowerPoint o pegá texto directamente para empezar.
+            Subí un PDF, Word, PowerPoint o pegá texto directamente para
+            empezar.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            type="button"
-            className="h-10 px-4"
-            onClick={startFresh}
-          >
+          <Button type="button" className="h-10 px-4" onClick={startFresh}>
             Comenzar
           </Button>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

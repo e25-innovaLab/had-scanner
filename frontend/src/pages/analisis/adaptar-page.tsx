@@ -1,5 +1,5 @@
-import { StepHeader } from "@/components/aula/step-header"
-import { AdaptarStep } from "@/pages/analisis/adaptar-step"
+import { StepHeader } from '@/components/aula/step-header';
+import { AdaptarStep } from '@/pages/analisis/adaptar-step';
 
 export function AdaptarPage() {
   return (
@@ -12,5 +12,5 @@ export function AdaptarPage() {
       />
       <AdaptarStep />
     </div>
-  )
+  );
 }

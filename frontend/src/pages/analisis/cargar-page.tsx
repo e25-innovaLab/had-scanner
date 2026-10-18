@@ -1,5 +1,5 @@
-import { StepHeader } from "@/components/aula/step-header"
-import { CargarStep } from "@/pages/analisis/cargar-step"
+import { StepHeader } from '@/components/aula/step-header';
+import { CargarStep } from '@/pages/analisis/cargar-step';
 
 export function CargarPage() {
   return (
@@ -12,5 +12,5 @@ export function CargarPage() {
       />
       <CargarStep />
     </div>
-  )
+  );
 }

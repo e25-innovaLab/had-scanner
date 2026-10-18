@@ -1,12 +1,18 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 export function SettingsForm() {
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState(false);
 
   return (
     <Card>
@@ -20,13 +26,17 @@ export function SettingsForm() {
         <form
           className="space-y-4"
           onSubmit={(event) => {
-            event.preventDefault()
-            setSaved(true)
+            event.preventDefault();
+            setSaved(true);
           }}
         >
           <label className="block space-y-1.5 text-sm font-medium">
             Nombre
-            <Input name="nombre" placeholder="Nombre y apellido" autoComplete="name" />
+            <Input
+              name="nombre"
+              placeholder="Nombre y apellido"
+              autoComplete="name"
+            />
           </label>
           <label className="block space-y-1.5 text-sm font-medium">
             Institución
@@ -54,5 +64,5 @@ export function SettingsForm() {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

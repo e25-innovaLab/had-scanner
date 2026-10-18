@@ -1,6 +1,6 @@
-import { Outlet } from "react-router-dom"
-import { AppHeader } from "@/components/shell/app-header"
-import { IaFab } from "@/components/shell/ia-fab"
+import { Outlet } from 'react-router-dom';
+import { AppHeader } from '@/components/shell/app-header';
+import { IaFab } from '@/components/shell/ia-fab';
 
 export function RootLayout() {
   return (
@@ -11,5 +11,5 @@ export function RootLayout() {
       </div>
       <IaFab />
     </div>
-  )
+  );
 }

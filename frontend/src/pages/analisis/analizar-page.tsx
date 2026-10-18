@@ -1,6 +1,6 @@
-import { AnalysisChecklist } from "@/components/aula/analysis-checklist"
-import { AnalysisFlowFooter } from "@/components/aula/analysis-flow-footer"
-import { StepHeader } from "@/components/aula/step-header"
+import { AnalysisChecklist } from '@/components/aula/analysis-checklist';
+import { AnalysisFlowFooter } from '@/components/aula/analysis-flow-footer';
+import { StepHeader } from '@/components/aula/step-header';
 
 export function AnalizarPage() {
   return (
@@ -18,5 +18,5 @@ export function AnalizarPage() {
         nextLabel="Siguiente: Revisar"
       />
     </div>
-  )
+  );
 }

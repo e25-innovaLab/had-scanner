@@ -1,61 +1,65 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
-import { AnalysisFlowFooter } from "@/components/aula/analysis-flow-footer"
-import { DownloadList } from "@/components/aula/download-list"
-import { MissingAnalysis } from "@/components/aula/missing-analysis"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { api } from "@/lib/api/client"
-import type { ExportFile } from "@/lib/api/types"
-import { resolveAnalysisId } from "@/lib/api/url"
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { AnalysisFlowFooter } from '@/components/aula/analysis-flow-footer';
+import { DownloadList } from '@/components/aula/download-list';
+import { MissingAnalysis } from '@/components/aula/missing-analysis';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { api } from '@/lib/api/client';
+import type { ExportFile } from '@/lib/api/types';
+import { resolveAnalysisId } from '@/lib/api/url';
 
 export function ResultadoStep() {
-  const [searchParams] = useSearchParams()
-  const analysisId = resolveAnalysisId(searchParams.get("analysisId"))
-  const [files, setFiles] = useState<ExportFile[]>([])
-  const [applied, setApplied] = useState<string[]>([])
-  const [summary, setSummary] = useState({ accepted: 0, discarded: 0 })
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(() => Boolean(analysisId))
-  const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId)
+  const [searchParams] = useSearchParams();
+  const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const [files, setFiles] = useState<ExportFile[]>([]);
+  const [applied, setApplied] = useState<string[]>([]);
+  const [summary, setSummary] = useState({ accepted: 0, discarded: 0 });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(() => Boolean(analysisId));
+  const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId);
 
   if (analysisId !== prevAnalysisId) {
-    setPrevAnalysisId(analysisId)
-    setLoading(Boolean(analysisId))
+    setPrevAnalysisId(analysisId);
+    setLoading(Boolean(analysisId));
   }
 
   useEffect(() => {
-    if (!analysisId) return
-    let cancelled = false
+    if (!analysisId) return;
+    let cancelled = false;
     void (async () => {
       try {
-        await api.export(analysisId)
-        const data = await api.getExports(analysisId)
-        if (cancelled) return
-        setFiles(data.exports)
-        setApplied(data.appliedChanges)
-        setSummary(data.summary)
-        setError(null)
+        await api.export(analysisId);
+        const data = await api.getExports(analysisId);
+        if (cancelled) return;
+        setFiles(data.exports);
+        setApplied(data.appliedChanges);
+        setSummary(data.summary);
+        setError(null);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Error al exportar")
+          setError(err instanceof Error ? err.message : 'Error al exportar');
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [analysisId])
+      cancelled = true;
+    };
+  }, [analysisId]);
 
   if (!analysisId) {
-    return <MissingAnalysis step="obtener el resultado" />
+    return <MissingAnalysis step="obtener el resultado" />;
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Preparando exportaciones...</p>
+    return (
+      <p className="text-sm text-muted-foreground">
+        Preparando exportaciones...
+      </p>
+    );
   }
 
   return (
@@ -70,7 +74,7 @@ export function ResultadoStep() {
           <CardHeader>
             <CardTitle>Proceso completado</CardTitle>
             <p className="text-sm text-muted-foreground">
-              {summary.accepted} adaptaciones aplicadas · {summary.discarded}{" "}
+              {summary.accepted} adaptaciones aplicadas · {summary.discarded}{' '}
               descartadas · el original permanece intacto
             </p>
           </CardHeader>
@@ -101,5 +105,5 @@ export function ResultadoStep() {
         nextLabel="Finalizar"
       />
     </>
-  )
+  );
 }

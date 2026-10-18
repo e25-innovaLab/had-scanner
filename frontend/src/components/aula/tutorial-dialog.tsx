@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { Link } from "react-router-dom"
-import { Button } from "@/components/ui/button"
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,13 +9,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { FLOW_STEPS } from "@/lib/aula"
+} from '@/components/ui/dialog';
+import { FLOW_STEPS } from '@/lib/aula';
 
 export function TutorialDialog() {
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline" className="h-10 px-4" />}>
+      <DialogTrigger
+        render={<Button variant="outline" className="h-10 px-4" />}
+      >
         Ver tutorial
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
@@ -41,5 +43,5 @@ export function TutorialDialog() {
         </ol>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
