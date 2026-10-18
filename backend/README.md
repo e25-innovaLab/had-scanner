@@ -13,6 +13,41 @@ Backend API for analyzing teaching materials and providing accessibility diagnos
 - PostgreSQL
 - Docker
 
+## Environment Configuration
+
+Before running the backend, create a `.env` file in the root of the `backend` directory.
+
+### 1. Create the environment file
+
+Copy the example configuration:
+
+```bash
+cp .env.example .env
+```
+
+On Windows PowerShell, you can use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### 2. Configure Gemini
+
+Open the `.env` file and set your Gemini API key and the LLM model to use:
+
+```dotenv
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-flash-latest
+```
+
+Replace the API key placeholder with your own Gemini API key. Make sure the model name matches the model configured for the application.
+
+### 3. Run the backend
+
+Follow the installation and execution instructions below.
+
+**Note:** The `.env` file contains sensitive credentials and must not be committed to the repository. Use `.env.example` as a reference for the required environment variables.
+
 ## Run
 
 Make sure [Docker Desktop](https://www.docker.com/products/docker-desktop/) is installed and running.
