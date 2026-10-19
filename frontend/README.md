@@ -43,9 +43,13 @@ Endpoints `/api/analyses…` (ver docs). Persistencia del mock: `data/vera-db.js
 
 Solo si usás NixOS u otro entorno con Nix. El camino canónico arriba (Node + Corepack) alcanza en Windows, macOS y Linux sin Nix.
 
+El `shellHook` del flake exporta `pnpm_config_pm_on_fail=ignore` para usar el pnpm de nixpkgs (Corepack baja un binario que NixOS no ejecuta).
+
 ```bash
 # con direnv + flake.nix en este directorio
 direnv allow
 pnpm install
 pnpm dev
 ```
+
+Si ya falló antes por un pnpm en `~/.local/share/pnpm`, borrá esa carpeta una vez y reentrá al directorio.

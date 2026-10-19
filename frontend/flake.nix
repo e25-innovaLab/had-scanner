@@ -15,6 +15,8 @@
         ];
         shellHook = ''
           export NODE_OPTIONS="--max-old-space-size=2048"
+          # Usar pnpm de nixpkgs; no bajar el binario de packageManager (FHS, no corre en NixOS)
+          export pnpm_config_pm_on_fail=ignore
           export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [ 
             pkgs.stdenv.cc.cc 
             pkgs.zlib 
