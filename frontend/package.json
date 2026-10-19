@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@12.9.0",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "dev": "concurrently -k -n mock,vite -c blue,green \"pnpm dev:mock\" \"pnpm dev:vite\"",
     "dev:mock": "tsx --tsconfig tsconfig.mock.json mock/server.ts",
     "dev:vite": "vite",

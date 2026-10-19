@@ -4,6 +4,8 @@ SPA del flujo VERA (Vite + React + TypeScript).
 
 ## Desarrollo
 
+Usá **pnpm** (no npm ni yarn). El `preinstall` lo bloquea si usás otro gestor.
+
 ```bash
 pnpm install
 pnpm dev

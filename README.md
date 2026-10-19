@@ -22,7 +22,7 @@ had-scanner/
 
 ```bash
 cd frontend
-pnpm install
+pnpm install   # no usar npm/yarn — el proyecto lo bloquea
 pnpm dev
 ```
 
