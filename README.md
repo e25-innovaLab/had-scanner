@@ -20,16 +20,19 @@ had-scanner/
 
 ## Getting Started (Frontend)
 
+Requisitos: [Node.js](https://nodejs.org/) 20+ y pnpm vía Corepack (viene con Node). No uses npm/yarn.
+
 ```bash
+corepack enable
 cd frontend
-pnpm install   # no usar npm/yarn — el proyecto lo bloquea
+pnpm install
 pnpm dev
 ```
 
 - UI: [http://localhost:5173](http://localhost:5173)
 - Mock API: [http://localhost:3001](http://localhost:3001) (proxied como `/api` desde Vite)
 
-Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/docs/`](./frontend/docs/).
+Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/docs/`](./frontend/docs/). Nix/direnv es opcional y solo para quien lo use.
 
 ## Getting Started (Backend)
 
