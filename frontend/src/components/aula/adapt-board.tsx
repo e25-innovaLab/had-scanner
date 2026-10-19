@@ -453,7 +453,7 @@ export function AdaptBoard({
               {state.mode === 'generating' ? (
                 <div className="space-y-2">
                   <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full w-2/3 animate-pulse rounded-full bg-[#c4b49a]" />
+                    <div className="h-full w-2/3 animate-pulse rounded-full bg-primary/50" />
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Generando propuesta con IA... Si falla, el intento no se

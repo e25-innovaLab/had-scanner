@@ -106,3 +106,14 @@ export type DbShape = {
   barriers: ApiBarrier[];
   proposals: Proposal[];
 };
+
+export type Material = {
+  id: number;
+  name: string;
+  status: string;
+};
+
+export type MaterialListResponse = {
+  materials: Material[];
+  total: number;
+};

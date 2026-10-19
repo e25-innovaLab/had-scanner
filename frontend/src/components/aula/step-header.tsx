@@ -22,7 +22,7 @@ export function StepHeader({
         {extra}
       </div>
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-[1.7rem]">
+        <h1 className="text-2xl font-semibold tracking-tight text-balance text-primary sm:text-[1.7rem]">
           {title}
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">

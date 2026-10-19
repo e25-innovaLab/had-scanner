@@ -393,7 +393,7 @@ export function DetailEditor({
           </Pill>
         </div>
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-[1.7rem]">
+          <h1 className="text-2xl font-semibold tracking-tight text-balance text-primary sm:text-[1.7rem]">
             {suggestion.title}
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
@@ -427,7 +427,7 @@ export function DetailEditor({
           </p>
         </Card>
 
-        <Card className="bg-[#fbf6ea] ring-[#eadfbe]">
+        <Card className="bg-tertiary-container/60 ring-info/40">
           <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing)">
             <div className="flex items-center gap-2">
               {hasProposal ? <Pill tone="step">IA</Pill> : null}
@@ -468,8 +468,8 @@ export function DetailEditor({
                 if (!saved) void persistDraft(text);
               }}
               className={cn(
-                'w-full resize-y rounded-lg border border-[#e4dcc8] bg-white px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
-                saved && 'cursor-default bg-[#f7f3e8] text-foreground/90'
+                'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                saved && 'cursor-default bg-muted text-foreground/90'
               )}
             />
           </div>
@@ -706,7 +706,7 @@ function BarrierPager({
 
 function Observation({ barrier }: { barrier: ApiBarrier }) {
   return (
-    <Card className="bg-[#f8f3e8] ring-[#eadfce]">
+    <Card className="bg-primary-container/50 ring-primary/15">
       <div className="flex flex-wrap items-start justify-between gap-3 px-(--card-spacing)">
         <div className="flex items-center gap-2">
           <Pill tone="step">IA</Pill>

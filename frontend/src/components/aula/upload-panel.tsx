@@ -172,7 +172,7 @@ export function UploadPanel({
           <Card
             className={cn(
               'relative flex flex-col items-center justify-center border border-dashed bg-white py-12 text-center transition-colors ring-0',
-              dragging ? 'border-primary bg-primary/5' : 'border-[#ddd4c6]',
+              dragging ? 'border-primary bg-primary/5' : 'border-border',
               fileError && 'border-destructive/50'
             )}
             onDragEnter={handleDragEnter}

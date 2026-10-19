@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 const tones = {
   step: 'bg-info text-info-foreground',
-  role: 'bg-media text-media-foreground',
+  role: 'bg-secondary text-muted-foreground',
   alta: 'bg-alta text-alta-foreground',
   media: 'bg-media text-media-foreground',
   baja: 'bg-baja text-baja-foreground',

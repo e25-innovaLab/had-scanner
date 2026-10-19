@@ -5,14 +5,16 @@ import type {
   BarriersResponse,
   ExportFile,
   Proposal,
-} from '@/lib/api/types';
+  MaterialListResponse,
+  Material,
+} from "@/lib/api/types";
 
-const DEFAULT_BASE = '';
+const DEFAULT_BASE = "";
 
 function baseUrl() {
   const env = import.meta.env.VITE_API_BASE_URL;
-  if (typeof env === 'string' && env.length > 0) {
-    return env.replace(/\/$/, '');
+  if (typeof env === "string" && env.length > 0) {
+    return env.replace(/\/$/, "");
   }
   return DEFAULT_BASE;
 }
@@ -34,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       ...(init?.body instanceof FormData
         ? {}
-        : { 'Content-Type': 'application/json' }),
+        : { "Content-Type": "application/json" }),
       ...init?.headers,
     },
   });
@@ -43,13 +45,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const data = text ? (JSON.parse(text) as unknown) : null;
 
   if (!res.ok) {
-    const message =
-      data &&
-      typeof data === 'object' &&
-      'error' in data &&
-      typeof (data as { error: unknown }).error === 'string'
-        ? (data as { error: string }).error
-        : `Error HTTP ${res.status}`;
+    let message = `Error HTTP ${res.status}`;
+    if (data && typeof data === "object") {
+      if (
+        "detail" in data &&
+        typeof (data as { detail: unknown }).detail === "string"
+      ) {
+        message = (data as { detail: string }).detail;
+      } else if (
+        "error" in data &&
+        typeof (data as { error: unknown }).error === "string"
+      ) {
+        message = (data as { error: string }).error;
+      }
+    }
     throw new ApiError(res.status, message, data);
   }
 
@@ -61,15 +70,15 @@ export const api = {
     fileName: string;
     fileSize: number;
   }): Promise<Analysis> {
-    return request<Analysis>('/api/analyses', {
-      method: 'POST',
+    return request<Analysis>("/api/analyses", {
+      method: "POST",
       body: JSON.stringify(input),
     });
   },
 
   getStatus(analysisId: string): Promise<AnalysisStatusResponse> {
     return request<AnalysisStatusResponse>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/status`
+      `/api/analyses/${encodeURIComponent(analysisId)}/status`,
     );
   },
 
@@ -79,75 +88,75 @@ export const api = {
 
   listBarriers(analysisId: string): Promise<BarriersResponse> {
     return request<BarriersResponse>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers`
+      `/api/analyses/${encodeURIComponent(analysisId)}/barriers`,
     );
   },
 
   listBarriersFlat(analysisId: string): Promise<{ barriers: ApiBarrier[] }> {
     return request<{ barriers: ApiBarrier[] }>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers?flat=1`
+      `/api/analyses/${encodeURIComponent(analysisId)}/barriers?flat=1`,
     );
   },
 
   getBarrier(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     return request<ApiBarrier>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}`
+      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}`,
     );
   },
 
   createProposal(
     analysisId: string,
     barrierId: string,
-    body?: { variant?: keyof ApiBarrier['variants'] }
+    body?: { variant?: keyof ApiBarrier["variants"] },
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/proposals`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(body ?? {}),
-      }
+      },
     );
   },
 
   saveDraft(
     analysisId: string,
     barrierId: string,
-    draft: string
+    draft: string,
   ): Promise<ApiBarrier> {
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/draft`,
       {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify({ draft }),
-      }
+      },
     );
   },
 
   accept(
     analysisId: string,
     barrierId: string,
-    draft?: string
+    draft?: string,
   ): Promise<ApiBarrier> {
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/accept`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({ draft }),
-      }
+      },
     );
   },
 
   discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/discard`,
-      { method: 'POST', body: JSON.stringify({}) }
+      { method: "POST", body: JSON.stringify({}) },
     );
   },
 
   reopen(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/reopen`,
-      { method: 'POST', body: JSON.stringify({}) }
+      { method: "POST", body: JSON.stringify({}) },
     );
   },
 
@@ -156,7 +165,7 @@ export const api = {
     exports: ExportFile[];
   }> {
     return request(`/api/analyses/${encodeURIComponent(analysisId)}/export`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({}),
     });
   },
@@ -168,5 +177,18 @@ export const api = {
     summary: { accepted: number; discarded: number };
   }> {
     return request(`/api/analyses/${encodeURIComponent(analysisId)}/exports`);
+  },
+
+  uploadMaterial(file: File): Promise<Material> {
+    const form = new FormData();
+    form.append("file", file);
+    return request<Material>("/materials", {
+      method: "POST",
+      body: form,
+    });
+  },
+
+  listMaterials(): Promise<MaterialListResponse> {
+    return request<MaterialListResponse>("/materials");
   },
 };

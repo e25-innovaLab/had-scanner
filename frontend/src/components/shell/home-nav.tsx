@@ -22,7 +22,7 @@ export function HomeNav() {
               'shrink-0 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors',
               active
                 ? 'bg-info font-medium text-info-foreground'
-                : 'text-muted-foreground hover:bg-white/60 hover:text-foreground'
+                : 'text-muted-foreground hover:bg-card hover:text-foreground'
             )}
           >
             {link.label}

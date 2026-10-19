@@ -4,7 +4,7 @@ export function ConfiguracionPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
           Configuración
         </h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">

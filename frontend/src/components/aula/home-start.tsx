@@ -38,9 +38,9 @@ export function HomeStart() {
   return (
     <div className="space-y-4">
       {resume && continueHref ? (
-        <Card className="ring-1 ring-primary/20">
-          <CardHeader>
-            <CardTitle>Continuar análisis</CardTitle>
+      <Card className="ring-1 ring-primary/25">
+        <CardHeader>
+          <CardTitle className="text-primary">Continuar análisis</CardTitle>
             <CardDescription>
               Hay un trabajo guardado en este navegador. Último paso:{' '}
               <span className="font-medium text-foreground">
@@ -71,7 +71,7 @@ export function HomeStart() {
 
       <Card>
         <CardHeader>
-          <CardTitle>+ Nuevo análisis</CardTitle>
+          <CardTitle className="text-primary">+ Nuevo análisis</CardTitle>
           <CardDescription>
             Subí un PDF, Word, PowerPoint o pegá texto directamente para
             empezar.

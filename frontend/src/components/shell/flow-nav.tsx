@@ -38,7 +38,7 @@ export function FlowNav() {
               'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors',
               state === 'current'
                 ? 'bg-info font-medium text-info-foreground'
-                : 'text-muted-foreground hover:bg-white/60 hover:text-foreground'
+                : 'text-muted-foreground hover:bg-card hover:text-foreground'
             )}
           >
             {state === 'done' ? (
