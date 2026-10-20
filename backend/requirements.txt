@@ -5,5 +5,5 @@ sqlalchemy==2.0.44
 psycopg[binary]==3.2.10
 alembic==1.16.5
 python-multipart==0.0.20
-pymupdf4llm
+pymupdf4llm==1.28.2
 google-genai
