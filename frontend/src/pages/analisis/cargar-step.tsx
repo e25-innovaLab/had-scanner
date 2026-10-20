@@ -31,14 +31,14 @@ export function CargarStep() {
     setError(null);
     try {
       // 1) Si es PDF, primero FastAPI
-      // if (mode === "archivo" && file) {
-      //   const isPdf = file.name.toLowerCase().endsWith(".pdf");
-      //   if (isPdf) {
-      //     await api.uploadMaterial(file);
-      //     // opcional: console.log(material) o guardar material.id
-      //   }
-      //   // si no es PDF, no llamamos materials (el back solo acepta PDF)
-      // }
+      if (mode === "archivo" && file) {
+        const isPdf = file.name.toLowerCase().endsWith(".pdf");
+        if (isPdf) {
+          await api.uploadMaterial(file);
+          // opcional: console.log(material) o guardar material.id
+        }
+        // si no es PDF, no llamamos materials (el back solo acepta PDF)
+      }
 
       // 2) Seguir con el mock de análisis (flujo VERA)
       const analysis = await api.createAnalysis(
