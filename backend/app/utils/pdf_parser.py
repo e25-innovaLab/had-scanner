@@ -12,7 +12,7 @@ def _extract_text(box: dict[str, Any]) -> str:
     """Extract text while preserving spaces between spans."""
     lines = []
 
-    for textline in box.get("textlines", []):
+    for textline in box.get("textlines") or []:
         spans = textline.get("spans", [])
         line = "".join(span.get("text", "") for span in spans).strip()
 
@@ -25,7 +25,7 @@ def _extract_text(box: dict[str, Any]) -> str:
 def _font_size(box: dict[str, Any]) -> float | None:
     sizes = [
         float(span["size"])
-        for line in box.get("textlines", [])
+        for line in (box.get("textlines") or [])
         for span in line.get("spans", [])
         if isinstance(span.get("size"), (int, float))
         and span["size"] > 0
@@ -41,7 +41,7 @@ def _font_size(box: dict[str, Any]) -> float | None:
 def _line_height(box: dict[str, Any]) -> float:
     heights = []
 
-    for line in box.get("textlines", []):
+    for line in (box.get("textlines") or []):
         bbox = line.get("bbox")
 
         if bbox and len(bbox) == 4:
@@ -90,7 +90,6 @@ def _make_element(
     element["_line_height"] = _line_height(box)
 
     return element
-
 
 def _can_merge(
     previous: dict[str, Any],
@@ -298,7 +297,7 @@ def _get_font_info(box: dict[str, Any]) -> dict[str, Any]:
     """Extract font size and style information from a PDF box."""
     spans = [
         span
-        for line in box.get("textlines", [])
+        for line in (box.get("textlines") or [])
         for span in line.get("spans", [])
         if span.get("text", "").strip()
     ]

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.routers.materials import router as materials_router
-from app.routers import analysis
+from app.routers import analysis, proposals
 
 
 app = FastAPI(
@@ -20,3 +20,4 @@ def health_check():
 
 app.include_router(materials_router)
 app.include_router(analysis.router)
+app.include_router(proposals.router)

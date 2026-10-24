@@ -84,3 +84,8 @@ class Barrier(Base):
         Text,
         nullable=False,
     )
+
+    proposals: Mapped[list["AdaptationProposal"]] = relationship(
+        back_populates="barrier",
+        cascade="all, delete-orphan",
+    )
