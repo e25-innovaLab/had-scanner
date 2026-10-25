@@ -90,7 +90,11 @@ export function readFlowResume(): FlowResume | null {
 
 export function writeFlowResume(analysisId: string, path: string) {
   if (typeof window === 'undefined') return;
-  const cleanPath = path.split('?')[0];
+  let cleanPath = path.split('?')[0];
+  // Detalle es parte del paso Adaptar (no aparece como paso propio en el nav).
+  if (cleanPath === '/analisis/detalle') {
+    cleanPath = '/analisis/adaptar';
+  }
   if (!FLOW_PATHS.has(cleanPath)) return;
   try {
     const payload: FlowResume = {

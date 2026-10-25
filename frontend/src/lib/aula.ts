@@ -9,7 +9,6 @@ export const FLOW_STEPS = [
   { href: '/analisis/analizar', label: 'Analizar' },
   { href: '/analisis/revisar', label: 'Revisar' },
   { href: '/analisis/adaptar', label: 'Adaptar' },
-  { href: '/analisis/detalle', label: 'Detalle y edición' },
   { href: '/analisis/resultado', label: 'Obtener resultado' },
 ] as const;
 

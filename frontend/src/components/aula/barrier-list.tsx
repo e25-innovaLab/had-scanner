@@ -2,45 +2,38 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { MissingAnalysis } from '@/components/aula/missing-analysis';
 import { Pill } from '@/components/aula/pill';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api/client';
-import type { BarrierGroupDto } from '@/lib/api/types';
+import type { BarrierGroupDto, BarriersResponse } from '@/lib/api/types';
 import { resolveAnalysisId } from '@/lib/api/url';
 import { cn } from '@/lib/utils';
 
-const severityTone = {
+const priorityTone = {
   alta: 'alta',
   media: 'media',
   baja: 'baja',
-  ninguna: 'ok',
 } as const;
 
-const severityLabel = {
-  alta: 'Alta',
-  media: 'Media',
-  baja: 'Baja',
-  ninguna: 'Sin barreras',
+const priorityLabel = {
+  alta: 'Prioridad alta',
+  media: 'Prioridad media',
+  baja: 'Prioridad baja',
 } as const;
+
+export type BarrierStats = BarriersResponse['stats'];
 
 export function BarrierList({
   onStats,
 }: {
-  onStats?: (stats: {
-    total: number;
-    highSeverity: number;
-    dimensionsAffected: number;
-    dimensionsTotal: number;
-  }) => void;
+  onStats?: (stats: BarrierStats) => void;
 } = {}) {
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
   const [groups, setGroups] = useState<BarrierGroupDto[]>([]);
-  const [openId, setOpenId] = useState<string>('comprension');
-  const [pages, setPages] = useState<Record<string, number>>({});
+  const [openId, setOpenId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => Boolean(analysisId));
   const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId);
@@ -59,6 +52,8 @@ export function BarrierList({
         if (cancelled) return;
         setGroups(data.groups);
         onStats?.(data.stats);
+        const firstWithItems = data.groups.find((g) => g.items.length > 0);
+        setOpenId(firstWithItems?.id ?? data.groups[0]?.id ?? '');
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -94,10 +89,10 @@ export function BarrierList({
   }
 
   return (
-    <Card className="gap-0 py-0">
+    <Card className="gap-0 overflow-hidden py-0">
       {groups.map((group) => {
         const open = openId === group.id;
-        const page = pages[group.id] ?? 0;
+        const hasBarriers = group.items.length > 0;
         return (
           <section
             key={group.id}
@@ -105,7 +100,7 @@ export function BarrierList({
           >
             <button
               type="button"
-              className="flex w-full items-center gap-3 px-4 py-4 text-left"
+              className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/40"
               aria-expanded={open}
               onClick={() => setOpenId(open ? '' : group.id)}
             >
@@ -119,30 +114,16 @@ export function BarrierList({
               <span className="min-w-0 flex-1 text-sm font-medium">
                 {group.name}
               </span>
-              <span className="flex flex-wrap items-center justify-end gap-2">
-                {group.items.length > 0 ? (
-                  <Pill tone="role">
-                    {group.items.length}{' '}
-                    {group.items.length === 1 ? 'barrera' : 'barreras'}
-                  </Pill>
-                ) : null}
-                <Pill tone={severityTone[group.severity]}>
-                  {severityLabel[group.severity]}
+              {hasBarriers ? (
+                <Pill tone="role">
+                  {group.items.length}{' '}
+                  {group.items.length === 1 ? 'barrera' : 'barreras'}
                 </Pill>
-                {group.severity === 'ninguna' ? (
-                  <Pill tone="muted">–</Pill>
-                ) : null}
-              </span>
+              ) : (
+                <Pill tone="ok">Sin barreras</Pill>
+              )}
             </button>
-            {open ? (
-              <BarrierBody
-                group={group}
-                page={Math.min(page, Math.max(0, group.items.length - 1))}
-                onPageChange={(next) =>
-                  setPages((prev) => ({ ...prev, [group.id]: next }))
-                }
-              />
-            ) : null}
+            {open ? <BarrierBody group={group} /> : null}
           </section>
         );
       })}
@@ -150,15 +131,7 @@ export function BarrierList({
   );
 }
 
-function BarrierBody({
-  group,
-  page,
-  onPageChange,
-}: {
-  group: BarrierGroupDto;
-  page: number;
-  onPageChange: (page: number) => void;
-}) {
+function BarrierBody({ group }: { group: BarrierGroupDto }) {
   if (group.items.length === 0) {
     return (
       <div className="px-4 pb-4 text-sm text-muted-foreground">
@@ -167,57 +140,41 @@ function BarrierBody({
     );
   }
 
-  const item = group.items[page];
-  const total = group.items.length;
-
   return (
     <div className="space-y-3 px-4 pb-4">
-      {total > 1 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            Barrera {page + 1} de {total}
-          </p>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={page <= 0}
-              aria-label="Barrera anterior"
-              onClick={() => onPageChange(page - 1)}
-            >
-              <ChevronLeft aria-hidden="true" />
-              Anterior
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={page >= total - 1}
-              aria-label="Barrera siguiente"
-              onClick={() => onPageChange(page + 1)}
-            >
-              Siguiente
-              <ChevronRight aria-hidden="true" />
-            </Button>
+      {group.items.map((item) => (
+        <article
+          key={item.id}
+          className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-none"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3 className="min-w-0 flex-1 text-sm font-semibold text-balance">
+              {item.title}
+            </h3>
+            <Pill tone={priorityTone[item.severity]}>
+              {priorityLabel[item.severity]}
+            </Pill>
           </div>
-        </div>
-      ) : null}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">{item.title}</h3>
-        <p className="text-sm leading-6">
-          <span className="text-muted-foreground">¿Por qué es barrera? </span>
-          {item.why}
-        </p>
-        <p className="text-sm leading-6">
-          <span className="text-muted-foreground">Dónde está: </span>
-          {item.where}
-        </p>
-        <p className="text-sm leading-6">
-          <span className="text-muted-foreground">Recomendación: </span>
-          {item.recommendation}
-        </p>
-      </div>
+          <p className="text-sm leading-6">
+            <span className="font-medium text-muted-foreground">
+              ¿Por qué es barrera?{' '}
+            </span>
+            {item.why}
+          </p>
+          <p className="text-sm leading-6">
+            <span className="font-medium text-muted-foreground">
+              Dónde está:{' '}
+            </span>
+            {item.where}
+          </p>
+          <p className="text-sm leading-6">
+            <span className="font-medium text-muted-foreground">
+              Recomendación:{' '}
+            </span>
+            {item.recommendation}
+          </p>
+        </article>
+      ))}
     </div>
   );
 }

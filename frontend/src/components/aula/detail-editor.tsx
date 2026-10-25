@@ -87,6 +87,20 @@ export function DetailEditor({
           startsWithoutProposal,
           fromGenerate,
         });
+        const current = list[idx];
+        if (current) {
+          const nextUrl = withAnalysisId(
+            `/analisis/detalle?origen=${startsWithoutProposal ? 'manual' : 'ia'}${fromGenerate ? '&desde=generar' : ''}&barrera=${encodeURIComponent(current.id)}&dimension=${encodeURIComponent(current.dimensionId)}&i=${idx + 1}&n=${list.length}`,
+            analysisId
+          );
+          if (
+            searchParams.get('i') !== String(idx + 1) ||
+            searchParams.get('n') !== String(list.length) ||
+            searchParams.get('dimension') !== current.dimensionId
+          ) {
+            navigate(nextUrl, { replace: true });
+          }
+        }
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -159,6 +173,11 @@ export function DetailEditor({
       ? `la barrera ${nextPendingIndex + 1} de ${barriers.length}`
       : 'el resultado';
 
+  const nextBarrierLabel =
+    nextPendingIndex >= 0
+      ? `barrera ${nextPendingIndex + 1} de ${barriers.length}`
+      : 'el resultado';
+
   const meta = useMemo(
     () =>
       text.length === 0
@@ -180,6 +199,22 @@ export function DetailEditor({
 
   function goToResultado() {
     navigate(withAnalysisId('/analisis/resultado', analysisId));
+  }
+
+  function detalleSearch(nextIndex: number, list: ApiBarrier[] = barriers) {
+    const next = list[nextIndex];
+    if (!next) return '';
+    return withAnalysisId(
+      `/analisis/detalle?origen=ia&barrera=${encodeURIComponent(next.id)}&dimension=${encodeURIComponent(next.dimensionId)}&i=${nextIndex + 1}&n=${list.length}`,
+      analysisId
+    );
+  }
+
+  function resumenHref(dimensionId: string) {
+    return withAnalysisId(
+      `/analisis/adaptar?dimension=${encodeURIComponent(dimensionId)}`,
+      analysisId
+    );
   }
 
   async function persistDraft(value: string) {
@@ -216,6 +251,13 @@ export function DetailEditor({
           setAiBaseline(barrier.currentProposal ?? '');
           setHasProposal(true);
           setLeft(barrier.remainingAttempts);
+          setBarriers((current) =>
+            current.map((item) =>
+              item.id === suggestion.id
+                ? { ...item, remainingAttempts: barrier.remainingAttempts }
+                : item
+            )
+          );
           setSaved(false);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'No se pudo generar');
@@ -236,6 +278,13 @@ export function DetailEditor({
       setAiBaseline(barrier.currentProposal ?? '');
       setHasProposal(true);
       setLeft(barrier.remainingAttempts);
+      setBarriers((current) =>
+        current.map((item) =>
+          item.id === suggestion.id
+            ? { ...item, remainingAttempts: barrier.remainingAttempts }
+            : item
+        )
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'No se pudo generar variante'
@@ -251,6 +300,7 @@ export function DetailEditor({
       startsWithoutProposal: false,
       fromGenerate: false,
     });
+    navigate(detalleSearch(nextIndex, list), { replace: true });
   }
 
   function advance(fromStatuses?: ApiBarrier[]) {
@@ -284,6 +334,7 @@ export function DetailEditor({
           : item
       );
       setBarriers(nextList);
+      advance(nextList);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo aceptar');
     }
@@ -334,6 +385,17 @@ export function DetailEditor({
     );
   }
 
+  const attemptsLabel =
+    left === 0
+      ? `0 de ${AI_ATTEMPTS_PER_BARRIER} intentos`
+      : `quedan ${left} de ${AI_ATTEMPTS_PER_BARRIER} intentos`;
+
+  const footerHint = saved
+    ? `Propuesta guardada. Usá Siguiente o continuá a ${nextLabel}.`
+    : left === 0
+      ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
+      : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
+
   return (
     <div
       className={cn(
@@ -368,12 +430,13 @@ export function DetailEditor({
           </div>
         </Card>
       ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          to={withAnalysisId('/analisis/adaptar', analysisId)}
+          to={resumenHref(suggestion.dimensionId)}
           className={cn(buttonVariants({ variant: 'outline' }), 'h-9 px-3')}
         >
-          ← Volver a Adaptar
+          ← Volver al resumen
         </Link>
         <BarrierPager
           index={index}
@@ -385,11 +448,11 @@ export function DetailEditor({
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Pill tone="step">Paso 05</Pill>
+          <Pill tone="step">Paso 04</Pill>
           <Pill tone="role">Docente + IA</Pill>
           <Pill tone="outline">{suggestion.dimension}</Pill>
           <Pill tone={suggestion.severity}>
-            {severityName(suggestion.severity)}
+            {priorityName(suggestion.severity)}
           </Pill>
         </div>
         <div className="space-y-1.5">
@@ -404,21 +467,18 @@ export function DetailEditor({
                 : 'El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano.'}
           </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          ⌞ Barrera {index + 1} de {barriers.length}
-        </p>
       </header>
 
       <Observation barrier={suggestion} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="bg-white">
-          <div className="flex items-center justify-between px-(--card-spacing)">
+          <div className="flex items-center justify-between gap-2 px-(--card-spacing)">
             <p className="text-sm font-medium">Original</p>
             <Pill tone="muted">Solo lectura</Pill>
           </div>
-          <p className="px-(--card-spacing) text-sm leading-7 text-foreground/90">
-            &quot;{suggestion.original}&quot;
+          <p className="px-(--card-spacing) text-sm leading-7 text-foreground/90 italic">
+            {suggestion.original}
           </p>
           <p className="px-(--card-spacing) text-xs text-muted-foreground">
             {originalWords} palabras · {originalSentences}{' '}
@@ -427,14 +487,15 @@ export function DetailEditor({
           </p>
         </Card>
 
-        <Card className="bg-tertiary-container/60 ring-info/40">
+        <Card className="bg-info/40 ring-1 ring-info/50">
           <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing)">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {hasProposal ? <Pill tone="step">IA</Pill> : null}
               <span className="text-sm font-medium">
-                {hasProposal ? 'Propuesta' : 'Editado por vos'}
+                {hasProposal ? 'Propuesta' : 'Tu adaptación'}
               </span>
               {edited ? <Pill tone="role">Editado por vos</Pill> : null}
+              {saved ? <Pill tone="ok">Guardada</Pill> : null}
             </div>
             {hasProposal && !saved ? (
               <Button
@@ -447,7 +508,6 @@ export function DetailEditor({
                 Restaurar propuesta IA
               </Button>
             ) : null}
-            {saved ? <Pill tone="ok">Guardada</Pill> : null}
           </div>
           <div className="px-(--card-spacing)">
             <label className="sr-only" htmlFor="propuesta">
@@ -475,7 +535,11 @@ export function DetailEditor({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing) text-xs text-muted-foreground">
             <span>{meta}</span>
-            {edited ? <span>Cambios sin guardar</span> : null}
+            {edited && !saved ? (
+              <span className="font-medium text-info-foreground">
+                Cambios sin guardar
+              </span>
+            ) : null}
             {saved ? <span>Propuesta aceptada</span> : null}
           </div>
           {!saved ? (
@@ -491,8 +555,7 @@ export function DetailEditor({
                     remaining={left}
                     total={AI_ATTEMPTS_PER_BARRIER}
                   />
-                  {left === 0 ? '0' : `quedan ${left}`} de{' '}
-                  {AI_ATTEMPTS_PER_BARRIER} intentos
+                  {attemptsLabel}
                 </span>
               </div>
 
@@ -509,7 +572,8 @@ export function DetailEditor({
                   </Button>
                   <p className="text-xs leading-5 text-muted-foreground">
                     Generar la primera propuesta usa 1 de los{' '}
-                    {AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera.
+                    {AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera. Editar a
+                    mano no consume intentos.
                   </p>
                 </>
               ) : (
@@ -527,20 +591,20 @@ export function DetailEditor({
                         {action.label}
                       </Button>
                     ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-8 rounded-full bg-white px-3"
+                      disabled={left === 0}
+                      onClick={() => void consume('otra')}
+                    >
+                      <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                      Otra versión
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 rounded-full bg-white px-3"
-                    disabled={left === 0}
-                    onClick={() => void consume('otra')}
-                  >
-                    <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                    Otra versión
-                  </Button>
                   {left === 0 ? (
-                    <Card className="bg-warning-soft text-warning-foreground ring-warning-foreground/15">
-                      <div className="flex gap-3 px-(--card-spacing)">
+                    <Card className="bg-warning-soft text-warning-foreground ring-1 ring-warning-foreground/20">
+                      <div className="flex gap-3 px-(--card-spacing) py-3">
                         <Info
                           className="mt-0.5 size-4 shrink-0"
                           aria-hidden="true"
@@ -548,11 +612,11 @@ export function DetailEditor({
                         <div className="space-y-1 text-sm leading-6">
                           <p className="font-semibold">
                             Usaste los {AI_ATTEMPTS_PER_BARRIER} intentos de IA
-                            de esta barrera
+                            de esta barrera.
                           </p>
                           <p>
                             Todavía podés editar el texto a mano y guardar, o
-                            descartar.
+                            descartar la barrera.
                           </p>
                         </div>
                       </div>
@@ -560,7 +624,8 @@ export function DetailEditor({
                   ) : (
                     <p className="text-xs leading-5 text-muted-foreground">
                       Cada nueva versión usa 1 intento. Son{' '}
-                      {AI_ATTEMPTS_PER_BARRIER} por barrera.
+                      {AI_ATTEMPTS_PER_BARRIER} por barrera. Editar a mano o
+                      restaurar no consume intentos.
                     </p>
                   )}
                 </>
@@ -594,73 +659,48 @@ export function DetailEditor({
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 lg:flex-row lg:items-center lg:justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-10 px-4"
-          onClick={() =>
-            navigate(withAnalysisId('/analisis/adaptar', analysisId))
-          }
-        >
-          Cancelar
-        </Button>
-        <p className="text-sm text-muted-foreground lg:flex-1 lg:text-center">
-          {saved
-            ? `Propuesta guardada. Usá Siguiente o tocá Propuesta guardada para pasar a ${nextLabel}.`
-            : left === 0
-              ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextLabel}.`
-              : `Al guardar, la propuesta queda aceptada. Podés seguir a ${nextLabel} después.`}
+        {saved ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 px-4"
+            onClick={() => void resumeEditing()}
+          >
+            Volver a editar
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 px-4"
+            onClick={() => void discardSuggestion()}
+          >
+            Descartar barrera
+          </Button>
+        )}
+        <p className="text-sm text-muted-foreground lg:flex-1 lg:px-4 lg:text-center">
+          {footerHint}
         </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {saved ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 px-4"
-              onClick={() => void resumeEditing()}
-            >
-              Volver a editar
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 px-4"
-              onClick={() => void discardSuggestion()}
-            >
-              Descartar sugerencia
-            </Button>
-          )}
-          {saved ? (
-            <Button
-              type="button"
-              className="h-10 px-4 bg-success-soft text-success-foreground hover:bg-success-soft/80"
-              onClick={() => advance()}
-            >
-              {allResolved || nextPendingIndex < 0
-                ? 'Obtener resultado'
-                : 'Propuesta guardada'}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              className="h-10 px-4"
-              disabled={!hasProposal && text.trim().length === 0}
-              onClick={() => void saveAndAccept()}
-            >
-              Guardar y aceptar
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex justify-end border-t border-border pt-4">
-        <BarrierPager
-          index={index}
-          total={barriers.length}
-          onPrevious={() => goTo(index - 1)}
-          onNext={() => goTo(index + 1)}
-        />
+        {saved ? (
+          <Button
+            type="button"
+            className="h-10 px-4 bg-success-soft text-success-foreground hover:bg-success-soft/80"
+            onClick={() => advance()}
+          >
+            {allResolved || nextPendingIndex < 0
+              ? 'Obtener resultado'
+              : 'Continuar'}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            className="h-10 px-4"
+            disabled={!hasProposal && text.trim().length === 0}
+            onClick={() => void saveAndAccept()}
+          >
+            Guardar y aceptar
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -689,7 +729,7 @@ function BarrierPager({
         disabled={index === 0}
         onClick={onPrevious}
       >
-        ‹ Anterior
+        Anterior
       </Button>
       <Button
         type="button"
@@ -698,7 +738,7 @@ function BarrierPager({
         disabled={index === total - 1}
         onClick={onNext}
       >
-        Siguiente ›
+        Siguiente
       </Button>
     </div>
   );
@@ -706,7 +746,7 @@ function BarrierPager({
 
 function Observation({ barrier }: { barrier: ApiBarrier }) {
   return (
-    <Card className="bg-primary-container/50 ring-primary/15">
+    <Card className="bg-muted/70 ring-1 ring-border/60">
       <div className="flex flex-wrap items-start justify-between gap-3 px-(--card-spacing)">
         <div className="flex items-center gap-2">
           <Pill tone="step">IA</Pill>
@@ -757,8 +797,8 @@ function ObservationColumn({ title, body }: { title: string; body: string }) {
   );
 }
 
-function severityName(severity: Severity) {
-  if (severity === 'alta') return 'Severidad alta';
-  if (severity === 'media') return 'Severidad media';
-  return 'Severidad baja';
+function priorityName(severity: Severity) {
+  if (severity === 'alta') return 'Prioridad alta';
+  if (severity === 'media') return 'Prioridad media';
+  return 'Prioridad baja';
 }
