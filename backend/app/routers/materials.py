@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.schemas.material import MaterialResponse, MaterialListResponse, MaterialDetailResponse
+from app.schemas.material import MaterialResponse, MaterialListResponse
 from app.services.material_service import create_material, get_all_materials, get_material_by_id
 
 
@@ -44,7 +44,7 @@ def get_materials(
 
 @router.get(
     "/{material_id}",
-    response_model=MaterialDetailResponse,
+    response_model=MaterialResponse,
     status_code=200,
 )
 def get_material(
