@@ -8,7 +8,7 @@ export function RevisarPage() {
         step="03"
         actor="Docente"
         title="Revisar barreras"
-        description="Diagnóstico completo — barreras detectadas, severidad y dimensión afectada. Ninguna adaptación se genera todavía."
+        description="Diagnóstico completo: todas las barreras detectadas pasan a Adaptar. Todavía no se genera ninguna adaptación."
       />
       <RevisarStep />
     </div>

@@ -80,6 +80,7 @@ export type BarrierGroupDto = {
     where: string;
     recommendation: string;
     status: BarrierDecision;
+    severity: Exclude<Severity, 'ninguna'>;
   }[];
 };
 
@@ -90,6 +91,9 @@ export type BarriersResponse = {
     highSeverity: number;
     dimensionsAffected: number;
     dimensionsTotal: number;
+    byDimension: { id: string; name: string; count: number }[];
+    highByDimension: { id: string; name: string; count: number }[];
+    clearDimensionNames: string[];
   };
 };
 

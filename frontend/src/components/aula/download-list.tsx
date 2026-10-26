@@ -5,7 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { ExportFile } from '@/lib/api/types';
 
-export function DownloadList({ files }: { files: ExportFile[] }) {
+export function DownloadList({
+  files,
+  onDownloaded,
+}: {
+  files: ExportFile[];
+  onDownloaded?: (name: string) => void;
+}) {
   const [done, setDone] = useState<Record<string, boolean>>({});
 
   function download(name: string) {
@@ -20,6 +26,7 @@ export function DownloadList({ files }: { files: ExportFile[] }) {
     anchor.click();
     URL.revokeObjectURL(url);
     setDone((current) => ({ ...current, [name]: true }));
+    onDownloaded?.(name);
   }
 
   if (files.length === 0) {
@@ -31,7 +38,7 @@ export function DownloadList({ files }: { files: ExportFile[] }) {
   }
 
   return (
-    <Card className="gap-0 divide-y divide-border py-0">
+    <Card className="gap-0 divide-y divide-border overflow-hidden py-0">
       {files.map((file) => (
         <div
           key={file.name}

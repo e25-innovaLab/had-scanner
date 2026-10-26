@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Pencil, Sparkles } from 'lucide-react';
+import { Check, Pencil, Sparkles } from 'lucide-react';
 import { IntentMeter } from '@/components/aula/intent-meter';
 import { MissingAnalysis } from '@/components/aula/missing-analysis';
 import { Pill } from '@/components/aula/pill';
@@ -17,6 +17,7 @@ import {
   GENERATE_TIMEOUT_MS,
   RESUME_EDIT_TIMEOUT_MS,
 } from '@/lib/aula';
+import { cn } from '@/lib/utils';
 
 export type AdaptCounts = {
   accepted: number;
@@ -43,6 +44,18 @@ function toState(barrier: ApiBarrier): BarrierState {
   };
 }
 
+const priorityTone = {
+  alta: 'alta',
+  media: 'media',
+  baja: 'baja',
+} as const;
+
+const priorityLabel = {
+  alta: 'Prioridad alta',
+  media: 'Prioridad media',
+  baja: 'Prioridad baja',
+} as const;
+
 export function AdaptBoard({
   onCountsChange,
 }: {
@@ -52,10 +65,11 @@ export function AdaptBoard({
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const dimensionFromQuery = searchParams.get('dimension');
 
   const [barriers, setBarriers] = useState<ApiBarrier[]>([]);
   const [stateById, setStateById] = useState<Record<string, BarrierState>>({});
-  const [pages, setPages] = useState<Record<string, number>>({});
+  const [selectedDimensionId, setSelectedDimensionId] = useState<string>('');
   const [overlay, setOverlay] = useState<{
     entryId: string;
     kind: 'generate' | 'edit';
@@ -76,7 +90,18 @@ export function AdaptBoard({
     setStateById(
       Object.fromEntries(list.map((item) => [item.id, toState(item)]))
     );
-  }, [analysisId]);
+    // Si venís del detalle, respetá esa dimensión aunque ya esté completa.
+    setSelectedDimensionId((current) => {
+      if (
+        dimensionFromQuery &&
+        list.some((b) => b.dimensionId === dimensionFromQuery)
+      ) {
+        return dimensionFromQuery;
+      }
+      if (current && list.some((b) => b.dimensionId === current)) return current;
+      return list[0]?.dimensionId ?? '';
+    });
+  }, [analysisId, dimensionFromQuery]);
 
   useEffect(() => {
     if (!analysisId) return;
@@ -101,6 +126,13 @@ export function AdaptBoard({
     };
   }, [analysisId, load, pathname]);
 
+  useEffect(() => {
+    if (!dimensionFromQuery || barriers.length === 0) return;
+    if (barriers.some((b) => b.dimensionId === dimensionFromQuery)) {
+      setSelectedDimensionId(dimensionFromQuery);
+    }
+  }, [dimensionFromQuery, barriers]);
+
   const dimensions = useMemo(() => {
     const order: string[] = [];
     const map = new Map<
@@ -121,6 +153,11 @@ export function AdaptBoard({
     return order.map((id) => map.get(id)!);
   }, [barriers]);
 
+  const selectedGroup = useMemo(
+    () => dimensions.find((group) => group.id === selectedDimensionId) ?? null,
+    [dimensions, selectedDimensionId]
+  );
+
   const overlayEntry = barriers.find((entry) => entry.id === overlay?.entryId);
   const isBusy = Boolean(overlay);
 
@@ -138,18 +175,42 @@ export function AdaptBoard({
     return { accepted, discarded, pending, total: barriers.length };
   }, [barriers, stateById]);
 
+  const nextPendingIndex = useMemo(() => {
+    const idx = barriers.findIndex((barrier) => {
+      const decision = stateById[barrier.id]?.decision ?? barrier.status;
+      return decision === 'pending';
+    });
+    return idx;
+  }, [barriers, stateById]);
+
   useEffect(() => {
     onCountsChange?.(counts);
   }, [counts, onCountsChange]);
 
-  async function decide(id: string, decision: BarrierDecision) {
-    if (!analysisId) return;
-    if (decision === 'accepted') await api.accept(analysisId, id);
-    else if (decision === 'discarded') await api.discard(analysisId, id);
-    setStateById((current) => ({
-      ...current,
-      [id]: { ...current[id], decision },
-    }));
+  function remainingForGroup(items: ApiBarrier[]) {
+    if (items.length === 0) return AI_ATTEMPTS_PER_BARRIER;
+    const pending = items.find((item) => {
+      const decision = stateById[item.id]?.decision ?? item.status;
+      return decision === 'pending';
+    });
+    const focus = pending ?? items[0];
+    return (
+      stateById[focus.id]?.remaining ??
+      focus.remainingAttempts ??
+      AI_ATTEMPTS_PER_BARRIER
+    );
+  }
+
+  function detalleHref(
+    entry: ApiBarrier,
+    opts: { origen: string; desde: string; intentos: number }
+  ) {
+    const i = barriers.findIndex((item) => item.id === entry.id) + 1;
+    const n = barriers.length;
+    return withAnalysisId(
+      `/analisis/detalle?origen=${opts.origen}&desde=${opts.desde}&barrera=${encodeURIComponent(entry.id)}&dimension=${encodeURIComponent(entry.dimensionId)}&intentos=${opts.intentos}&i=${i}&n=${n}`,
+      analysisId
+    );
   }
 
   function resumeEdit(entry: ApiBarrier) {
@@ -159,10 +220,11 @@ export function AdaptBoard({
     window.setTimeout(() => {
       void api.reopen(analysisId, entry.id).finally(() => {
         navigate(
-          withAnalysisId(
-            `/analisis/detalle?origen=ia&desde=editar&barrera=${encodeURIComponent(entry.id)}&intentos=${left}`,
-            analysisId
-          )
+          detalleHref(entry, {
+            origen: 'ia',
+            desde: 'editar',
+            intentos: left,
+          })
         );
       });
     }, RESUME_EDIT_TIMEOUT_MS);
@@ -182,11 +244,21 @@ export function AdaptBoard({
       void (async () => {
         try {
           const { barrier } = await api.createProposal(analysisId, entry.id);
+          setStateById((current) => ({
+            ...current,
+            [entry.id]: {
+              ...current[entry.id],
+              mode: 'ready',
+              remaining: barrier.remainingAttempts,
+              proposal: barrier.draft ?? barrier.currentProposal ?? null,
+            },
+          }));
           navigate(
-            withAnalysisId(
-              `/analisis/detalle?origen=ia&desde=generar&barrera=${encodeURIComponent(entry.id)}&intentos=${barrier.remainingAttempts}`,
-              analysisId
-            )
+            detalleHref(entry, {
+              origen: 'ia',
+              desde: 'generar',
+              intentos: barrier.remainingAttempts,
+            })
           );
         } catch (err) {
           setOverlay(null);
@@ -200,6 +272,17 @@ export function AdaptBoard({
     }, GENERATE_TIMEOUT_MS);
   }
 
+  function openBarrier(entry: ApiBarrier) {
+    const state = stateById[entry.id] ?? toState(entry);
+    if (state.decision === 'accepted' || state.mode === 'ready') {
+      resumeEdit(entry);
+      return;
+    }
+    if (state.mode === 'empty') {
+      generate(entry);
+    }
+  }
+
   if (!analysisId) {
     return <MissingAnalysis step="adaptar barreras" />;
   }
@@ -209,6 +292,8 @@ export function AdaptBoard({
       <p className="text-sm text-muted-foreground">Cargando adaptaciones...</p>
     );
   }
+
+  const reviewed = counts.accepted + counts.discarded;
 
   return (
     <div className="relative space-y-4">
@@ -268,6 +353,14 @@ export function AdaptBoard({
         </div>
       ) : null}
 
+      {counts.total > 0 ? (
+        <p className="text-sm leading-6 text-muted-foreground">
+          {reviewed === 0
+            ? `Se detectaron ${counts.total} barreras. Revisalas una a una: pedí una propuesta a la IA, escribí la tuya o descartala.`
+            : `Llevás ${reviewed} de ${counts.total} barreras revisadas. Podés seguir donde lo dejaste o abrir cualquier barrera desde la lista.`}
+        </p>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ['Pendientes', counts.pending],
@@ -277,7 +370,9 @@ export function AdaptBoard({
         ].map(([label, value]) => (
           <Card key={String(label)} className="items-center text-center">
             <CardContent className="space-y-1">
-              <p className="text-3xl font-semibold tracking-tight">{value}</p>
+              <p className="text-3xl font-semibold tracking-tight text-primary">
+                {value}
+              </p>
               <p className="text-sm text-muted-foreground">{label}</p>
             </CardContent>
           </Card>
@@ -310,29 +405,62 @@ export function AdaptBoard({
 
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Intentos de IA por barrera</CardTitle>
+          <CardTitle>Intentos de IA por dimensión</CardTitle>
           <p className="text-xs text-muted-foreground sm:text-right">
-            Cada barrera tiene {AI_ATTEMPTS_PER_BARRIER} intentos propios · se
-            muestra la barrera activa de cada dimensión
+            Cada barrera tiene {AI_ATTEMPTS_PER_BARRIER} intentos propios ·
+            elegí una dimensión para ver su lista
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-3">
           {dimensions.map((group) => {
-            const page = Math.min(
-              pages[group.id] ?? 0,
-              Math.max(0, group.items.length - 1)
-            );
-            const entry = group.items[page];
-            const value =
-              stateById[entry?.id]?.remaining ??
-              entry?.remainingAttempts ??
-              AI_ATTEMPTS_PER_BARRIER;
+            const active = group.id === selectedDimensionId;
+            const value = remainingForGroup(group.items);
+            const resolved = group.items.every((item) => {
+              const decision = stateById[item.id]?.decision ?? item.status;
+              return decision === 'accepted' || decision === 'discarded';
+            });
             return (
-              <div
+              <button
                 key={group.id}
-                className="min-w-0 space-y-2 rounded-lg bg-secondary/60 px-3 py-3 ring-1 ring-border"
+                type="button"
+                aria-pressed={active}
+                aria-label={
+                  resolved
+                    ? `${group.name}, dimensión revisada`
+                    : group.name
+                }
+                onClick={() => {
+                  setSelectedDimensionId(group.id);
+                  const params = new URLSearchParams(searchParams);
+                  params.set('dimension', group.id);
+                  navigate(
+                    { pathname, search: params.toString() },
+                    { replace: true }
+                  );
+                }}
+                className={cn(
+                  'relative min-w-0 space-y-2 rounded-xl px-3 py-3 text-left ring-1 transition-[transform,box-shadow,background-color,ring-color]',
+                  active
+                    ? 'scale-[1.04] bg-info py-4 text-info-foreground ring-2 ring-primary/40 shadow-sm'
+                    : resolved
+                      ? 'bg-success-soft/50 ring-success-foreground/25 hover:bg-success-soft/70'
+                      : 'bg-secondary/60 ring-border hover:bg-secondary hover:ring-primary/20'
+                )}
               >
-                <p className="text-xs leading-4 font-medium wrap-break-word">
+                {resolved ? (
+                  <span
+                    className={cn(
+                      'absolute top-2 right-2 flex size-5 items-center justify-center rounded-full',
+                      active
+                        ? 'bg-card text-success-foreground'
+                        : 'bg-success-soft text-success-foreground'
+                    )}
+                    title="Dimensión revisada"
+                  >
+                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                  </span>
+                ) : null}
+                <p className="pr-6 text-xs leading-4 font-medium wrap-break-word">
                   {group.name}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
@@ -340,223 +468,149 @@ export function AdaptBoard({
                     remaining={value}
                     total={AI_ATTEMPTS_PER_BARRIER}
                   />
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className={cn(
+                      'text-xs',
+                      active
+                        ? 'text-info-foreground/80'
+                        : 'text-muted-foreground'
+                    )}
+                  >
                     {value} de {AI_ATTEMPTS_PER_BARRIER}
                   </span>
                 </div>
-              </div>
+                <p
+                  className={cn(
+                    'text-[11px]',
+                    active
+                      ? 'text-info-foreground/70'
+                      : resolved
+                        ? 'text-success-foreground'
+                        : 'text-muted-foreground'
+                  )}
+                >
+                  {resolved
+                    ? 'Revisada'
+                    : `${group.items.length} ${group.items.length === 1 ? 'barrera' : 'barreras'}`}
+                </p>
+              </button>
             );
           })}
         </CardContent>
       </Card>
 
-      {dimensions.map((group) => {
-        const page = Math.min(
-          pages[group.id] ?? 0,
-          Math.max(0, group.items.length - 1)
-        );
-        const entry = group.items[page];
-        if (!entry) return null;
+      {selectedGroup ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-primary">
+              {selectedGroup.name}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {selectedGroup.items.length}{' '}
+              {selectedGroup.items.length === 1 ? 'barrera' : 'barreras'} en esta
+              dimensión
+            </p>
+          </div>
 
-        const state = stateById[entry.id] ?? toState(entry);
-        const left = state.remaining;
-        const total = group.items.length;
-        const showPager = total > 1;
+          {selectedGroup.items.map((entry) => {
+            const globalIndex = barriers.findIndex((b) => b.id === entry.id);
+            const state = stateById[entry.id] ?? toState(entry);
+            const left = state.remaining;
+            const isNext = globalIndex === nextPendingIndex;
+            const decision = state.decision;
+            const statusLabel =
+              decision === 'accepted'
+                ? 'Aceptada'
+                : decision === 'discarded'
+                  ? 'Descartada'
+                  : isNext
+                    ? 'Próxima'
+                    : 'Pendiente';
+            const actionLabel =
+              decision === 'accepted' || state.mode === 'ready'
+                ? 'Ver o cambiar'
+                : 'Revisar';
 
-        return (
-          <Card key={group.id}>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <Pill tone="role">{group.name}</Pill>
-                <span className="text-xs text-muted-foreground">
-                  {total} {total === 1 ? 'barrera' : 'barreras'}
+            return (
+              <Card
+                key={entry.id}
+                className={cn(
+                  'flex-row flex-wrap items-center gap-3 px-(--card-spacing) py-3 sm:flex-nowrap',
+                  isNext && 'ring-2 ring-primary/35'
+                )}
+              >
+                <span
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-muted-foreground"
+                  aria-hidden="true"
+                >
+                  {globalIndex + 1}
                 </span>
-              </div>
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                <IntentMeter remaining={left} total={AI_ATTEMPTS_PER_BARRIER} />
-                Quedan {left} de {AI_ATTEMPTS_PER_BARRIER} intentos de IA
-              </span>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {showPager ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-                  <p
-                    className="text-xs text-muted-foreground"
-                    aria-live="polite"
-                  >
-                    Barrera {page + 1} de {total}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Pill tone="role">{entry.dimension}</Pill>
+                    <Pill tone={priorityTone[entry.severity]}>
+                      {priorityLabel[entry.severity]}
+                    </Pill>
+                  </div>
+                  <p className="text-sm font-semibold text-balance">
+                    {entry.title}
                   </p>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={page <= 0}
-                      aria-label="Barrera anterior"
-                      onClick={() =>
-                        setPages((prev) => ({ ...prev, [group.id]: page - 1 }))
-                      }
-                    >
-                      <ChevronLeft aria-hidden="true" />
-                      Anterior
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={page >= total - 1}
-                      aria-label="Barrera siguiente"
-                      onClick={() =>
-                        setPages((prev) => ({ ...prev, [group.id]: page + 1 }))
-                      }
-                    >
-                      Siguiente
-                      <ChevronRight aria-hidden="true" />
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="space-y-2">
-                <h2 className="text-base font-semibold">{entry.title}</h2>
-                <p className="text-sm leading-6">
-                  <span className="text-muted-foreground">
-                    ¿Por qué es barrera?{' '}
-                  </span>
-                  {entry.why}
-                </p>
-                <p className="text-sm leading-6">
-                  <span className="text-muted-foreground">Dónde está: </span>
-                  {entry.where}
-                </p>
-                <p className="text-sm leading-6">
-                  <span className="text-muted-foreground">Recomendación: </span>
-                  {entry.recommendation}
-                </p>
-              </div>
-
-              {state.mode === 'ready' && state.proposal ? (
-                <p className="text-sm leading-6">
-                  <span className="font-medium">Propuesta IA: </span>
-                  {state.proposal}
-                </p>
-              ) : null}
-              {state.mode === 'empty' ? (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    Propuesta IA:{' '}
-                  </span>
-                  todavía no generada. Generarla usa 1 de los{' '}
-                  {AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera.
-                </p>
-              ) : null}
-              {state.mode === 'generating' ? (
-                <div className="space-y-2">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full w-2/3 animate-pulse rounded-full bg-primary/50" />
-                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Generando propuesta con IA... Si falla, el intento no se
-                    descuenta.
+                    Dónde: {entry.where}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Intentos IA: {left} de {AI_ATTEMPTS_PER_BARRIER}
                   </p>
                 </div>
-              ) : null}
+                <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end">
+                  <span
+                    className={cn(
+                      'text-xs font-medium',
+                      decision === 'accepted' && 'text-success-foreground',
+                      decision === 'discarded' && 'text-muted-foreground',
+                      decision === 'pending' &&
+                        isNext &&
+                        'text-primary',
+                      decision === 'pending' &&
+                        !isNext &&
+                        'text-muted-foreground'
+                    )}
+                  >
+                    {decision === 'accepted'
+                      ? '✓ '
+                      : decision === 'discarded'
+                        ? '– '
+                        : isNext
+                          ? '→ '
+                          : '○ '}
+                    {statusLabel}
+                  </span>
+                  <Button
+                    type="button"
+                    variant={isNext ? 'default' : 'outline'}
+                    className="h-9 px-3"
+                    disabled={isBusy || state.mode === 'generating'}
+                    onClick={() => openBarrier(entry)}
+                  >
+                    {state.mode === 'generating' ? 'Generando…' : actionLabel}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
 
-              {state.decision === 'accepted' ? (
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <p className="text-sm font-medium text-success-foreground">
-                    Aceptada
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 px-4"
-                    onClick={() => resumeEdit(entry)}
-                  >
-                    Volver a editar
-                  </Button>
-                </div>
-              ) : state.decision === 'discarded' ? (
-                <p className="text-sm font-medium text-muted-foreground">
-                  Descartada
-                </p>
-              ) : state.mode === 'generating' ? (
-                <Button type="button" disabled className="h-10 px-4">
-                  Generando...
-                </Button>
-              ) : state.mode === 'empty' ? (
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button
-                    type="button"
-                    className="h-10 px-4"
-                    disabled={isBusy || left === 0}
-                    onClick={() => generate(entry)}
-                  >
-                    <Sparkles data-icon="inline-start" aria-hidden="true" />
-                    Generar propuesta con IA
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-10 px-4"
-                    nativeButton={false}
-                    render={
-                      <Link
-                        to={withAnalysisId(
-                          `/analisis/detalle?origen=manual&barrera=${encodeURIComponent(entry.id)}`,
-                          analysisId
-                        )}
-                      />
-                    }
-                  >
-                    Adaptar a mano
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 px-4"
-                    onClick={() => void decide(entry.id, 'discarded')}
-                  >
-                    Descartar
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button
-                    type="button"
-                    className="h-10 px-4"
-                    onClick={() => void decide(entry.id, 'accepted')}
-                  >
-                    Aceptar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-10 px-4"
-                    nativeButton={false}
-                    render={
-                      <Link
-                        to={withAnalysisId(
-                          `/analisis/detalle?origen=ia&barrera=${encodeURIComponent(entry.id)}&intentos=${left}`,
-                          analysisId
-                        )}
-                      />
-                    }
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 px-4"
-                    onClick={() => void decide(entry.id, 'discarded')}
-                  >
-                    Descartar
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Revisar</span> genera
+            una propuesta con IA (1 intento) y abre el detalle.{' '}
+            <span className="font-medium text-foreground">Ver o cambiar</span>{' '}
+            retoma una propuesta ya aceptada o generada.
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No hay dimensiones con barreras para mostrar.
+        </p>
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ export function AdaptarPage() {
         step="04"
         actor="Docente + IA"
         title="Adaptar con IA"
-        description="Elegí en qué barreras usar la IA: cada propuesta se genera cuando la pedís y usa 1 de los 5 intentos de esa barrera. Vos aceptás, editás o descartás — nunca se aplica sola."
+        description="Se detectaron barreras. Revisalas una a una: pedí una propuesta a la IA, escribí tu versión o descartala. Cada barrera tiene sus propios intentos de IA."
       />
       <AdaptarStep />
     </div>

@@ -174,7 +174,8 @@ export const api = {
     exportStatus: string;
     exports: ExportFile[];
     appliedChanges: string[];
-    summary: { accepted: number; discarded: number };
+    discardedChanges: string[];
+    summary: { accepted: number; discarded: number; total: number };
   }> {
     return request(`/api/analyses/${encodeURIComponent(analysisId)}/exports`);
   },

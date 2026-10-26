@@ -14,7 +14,7 @@ import type {
   ExportFile,
   Proposal,
 } from '@/lib/api/types';
-import { BARRIERS, RESULT_FILES } from '@/lib/aula';
+import { BARRIERS } from '@/lib/aula';
 
 const ANALYZE_STEP_MS = 700;
 
@@ -116,11 +116,13 @@ export async function getAnalysis(id: string): Promise<Analysis | Response> {
 }
 
 function buildGroups(barriers: ApiBarrier[]): BarriersResponse {
-  const byDimension = new Map(barriers.map((b) => [b.id, b]));
+  const byId = new Map(barriers.map((b) => [b.id, b]));
   const groups = BARRIERS.map((template) => {
     const items = template.items.map((item, index) => {
       const id = `${template.id}-${index}`;
-      const barrier = byDimension.get(id);
+      const barrier = byId.get(id);
+      const fallbackSeverity =
+        template.severity === 'ninguna' ? ('baja' as const) : template.severity;
       return {
         id,
         title: barrier?.title ?? item.title,
@@ -128,6 +130,7 @@ function buildGroups(barriers: ApiBarrier[]): BarriersResponse {
         where: barrier?.where ?? item.where,
         recommendation: barrier?.recommendation ?? item.recommendation,
         status: barrier?.status ?? ('pending' as const),
+        severity: barrier?.severity ?? fallbackSeverity,
       };
     });
     return {
@@ -142,6 +145,19 @@ function buildGroups(barriers: ApiBarrier[]): BarriersResponse {
   const listed = barriers;
   const highSeverity = listed.filter((b) => b.severity === 'alta').length;
   const dimensionsAffected = new Set(listed.map((b) => b.dimensionId)).size;
+  const byDimension = groups
+    .filter((g) => g.count > 0)
+    .map((g) => ({ id: g.id, name: g.name, count: g.count }));
+  const highByDimension = groups
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      count: g.items.filter((item) => item.severity === 'alta').length,
+    }))
+    .filter((g) => g.count > 0);
+  const clearDimensionNames = groups
+    .filter((g) => g.count === 0)
+    .map((g) => g.name);
 
   return {
     groups,
@@ -150,6 +166,9 @@ function buildGroups(barriers: ApiBarrier[]): BarriersResponse {
       highSeverity,
       dimensionsAffected,
       dimensionsTotal: BARRIERS.length,
+      byDimension,
+      highByDimension,
+      clearDimensionNames,
     },
   };
 }
@@ -293,24 +312,20 @@ export async function startExport(
     analysis.exports = [
       {
         name: `${baseName}_adaptado.pdf`,
-        detail: `Material con ${accepted.length} adaptaciones aceptadas · simulado`,
+        detail:
+          accepted.length > 0
+            ? `Material con todas las adaptaciones aceptadas · 2.1 MB`
+            : 'Material sin adaptaciones aplicadas · 2.1 MB',
       },
       {
         name: 'Informe_barreras.pdf',
-        detail: 'Diagnóstico completo y registro de cambios · simulado',
+        detail: 'Diagnóstico completo y registro de cambios · 380 KB',
       },
       {
         name: `${baseName}_adaptado.docx`,
-        detail: 'Versión editable del material adaptado · simulado',
+        detail: 'Versión editable del material adaptado · 1.1 MB',
       },
     ];
-    // fallback to RESULT_FILES naming if empty somehow
-    if (analysis.exports.length === 0) {
-      analysis.exports = RESULT_FILES.map((f) => ({
-        name: f.name,
-        detail: f.detail,
-      }));
-    }
 
     return {
       exportStatus: analysis.exportStatus,
@@ -324,7 +339,8 @@ export async function getExports(analysisId: string): Promise<
       exportStatus: Analysis['exportStatus'];
       exports: ExportFile[];
       appliedChanges: string[];
-      summary: { accepted: number; discarded: number };
+      discardedChanges: string[];
+      summary: { accepted: number; discarded: number; total: number };
     }
   | Response
 > {
@@ -332,20 +348,28 @@ export async function getExports(analysisId: string): Promise<
   const analysis = db.analyses.find((item) => item.id === analysisId);
   if (!analysis) return notFound('Análisis no encontrado');
 
-  const accepted = db.barriers.filter(
-    (b) => b.analysisId === analysisId && b.status === 'accepted'
-  );
-  const discarded = db.barriers.filter(
-    (b) => b.analysisId === analysisId && b.status === 'discarded'
-  );
+  const related = db.barriers.filter((b) => b.analysisId === analysisId);
+  const accepted = related.filter((b) => b.status === 'accepted');
+  const discarded = related.filter((b) => b.status === 'discarded');
 
   return {
     exportStatus: analysis.exportStatus,
     exports: analysis.exports,
-    appliedChanges: accepted.map((b) => `${b.dimension} — ${b.title}`),
+    appliedChanges: accepted.map((b) => {
+      const edited =
+        Boolean(b.draft?.trim()) &&
+        Boolean(b.currentProposal?.trim()) &&
+        b.draft!.trim() !== b.currentProposal!.trim();
+      const label = `${b.dimension} — ${b.title}`;
+      return edited ? `${label} (editado por vos)` : label;
+    }),
+    discardedChanges: discarded.map(
+      (b) => `${b.dimension} — ${b.title}`
+    ),
     summary: {
       accepted: accepted.length,
       discarded: discarded.length,
+      total: related.length,
     },
   };
 }
