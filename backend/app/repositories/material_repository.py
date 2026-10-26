@@ -36,7 +36,8 @@ def get_by_id(
     material_id: int,
 ) -> Material | None:
     statement = select(Material).where(
-        Material.id == material_id
+        Material.id == material_id,
+        Material.status == "uploaded",
     )
 
     return db.scalar(statement)
