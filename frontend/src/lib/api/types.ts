@@ -121,3 +121,35 @@ export type MaterialListResponse = {
   materials: Material[];
   total: number;
 };
+
+export type BackendBarrierEvidence = {
+  id: number;
+  element_id: string | null;
+  page: number | null;
+  element_type: string | null;
+  anchor: string;
+  context_role: string | null;
+  match_status: string;
+};
+
+export type BackendBarrier = {
+  id: number;
+  type: string;
+  title: string;
+  severity: string;
+  location: { pages?: number[] } & Record<string, unknown>;
+  description: string;
+  justification: string;
+  recommendation: string;
+  detected_by: string;
+  status: string;
+  evidences: BackendBarrierEvidence[];
+};
+
+export type BackendAnalysis = {
+  analysis_id: number;
+  material_id: number;
+  status: string;
+  score: number;
+  barriers: BackendBarrier[];
+};

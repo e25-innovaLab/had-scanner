@@ -7,6 +7,7 @@ import type {
   Proposal,
   MaterialListResponse,
   Material,
+  BackendAnalysis,
 } from "@/lib/api/types";
 
 const DEFAULT_BASE = "";
@@ -191,5 +192,12 @@ export const api = {
 
   listMaterials(): Promise<MaterialListResponse> {
     return request<MaterialListResponse>("/materials");
+  },
+
+  analyzeMaterial(materialId: number): Promise<BackendAnalysis> {
+    return request<BackendAnalysis>(
+      `/materials/${materialId}/analysis`,
+      { method: "POST" },
+    );
   },
 };
