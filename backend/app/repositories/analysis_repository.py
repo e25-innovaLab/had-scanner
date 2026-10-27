@@ -1,6 +1,5 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
-
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.barrier_evidence import BarrierEvidence
@@ -71,6 +70,22 @@ def create(
             )
         )
         .where(Analysis.id == analysis.id)
+    )
+
+    return db.scalar(statement)
+
+def get_by_id(
+    db: Session,
+    analysis_id: int,
+) -> Analysis | None:
+    statement = (
+        select(Analysis)
+        .options(
+            selectinload(Analysis.barriers).selectinload(
+                Barrier.evidences
+            )
+        )
+        .where(Analysis.id == analysis_id)
     )
 
     return db.scalar(statement)
