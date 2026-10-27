@@ -41,13 +41,27 @@ No uses el frontend Next de `main` (`npm run dev` / puerto 3000).
 
 ## Getting Started (Backend)
 
-### Requerimientos
+## Deployed Demo
+
+The backend is deployed and available for testing.
+
+- **API Base URL:** https://had-scanner.onrender.com
+- **Swagger UI:** https://had-scanner.onrender.com/docs#/
+- **Health Check:** https://had-scanner.onrender.com/health
+
+Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
+
+**Note:** The service is hosted on Render and may take a few moments to respond to the first request if it has been inactive.
+
+---
+
+### Requerimientos para ejecutar en local
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose incluido)
 
 > **Importante:** Docker Desktop debe estar abierto antes de usar los comandos de Docker.
 
-### Ejecutando el proyecto
+### Ejecutando el proyecto (en local)
 
 ```bash
 cd backend
