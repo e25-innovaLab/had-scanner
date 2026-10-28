@@ -58,3 +58,16 @@ def get_by_id(
     )
 
     return db.scalar(statement)
+
+def update_current_step(
+    db: Session,
+    analysis_id: int,
+    current_step: str,
+) -> None:
+    analysis = db.get(Analysis, analysis_id)
+
+    if analysis is None:
+        raise ValueError(f"Analysis {analysis_id} not found")
+
+    analysis.current_step = current_step
+    db.commit()

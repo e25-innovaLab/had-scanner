@@ -49,3 +49,9 @@ class Analysis(Base):
         back_populates="analysis",
         cascade="all, delete-orphan",
     )
+
+    current_step: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="queued",
+    )

@@ -66,6 +66,7 @@ def persist_analysis(
                 )
 
         analysis.status = "completed"
+        analysis.current_step = "completed"
         analysis.score = 100
         analysis.error_message = None
 

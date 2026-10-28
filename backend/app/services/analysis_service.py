@@ -15,10 +15,19 @@ from app.models.analysis import Analysis
 logger = logging.getLogger(__name__)
 
 
-def analyze_material(file_path: str) -> dict:
+def analyze_material(file_path: str, on_step=None) -> dict:
+    if on_step:
+        on_step("parsing")
+
     document = extract_document(file_path)
 
+    if on_step:
+        on_step("accessibility_analysis")
+
     gemini_result = analyze_pdf_with_gemini(file_path)
+
+    if on_step:
+        on_step("associating_evidence")
 
     accessibility_analysis = associate_evidence_elements(
         document=document,
@@ -40,12 +49,18 @@ def create_material_analysis(
         material_id=material_id,
     )
 
-
 def process_analysis_task(
     analysis_id: int,
     material_id: int,
 ) -> None:
     db = SessionLocal()
+
+    def set_analysis_step(step: str) -> None:
+        analysis_repository.update_current_step(
+            db=db,
+            analysis_id=analysis_id,
+            current_step=step,
+        )
 
     try:
         analysis = db.get(Analysis, analysis_id)
@@ -70,7 +85,12 @@ def process_analysis_task(
                 f"Material {material_id} not found or not uploaded"
             )
 
-        result = analyze_material(material.file_path)
+        result = analyze_material(
+            material.file_path,
+            on_step=set_analysis_step,
+        )
+
+        set_analysis_step("persisting_results")
 
         persist_analysis(
             db=db,
@@ -83,7 +103,7 @@ def process_analysis_task(
             analysis_id,
         )
 
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Failed to process analysis %s",
             analysis_id,
@@ -100,6 +120,13 @@ def process_analysis_task(
                     "No se pudo completar el análisis del material."
                 ),
             )
+
+            analysis_repository.update_current_step(
+                db=db,
+                analysis_id=analysis_id,
+                current_step="failed",
+            )
+
         except Exception:
             db.rollback()
             logger.exception(
@@ -110,6 +137,12 @@ def process_analysis_task(
     finally:
         db.close()
 
+def set_analysis_step(step: str) -> None:
+    analysis_repository.update_current_step(
+        db=db,
+        analysis_id=analysis_id,
+        current_step=step,
+    )
 
 def get_analysis_by_id(
     db: Session,
