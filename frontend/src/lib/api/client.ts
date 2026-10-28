@@ -9,6 +9,8 @@ import type {
   Material,
   BackendAnalysis,
 } from "@/lib/api/types";
+import { toBarriersResponse } from "./mappers/backend-analysis";
+import { isBackendId } from "./ids";
 
 const DEFAULT_BASE = "";
 
@@ -200,4 +202,26 @@ export const api = {
       { method: "POST" },
     );
   },
+
+  getBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
+    return request<BackendAnalysis>(`/analysis/${analysisId}`);
+  },
+
+  async getBarriersForUi(analysisId: string): Promise<BarriersResponse> {
+    if (isBackendId(analysisId)) {
+      const analysis = await this.getBackendAnalysis(Number(analysisId));
+  
+      if (analysis.status === "processing") {
+        throw new Error("El análisis aún está en curso. Volvé cuando esté listo.");
+      }
+      if (analysis.status === "failed") {
+        throw new Error(
+          analysis.error_message ?? "El análisis falló y no hay barreras para revisar.",
+        );
+      }
+  
+      return toBarriersResponse(analysis);
+    }
+    return this.listBarriers(analysisId);
+  }
 };

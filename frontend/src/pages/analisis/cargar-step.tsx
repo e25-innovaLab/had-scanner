@@ -21,6 +21,7 @@ export function CargarStep() {
   const [mode, setMode] = useState<"archivo" | "texto">("archivo");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusLabel, setStatusLabel] = useState<string | null>(null);
 
   const canContinue =
     mode === "archivo" ? Boolean(file) : text.trim().length > 0;
@@ -29,18 +30,29 @@ export function CargarStep() {
     if (!canContinue || submitting) return;
     setSubmitting(true);
     setError(null);
+    setStatusLabel(null);
+
     try {
-      // 1) Si es PDF, primero FastAPI
-      if (mode === "archivo" && file) {
-        const isPdf = file.name.toLowerCase().endsWith(".pdf");
-        if (isPdf) {
-          await api.uploadMaterial(file);
-          // opcional: console.log(material) o guardar material.id
-        }
-        // si no es PDF, no llamamos materials (el back solo acepta PDF)
+      const isPdf =
+        mode === "archivo" && file && file.name.toLowerCase().endsWith(".pdf");
+
+      if (isPdf && file) {
+        setStatusLabel("Subiendo PDF…");
+        const material = await api.uploadMaterial(file);
+
+        setStatusLabel("Iniciando análisis…");
+        const pending = await api.analyzeMaterial(material.id);
+
+
+        const id = String(pending.analysis_id);
+        storeAnalysisId(id);
+        writeFlowResume(id, "/analisis/analizar");
+        navigate(withAnalysisId("/analisis/analizar", id));
+        return;
       }
 
-      // 2) Seguir con el mock de análisis (flujo VERA)
+      // Texto o archivo no-PDF → mock (como antes)
+      setStatusLabel("Subiendo texto…");
       const analysis = await api.createAnalysis(
         mode === "archivo" && file
           ? { fileName: file.name, fileSize: file.size }
@@ -57,6 +69,7 @@ export function CargarStep() {
         err instanceof Error ? err.message : "No se pudo crear el análisis",
       );
       setSubmitting(false);
+      setStatusLabel(null);
     }
   }
 
@@ -96,7 +109,9 @@ export function CargarStep() {
           disabled={!canContinue || submitting}
           onClick={() => void continueToAnalyze()}
         >
-          {submitting ? "Creando análisis..." : "Siguiente: Analizar"}
+          {submitting
+            ? (statusLabel ?? "Subiendo material…")
+            : "Siguiente: Analizar"}
         </Button>
       </div>
     </>

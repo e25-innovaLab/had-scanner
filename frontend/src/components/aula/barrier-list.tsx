@@ -48,7 +48,7 @@ export function BarrierList({
     let cancelled = false;
     void (async () => {
       try {
-        const data = await api.listBarriers(analysisId);
+        const data = await api.getBarriersForUi(analysisId);
         if (cancelled) return;
         setGroups(data.groups);
         onStats?.(data.stats);
