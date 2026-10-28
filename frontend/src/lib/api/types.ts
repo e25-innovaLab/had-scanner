@@ -115,6 +115,7 @@ export type Material = {
   id: number;
   name: string;
   status: string;
+  created_at?: string;
 };
 
 export type MaterialListResponse = {

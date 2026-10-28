@@ -3,8 +3,14 @@
 import { Link } from 'react-router-dom';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
+import { Pill } from '@/components/aula/pill';
 import { SideNav } from '@/components/shell/side-nav';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
+import {
+  readVeraSource,
+  VERA_SOURCE,
+  veraSourceLabel,
+} from '@/lib/api/vera-source';
 import { FLOW_STEPS } from '@/lib/aula';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +18,7 @@ export function FlowNav() {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const veraSource = readVeraSource() ?? VERA_SOURCE.mock;
   const isDetalle = pathname.startsWith('/analisis/detalle');
   const flowPath = isDetalle ? '/analisis/adaptar' : pathname;
   const currentIndex = Math.max(
@@ -46,6 +53,12 @@ export function FlowNav() {
 
   return (
     <SideNav label="Pasos del análisis">
+      <div className="mb-1 px-3 md:mb-2">
+        <Pill tone="outline">{veraSourceLabel(veraSource)}</Pill>
+        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+          Fijo para este recorrido
+        </p>
+      </div>
       {FLOW_STEPS.map((step, index) => {
         const state =
           index < currentIndex

@@ -1,18 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Circle, CircleAlert } from "lucide-react";
 import { MissingAnalysis } from "@/components/aula/missing-analysis";
 import { Pill } from "@/components/aula/pill";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
 import type { DimensionProgressStatus } from "@/lib/api/types";
-import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
-import { resolveAnalysisId } from "@/lib/api/url";
 import { isBackendId } from "@/lib/api/ids";
+import {
+  resolveAnalysisId,
+  storeAnalysisId,
+  withAnalysisId,
+  writeFlowResume,
+} from "@/lib/api/url";
+import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
+
+export type AnalysisUiStatus = "analyzing" | "ready" | "failed";
 
 type Row = {
   id: string;
@@ -24,6 +32,12 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatElapsed(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 const PIPELINE = [
@@ -58,19 +72,47 @@ function rowsFromStep(step: string, failed: boolean): Row[] {
   }));
 }
 
-export function AnalysisChecklist() {
+export function AnalysisChecklist({
+  onStatusChange,
+}: {
+  onStatusChange?: (status: AnalysisUiStatus) => void;
+} = {}) {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get("analysisId"));
   const [rows, setRows] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("Material");
   const [fileSize, setFileSize] = useState(0);
-  const [status, setStatus] = useState<string>("analyzing");
+  const [status, setStatus] = useState<AnalysisUiStatus>("analyzing");
   const [error, setError] = useState<string | null>(null);
+  const [materialId, setMaterialId] = useState<number | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+
+  useEffect(() => {
+    if (!analysisId) return;
+    setStatus("analyzing");
+    onStatusChange?.("analyzing");
+  }, [analysisId, onStatusChange]);
+
+  useEffect(() => {
+    if (!analysisId || status !== "analyzing") return;
+    setElapsedSec(0);
+    const id = window.setInterval(() => {
+      setElapsedSec((n) => n + 1);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [analysisId, status]);
 
   useEffect(() => {
     if (!analysisId) return;
     let cancelled = false;
     let timer: number | undefined;
+
+    function applyStatus(next: AnalysisUiStatus) {
+      setStatus(next);
+      onStatusChange?.(next);
+    }
 
     async function poll() {
       try {
@@ -78,15 +120,16 @@ export function AnalysisChecklist() {
           await waitForBackendAnalysis(Number(analysisId), {
             onStep: (a) => {
               if (cancelled) return;
+              setMaterialId(a.material_id);
               setFileName(`material-${a.material_id}.pdf`);
               setFileSize(0);
-              setStatus(
+              const nextStatus: AnalysisUiStatus =
                 a.status === "completed"
                   ? "ready"
                   : a.status === "failed"
                     ? "failed"
-                    : "analyzing",
-              );
+                    : "analyzing";
+              applyStatus(nextStatus);
               setRows(rowsFromStep(a.current_step, a.status === "failed"));
               setError(
                 a.status === "failed"
@@ -103,7 +146,13 @@ export function AnalysisChecklist() {
         setRows(data.dimensionProgress);
         setFileName(data.originalFileName);
         setFileSize(data.originalFileSize);
-        setStatus(data.status);
+        const nextStatus: AnalysisUiStatus =
+          data.status === "ready"
+            ? "ready"
+            : data.status === "failed"
+              ? "failed"
+              : "analyzing";
+        applyStatus(nextStatus);
         setError(null);
         if (data.status === "ready" || data.status === "failed") return;
         timer = window.setTimeout(() => void poll(), 700);
@@ -121,7 +170,27 @@ export function AnalysisChecklist() {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [analysisId]);
+  }, [analysisId, onStatusChange]);
+
+  async function retryAnalysis() {
+    if (materialId == null || retrying) return;
+    setRetrying(true);
+    setError(null);
+    try {
+      const pending = await api.analyzeMaterial(materialId);
+      const id = String(pending.analysis_id);
+      storeAnalysisId(id);
+      writeFlowResume(id, "/analisis/analizar");
+      navigate(withAnalysisId("/analisis/analizar", id));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo reiniciar el análisis",
+      );
+      setRetrying(false);
+    }
+  }
 
   if (!analysisId) {
     return <MissingAnalysis step="analizar el material" />;
@@ -139,6 +208,9 @@ export function AnalysisChecklist() {
             <p className="truncate text-sm font-medium">{fileName}</p>
             <p className="text-xs text-muted-foreground">
               {fileSize ? formatSize(fileSize) : "—"}
+              {status === "analyzing"
+                ? ` · ${formatElapsed(elapsedSec)}`
+                : null}
             </p>
           </div>
         </div>
@@ -151,10 +223,38 @@ export function AnalysisChecklist() {
         </Pill>
       </Card>
 
+      {status === "analyzing" ? (
+        <p className="text-sm text-muted-foreground">
+          Este paso puede demorar varios minutos (análisis con IA). No hace
+          falta recargar la página.
+        </p>
+      ) : null}
+
       {error ? (
         <p className="text-sm text-danger-foreground" role="alert">
           {error}
         </p>
+      ) : null}
+
+      {status === "failed" ? (
+        <div className="flex flex-wrap gap-2">
+          {materialId != null ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={retrying}
+              onClick={() => void retryAnalysis()}
+            >
+              {retrying ? "Reiniciando…" : "Analizar de nuevo"}
+            </Button>
+          ) : null}
+          <Link
+            to={withAnalysisId("/analisis/cargar", analysisId)}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Volver a Cargar
+          </Link>
+        </div>
       ) : null}
 
       <Card>
@@ -177,23 +277,7 @@ export function AnalysisChecklist() {
               ) : null}
               {row.status === "error" ? (
                 <span className="text-danger-foreground">
-                  no se pudo analizar —{" "}
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="h-auto px-0 text-danger-foreground underline"
-                    onClick={() =>
-                      setRows((current) =>
-                        current.map((item) =>
-                          item.id === row.id
-                            ? { ...item, status: "done" }
-                            : item,
-                        ),
-                      )
-                    }
-                  >
-                    reintentar
-                  </Button>
+                  no se pudo analizar
                 </span>
               ) : null}
             </div>

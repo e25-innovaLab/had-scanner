@@ -50,11 +50,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let message = `Error HTTP ${res.status}`;
     if (data && typeof data === "object") {
-      if (
-        "detail" in data &&
-        typeof (data as { detail: unknown }).detail === "string"
-      ) {
-        message = (data as { detail: string }).detail;
+      if ("detail" in data) {
+        const detail = (data as { detail: unknown }).detail;
+        if (typeof detail === "string") {
+          message = detail;
+        } else if (
+          detail &&
+          typeof detail === "object" &&
+          "message" in detail &&
+          typeof (detail as { message: unknown }).message === "string"
+        ) {
+          message = (detail as { message: string }).message;
+        }
       } else if (
         "error" in data &&
         typeof (data as { error: unknown }).error === "string"
@@ -194,6 +201,18 @@ export const api = {
 
   listMaterials(): Promise<MaterialListResponse> {
     return request<MaterialListResponse>("/materials");
+  },
+
+  async isBackendHealthy(): Promise<boolean> {
+    try {
+      const res = await fetch(`${baseUrl()}/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(2500),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 
   analyzeMaterial(materialId: number): Promise<BackendAnalysis> {

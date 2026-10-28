@@ -9,11 +9,15 @@ export function AnalysisFlowFooter({
   backLabel,
   nextHref,
   nextLabel,
+  nextDisabled = false,
+  nextHint,
 }: {
   backHref: string;
   backLabel?: string;
   nextHref: string;
   nextLabel: string;
+  nextDisabled?: boolean;
+  nextHint?: string | null;
 }) {
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
@@ -24,6 +28,8 @@ export function AnalysisFlowFooter({
       backLabel={backLabel}
       nextHref={withAnalysisId(nextHref, analysisId)}
       nextLabel={nextLabel}
+      nextDisabled={nextDisabled}
+      nextHint={nextHint}
     />
   );
 }
