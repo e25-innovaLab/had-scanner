@@ -37,4 +37,5 @@ class AnalysisResponse(BaseModel):
     material_id: int
     status: str
     score: int
+    error_message: str | None = None
     barriers: list[BarrierResponse]
