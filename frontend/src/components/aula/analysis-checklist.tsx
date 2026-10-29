@@ -12,6 +12,12 @@ import { api } from "@/lib/api/client";
 import type { DimensionProgressStatus } from "@/lib/api/types";
 import { isBackendId } from "@/lib/api/ids";
 import {
+  elapsedSecondsForAnalysis,
+  ensureAnalysisStartedAt,
+  markAnalysisEnded,
+  readAnalysisEndedAt,
+} from "@/lib/api/analysis-elapsed";
+import {
   resolveAnalysisId,
   storeAnalysisId,
   withAnalysisId,
@@ -96,11 +102,28 @@ export function AnalysisChecklist({
   }, [analysisId, onStatusChange]);
 
   useEffect(() => {
-    if (!analysisId || status !== "analyzing") return;
-    setElapsedSec(0);
-    const id = window.setInterval(() => {
-      setElapsedSec((n) => n + 1);
-    }, 1000);
+    if (!analysisId) return;
+
+    const startedAt = ensureAnalysisStartedAt(analysisId);
+    const endedAt = readAnalysisEndedAt(analysisId);
+
+    if (endedAt != null || status === "ready" || status === "failed") {
+      if (endedAt == null && (status === "ready" || status === "failed")) {
+        markAnalysisEnded(analysisId);
+      }
+      setElapsedSec(elapsedSecondsForAnalysis(analysisId));
+      return;
+    }
+
+    if (status !== "analyzing") return;
+
+    const tick = () => {
+      setElapsedSec(
+        Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
+      );
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [analysisId, status]);
 
