@@ -208,9 +208,7 @@ export function AnalysisChecklist({
             <p className="truncate text-sm font-medium">{fileName}</p>
             <p className="text-xs text-muted-foreground">
               {fileSize ? formatSize(fileSize) : "—"}
-              {status === "analyzing"
-                ? ` · ${formatElapsed(elapsedSec)}`
-                : null}
+              {` · ${formatElapsed(elapsedSec)}`}
             </p>
           </div>
         </div>
