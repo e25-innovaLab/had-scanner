@@ -1,7 +1,11 @@
+
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.database.base import Base
+
 
 class Analysis(Base):
     __tablename__ = "analysis"
@@ -20,13 +24,19 @@ class Analysis(Base):
     status: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
-        default="completed",
+        default="processing",
     )
 
     score: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=50,
+    )
+
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -38,4 +48,10 @@ class Analysis(Base):
     barriers: Mapped[list["Barrier"]] = relationship(
         back_populates="analysis",
         cascade="all, delete-orphan",
+    )
+
+    current_step: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="queued",
     )

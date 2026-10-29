@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+
+import logging
+import os
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.database.session import get_db
 from app.repositories import material_repository
 from app.schemas.analysis import AnalysisResponse
 from app.services.analysis_service import (
     create_material_analysis,
     get_analysis_by_id,
+    process_analysis_task,
 )
 
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +27,15 @@ analysis_by_id_router = APIRouter(
     tags=["Analysis"],
 )
 
+
 @router.post(
     "/{material_id}/analysis",
     response_model=AnalysisResponse,
-    status_code=201,
+    status_code=status.HTTP_202_ACCEPTED,
 )
 def analyze_material_endpoint(
     material_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     material = material_repository.get_by_id(
@@ -38,40 +45,40 @@ def analyze_material_endpoint(
 
     if material is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Material not found",
         )
 
-    file_path = material.file_path
-
-    try:
-        return create_material_analysis(
-            db=db,
-            material_id=material_id,
-            file_path=file_path,
-        )
-
-    except FileNotFoundError:
+    if not os.path.isfile(material.file_path):
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Material file not found",
         )
 
-    except RuntimeError as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=str(exc),
+    try:
+        analysis = create_material_analysis(
+            db=db,
+            material_id=material_id,
         )
+
+        background_tasks.add_task(
+            process_analysis_task,
+            analysis.id,
+            material_id,
+        )
+
+        return analysis
 
     except Exception:
         logger.exception(
-            "Failed to analyze material %s",
+            "Failed to start analysis for material %s",
             material_id,
         )
         raise HTTPException(
-            status_code=500,
-            detail="No se pudo completar el análisis del material.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo iniciar el análisis del material.",
         )
+
 
 @analysis_by_id_router.get(
     "/{analysis_id}",
@@ -88,7 +95,7 @@ def get_analysis_by_id_endpoint(
 
     if analysis is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Analysis not found",
         )
 
