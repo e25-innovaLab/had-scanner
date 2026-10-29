@@ -51,7 +51,19 @@ docker compose up --build
 
 Documentación de la API: [http://localhost:8000/docs](http://localhost:8000/docs).
 
-Hoy el backend cubre upload/listado de materiales; el flujo completo de análisis en el front corre contra el mock hasta integrar FastAPI.
+El camino **API real** (PDF) usa FastAPI async; el camino **Demo** del front sigue contra el mock local (texto/archivo).
+
+## Deployed Demo
+
+The backend is deployed and available for testing.
+
+- **API Base URL:** https://had-scanner.onrender.com
+- **Swagger UI:** https://had-scanner.onrender.com/docs#/
+- **Health Check:** https://had-scanner.onrender.com/health
+
+Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
+
+**Note:** The service is hosted on Render and may take a few moments to respond to the first request if it has been inactive.
 
 ## Licencia
 
