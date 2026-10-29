@@ -8,26 +8,24 @@ from app.models.barrier_evidence import BarrierEvidence
 
 def persist_analysis(
     db: Session,
-    material_id: int,
+    analysis_id: int,
     analysis_result: dict,
 ) -> Analysis:
-    accessibility_analysis = analysis_result["accessibility_analysis"]
+    accessibility_analysis = analysis_result[
+        "accessibility_analysis"
+    ]
     barriers_data = accessibility_analysis.get("barriers", [])
 
-    analysis = Analysis(
-        material_id=material_id,
-        status="completed",
-        score=100,
-    )
+    analysis = db.get(Analysis, analysis_id)
+
+    if analysis is None:
+        raise RuntimeError(
+            f"Analysis {analysis_id} not found"
+        )
 
     try:
-        db.add(analysis)
-        db.flush()
-
         for barrier_data in barriers_data:
             evidence_data = barrier_data.get("evidence", [])
-
-            dimension = barrier_data["dimension"]
 
             pages = sorted({
                 evidence["page"]
@@ -37,7 +35,7 @@ def persist_analysis(
 
             barrier = Barrier(
                 analysis_id=analysis.id,
-                type=dimension,
+                type=barrier_data["dimension"],
                 title=barrier_data["title"],
                 severity="medium",
                 location={"pages": pages},
@@ -67,13 +65,13 @@ def persist_analysis(
                     )
                 )
 
+        analysis.status = "completed"
+        analysis.current_step = "completed"
+        analysis.score = 100
+        analysis.error_message = None
+
         db.commit()
         db.refresh(analysis)
-
-        _ = [
-            (barrier.evidences, barrier.id)
-            for barrier in analysis.barriers
-        ]
 
         return analysis
 
