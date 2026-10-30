@@ -264,7 +264,10 @@ export function UploadPanel({
           <CardContent className="space-y-4">
             <label className="block space-y-1.5 text-sm font-medium">
               Nombre del material
-              <Input placeholder="Unidad 3 — Biología" name="titulo" />
+              <Input
+                placeholder="CARPINTERIA I — Tecnología de los materiales"
+                name="titulo"
+              />
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
               Contenido

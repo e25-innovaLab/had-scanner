@@ -58,32 +58,32 @@ export const BARRIERS: BarrierGroup[] = [
     severity: 'alta',
     items: [
       {
-        title: 'Párrafo introductorio demasiado complejo',
-        why: 'Oraciones muy extensas y vocabulario técnico sin definición.',
-        where: 'Sección 1, párrafo 1 (pág. 1)',
+        title: 'Definición de madera demasiado densa',
+        why: 'Una sola oración larga mezcla definición, usos y origen sin pausas.',
+        where: 'Tecnología de la madera · definición (pág. 1)',
         recommendation:
-          'dividir en oraciones cortas y definir el primer término técnico en glosario lateral.',
+          'dividir en oraciones cortas y explicar el primer término técnico en un glosario lateral.',
       },
       {
-        title: 'Término «homeostasis» sin definición',
-        why: 'Aparece varias veces y nunca se explica con palabras de uso cotidiano.',
-        where: 'Sección 1, párrafos 1–2 (pág. 1)',
+        title: 'Término «rollizo» sin definición accesible',
+        why: 'Aparece como concepto clave y no se explica con palabras de uso cotidiano.',
+        where: 'Tecnología de la madera (pág. 1)',
         recommendation:
           'agregar una entrada breve de glosario en la primera aparición.',
       },
       {
-        title: 'Términos técnicos encadenados',
-        why: 'Varios conceptos especializados seguidos aumentan la carga de lectura.',
-        where: 'Sección 1, párrafo 2 (pág. 1)',
+        title: 'Partes del tronco encadenadas sin apoyo',
+        why: 'Médula, duramen, albura, cambium y liber se presentan seguidos sin guía.',
+        where: 'Estructura de la madera (págs. 1–2)',
         recommendation:
           'una idea por oración y definir al menos un término por bloque.',
       },
       {
-        title: 'Consigna sin andamiaje previo',
-        why: 'La actividad pide inferir sin recordatorio del concepto clave.',
-        where: 'Actividad al final de la sección 1 (pág. 1)',
+        title: 'Consigna implícita sin andamiaje',
+        why: 'Se asume que el estudiante relaciona cortes y usos sin un recordatorio previo.',
+        where: 'Diferentes cortes de un tronco (pág. 2)',
         recommendation:
-          'incluir un recordatorio breve del concepto antes de la pregunta.',
+          'incluir un recordatorio breve del concepto antes de pedir ejemplos o usos.',
       },
     ],
   },
@@ -94,18 +94,18 @@ export const BARRIERS: BarrierGroup[] = [
     severity: 'media',
     items: [
       {
-        title: 'Sección 2 sin subtítulos',
-        why: 'Un bloque extenso dificulta recorrer el contenido y encontrar un tema.',
-        where: 'Sección 2 (pág. 2)',
+        title: 'Bloque de curado sin subtítulos claros',
+        why: 'Natural, por lavado y artificial aparecen en un bloque denso difícil de recorrer.',
+        where: 'Curado de la madera (pág. 3)',
         recommendation:
-          'dividir en subsecciones con títulos breves y descriptivos.',
+          'dividir en subsecciones con títulos breves por método de secado.',
       },
       {
-        title: 'Orden poco predecible de temas',
-        why: 'Se nombra un sistema antes de introducir el contexto del medio interno.',
-        where: 'Sección 2, primer párrafo (pág. 2)',
+        title: 'Propiedades mezcladas en un solo tramo',
+        why: 'Dureza, densidad, trabajo y grietas se suceden sin jerarquía visible.',
+        where: 'Propiedades y deformaciones (pág. 3)',
         recommendation:
-          'reordenar: contexto general, sistemas involucrados y luego función de cada uno.',
+          'reordenar: qué es cada propiedad, por qué importa y un ejemplo de taller.',
       },
     ],
   },
@@ -116,24 +116,24 @@ export const BARRIERS: BarrierGroup[] = [
     severity: 'alta',
     items: [
       {
-        title: 'Imagen 1 sin texto alternativo',
-        why: 'Quien no ve la imagen no accede a la información que transmite.',
-        where: 'Sección 1, figura 1 (pág. 1)',
+        title: 'Esquema del tronco sin texto alternativo',
+        why: 'Quien no ve la figura no accede a las partes del tronco que transmite.',
+        where: 'Partes del tronco (pág. 1–2)',
         recommendation:
-          'agregar un alt-text que describa la relación entre órganos y equilibrio.',
+          'agregar un alt-text que nombre médula, duramen, albura, cambium, liber y corteza.',
       },
       {
-        title: 'Contraste insuficiente en epígrafe',
-        why: 'Texto gris claro sobre fondo claro dificulta la lectura.',
-        where: 'Epígrafe de la figura 1 (pág. 1)',
+        title: 'Contraste insuficiente en pie de página',
+        why: 'El texto del pie (CFP N°7) en gris claro dificulta la lectura.',
+        where: 'Pie de página (págs. 1–3)',
         recommendation: 'aumentar el contraste del texto según criterios WCAG.',
       },
       {
-        title: 'Tabla sin encabezados claros',
-        why: 'Sin encabezados de fila y columna, un lector de pantalla no asocia las celdas.',
-        where: 'Tabla de la sección 2 (pág. 2)',
+        title: 'Tabla de maderas sin encabezados claros',
+        why: 'Sin encabezados explícitos, un lector de pantalla no asocia nombre, origen y usos.',
+        where: 'Tipos de maderas · clasificación (Materiales II, pág. 1)',
         recommendation:
-          'usar encabezados `<th>` con scope o simplificar la tabla con títulos explícitos.',
+          'usar encabezados de columna claros (Nombre, Origen, Características, Precio, Usos).',
       },
     ],
   },
@@ -144,11 +144,11 @@ export const BARRIERS: BarrierGroup[] = [
     severity: 'baja',
     items: [
       {
-        title: 'El concepto se presenta solo como párrafo',
-        why: 'Una única forma de mostrar la idea deja afuera otros modos de comprenderla.',
-        where: 'Sección 1 (pág. 1)',
+        title: 'Los cortes del tronco solo en prosa',
+        why: 'Una única forma de mostrar aserrado plano, radial y de vigas deja afuera otros modos de comprender.',
+        where: 'Diferentes cortes de un tronco (pág. 2)',
         recommendation:
-          'sumar un esquema simple o una lista de los sistemas involucrados.',
+          'sumar un esquema simple o una lista con el nombre del corte y su uso principal.',
       },
     ],
   },
@@ -159,22 +159,22 @@ export const BARRIERS: BarrierGroup[] = [
     severity: 'media',
     items: [
       {
-        title: 'Audio sin transcripción',
-        why: 'El relato oral no está disponible como texto.',
-        where: 'Recurso de audio, sección 3',
+        title: 'Audio del taller sin transcripción',
+        why: 'La explicación oral del curado no está disponible como texto.',
+        where: 'Recurso de audio · Curado de la madera',
         recommendation: 'incorporar la transcripción junto al reproductor.',
       },
       {
-        title: 'Video sin subtítulos',
-        why: 'El contenido hablado no está disponible para quien no puede escuchar.',
-        where: 'Video de la sección 3 (pág. 3)',
+        title: 'Video de aserrado sin subtítulos',
+        why: 'El contenido hablado del corte del rollizo no está disponible para quien no puede escuchar.',
+        where: 'Video · Diferentes cortes de un tronco',
         recommendation:
           'agregar subtítulos cerrados o transcripción sincronizada.',
       },
       {
         title: 'Controles del reproductor poco visibles',
         why: 'Botones pequeños o de bajo contraste dificultan pausar o ajustar volumen.',
-        where: 'Reproductor de audio, sección 3',
+        where: 'Reproductor del material multimedia',
         recommendation:
           'aumentar tamaño de controles y etiquetas accesibles para cada acción.',
       },
@@ -214,142 +214,144 @@ export type Suggestion = {
 export const SUGGESTIONS: Suggestion[] = [
   {
     id: 'intro',
-    title: 'Simplificar párrafo introductorio',
+    title: 'Simplificar definición de madera',
     dimension: 'Comprensión',
     severity: 'alta',
     criterion: 'Lenguaje claro',
     detected:
-      'Un párrafo de una sola oración, con 46 palabras y 6 términos técnicos sin definir (autorregulación, constancia, sinérgica...).',
-    why: 'Las oraciones muy extensas y el vocabulario técnico aumentan la carga de lectura y dificultan la comprensión para quienes leen o procesan la información de distintas formas.',
+      'Definición en una sola oración larga, con términos técnicos (orgánica, fibrosa, manufactura) sin apoyo.',
+    why: 'Las oraciones muy extensas y el vocabulario técnico aumentan la carga de lectura en un apunte de taller.',
     proposes:
-      'Dividir en 2 oraciones breves, usar palabras de uso cotidiano y conservar el concepto central del contenido.',
-    location: 'Sección 1 · Párrafo 1 · Pág. 1',
+      'Dividir en 2 oraciones breves, usar palabras de uso cotidiano y conservar la idea central.',
+    location: 'Tecnología de la madera · Pág. 1',
     original:
-      'La homeostasis es el conjunto de fenómenos de autorregulación que llevan al mantenimiento de la constancia en la composición y propiedades del medio interno de un organismo, siendo un proceso dinámico que requiere la coordinación de múltiples sistemas fisiológicos que operan de manera simultánea y sinérgica.',
+      'Llamase madera a la sustancia orgánica vegetal mas o menos dura, compacta y fibrosa que se extrae de los árboles y con la cual el hombre fabrica los más variados objetos para la vivienda y el uso diario.',
     aiProposal:
-      'La homeostasis es la capacidad del cuerpo de mantener un equilibrio interno estable.',
+      'La madera es la parte dura y fibrosa de los árboles. Con ella se fabrican objetos para la vivienda y el uso diario.',
     editedProposal:
-      'La homeostasis es la capacidad del cuerpo de mantener un equilibrio interno estable. Para lograrlo, distintos órganos y sistemas trabajan juntos al mismo tiempo.',
+      'La madera es la parte dura y fibrosa de los árboles. Con ella se fabrican objetos para la vivienda y el uso diario. En carpintería es el material predominante.',
     variants: {
       simple:
-        'La homeostasis es el equilibrio interno del cuerpo. El cuerpo lo mantiene estable con ayuda de varios órganos.',
-      breve: 'La homeostasis es el equilibrio interno estable del cuerpo.',
+        'La madera sale de los árboles. Es dura y fibrosa. Sirve para fabricar muebles y objetos de uso diario.',
+      breve: 'La madera es el material duro y fibroso que se saca de los árboles.',
       pasos:
-        '1. El cuerpo detecta un cambio interno.\n2. Distintos órganos responden juntos.\n3. El equilibrio se mantiene. Eso es la homeostasis.',
+        '1. Se obtiene de los árboles.\n2. Es dura, compacta y fibrosa.\n3. Se usa para objetos de vivienda y uso diario.',
       ejemplo:
-        'La homeostasis es la capacidad del cuerpo de mantener un equilibrio interno estable. Por ejemplo, cuando hace calor, transpiramos para no subir demasiado la temperatura.',
-      otra: 'El cuerpo busca un equilibrio interno estable. Esa capacidad se llama homeostasis. Varios órganos trabajan al mismo tiempo para lograrlo.',
+        'La madera es el material del árbol que usamos en carpintería. Por ejemplo, tablas y tableros para muebles.',
+      otra: 'En carpintería, madera es la sustancia fibrosa del árbol con la que fabricamos objetos útiles.',
     },
   },
   {
     id: 'seccion',
-    title: 'Dividir sección 2 en subsecciones',
+    title: 'Dividir curado en subtítulos',
     dimension: 'Estructura',
     severity: 'media',
     criterion: 'Estructura predecible',
     detected:
-      'La sección 2 es un único bloque de texto, sin subtítulos ni listas.',
-    why: 'Sin cortes visibles cuesta anticipar de qué trata cada parte y volver a un tema puntual.',
-    proposes: 'Crear tres subtítulos breves que nombren el tema de cada tramo.',
-    location: 'Sección 2 · Pág. 2',
+      '«Curado de la madera» junta tres métodos en un bloque sin subtítulos ni listas.',
+    why: 'Sin cortes visibles cuesta anticipar cada método y volver a uno puntual en clase.',
+    proposes: 'Crear tres subtítulos: secado natural, por lavado y artificial.',
+    location: 'Curado de la madera · Pág. 3',
     original:
-      'Los sistemas nervioso, endocrino y excretor participan en la regulación del medio interno. El nervioso responde rápido, el endocrino sostiene respuestas más largas y el excretor elimina desechos que alterarían el equilibrio.',
+      'SECADO NATURAL: En este procedimientola madera aserradase expone al aire libre, cuidadosamente apiladapara que el secado sea uniforme. SECADO POR LAVADO: un método algo más rápidode cuardo, consiste en sumergir la madera en agua corriente durante un mes aproximadamente. SECADO ARTIFICIAL: Este es uno de los métodos más utilizados actualmente por su rapidez, se introduce el rollo ya trozada y aserrado con listones de separación entre tabla y tabla dentro de un horno.',
     aiProposal:
-      'Varios sistemas regulan el medio interno.\n\nRespuesta rápida. El sistema nervioso reacciona enseguida.\n\nRespuesta sostenida. El sistema endocrino mantiene el ajuste.\n\nEliminación. El sistema excretor saca lo que alteraría el equilibrio.',
+      'Curado de la madera\n\nSecado natural. La madera aserrada se apila al aire libre para que seque parejo.\n\nSecado por lavado. Se sumerge en agua corriente cerca de un mes y luego se seca al aire.\n\nSecado artificial. Se coloca en un horno con calor, humedad y ventilación; puede durar entre 10 y 30 horas.',
     editedProposal:
-      'Varios sistemas regulan el medio interno.\n\nRespuesta rápida. El sistema nervioso reacciona enseguida.\n\nRespuesta sostenida. El sistema endocrino mantiene el ajuste.\n\nEliminación. El sistema excretor saca lo que alteraría el equilibrio.',
+      'Curado de la madera\n\nSecado natural. La madera aserrada se apila al aire libre para que seque parejo.\n\nSecado por lavado. Se sumerge en agua corriente cerca de un mes y luego se seca al aire.\n\nSecado artificial. Se coloca en un horno con calor, humedad y ventilación; puede durar entre 10 y 30 horas.',
     variants: {
       simple:
-        'Tres sistemas cuidan el equilibrio del cuerpo: el nervioso (rápido), el endocrino (sostenido) y el excretor (elimina desechos).',
+        'Hay tres formas de curar la madera: al aire, lavándola con agua y después secándola, o en un horno.',
       breve:
-        'El equilibrio interno lo regulan el sistema nervioso, el endocrino y el excretor.',
+        'Curado: secado natural, por lavado o artificial (horno).',
       pasos:
-        '1. El sistema nervioso responde rápido.\n2. El endocrino sostiene esa respuesta.\n3. El excretor elimina lo que desequilibra.',
+        '1. Natural: apilar al aire.\n2. Lavado: un mes en agua y luego aire.\n3. Artificial: horno 10–30 h.',
       ejemplo:
-        'Si tomás mucha agua, el sistema excretor ayuda a eliminar el exceso para que el medio interno siga estable.',
-      otra: 'El medio interno se regula entre tres sistemas. Cada uno tiene un rol distinto y los tres se necesitan.',
+        'Si necesitás secar tablas rápido para el taller, el método artificial (horno) suele ser el más usado.',
+      otra: 'El curado prepara la madera antes de usarla. Elegí el método según tiempo y calidad que necesites.',
     },
   },
   {
     id: 'alt',
-    title: 'Agregar alt-text a imagen 1',
+    title: 'Agregar alt-text al esquema del tronco',
     dimension: 'Accesibilidad visual',
     severity: 'alta',
     criterion: 'Texto alternativo',
     detected:
-      'La figura 1 no tiene descripción. El epígrafe solo dice «Esquema».',
-    why: 'Sin alternativa textual, la información del esquema no está disponible para quien usa lector de pantalla.',
+      'La figura de partes del tronco no tiene descripción; solo se listan nombres en el texto.',
+    why: 'Sin alternativa textual, la información visual del corte del tronco no está disponible con lector de pantalla.',
     proposes:
-      'Describir qué muestra el esquema y cuál es su idea central, en una oración.',
-    location: 'Sección 1 · Figura 1 · Pág. 1',
+      'Describir las capas del tronco desde el centro hacia afuera, en una oración.',
+    location: 'Partes del tronco · Págs. 1–2',
     original: '(sin descripción)',
     aiProposal:
-      'Esquema de tres sistemas —nervioso, endocrino y excretor— que actúan a la vez para mantener el equilibrio interno del cuerpo.',
+      'Esquema de la sección de un tronco: en el centro la médula, luego duramen, albura, cambium, liber y corteza hacia afuera.',
     editedProposal:
-      'Esquema de tres sistemas —nervioso, endocrino y excretor— que actúan a la vez para mantener el equilibrio interno del cuerpo.',
+      'Esquema de la sección de un tronco: en el centro la médula, luego duramen, albura, cambium, liber y corteza hacia afuera.',
     variants: {
       simple:
-        'Dibujo de tres sistemas del cuerpo trabajando juntos para mantener el equilibrio interno.',
+        'Dibujo del tronco cortado al medio, con capas desde el centro hasta la corteza.',
       breve:
-        'Esquema: sistemas nervioso, endocrino y excretor regulan el equilibrio interno.',
+        'Esquema: médula, duramen, albura, cambium, liber y corteza.',
       pasos:
-        'El esquema muestra tres partes: sistema nervioso, sistema endocrino y sistema excretor. Las flechas indican que actúan al mismo tiempo.',
+        '1. Centro: médula.\n2. Luego duramen y albura.\n3. Afuera: cambium, liber y corteza.',
       ejemplo:
-        'Esquema del equilibrio interno: como un equipo en el que cada sistema cumple una tarea distinta al mismo tiempo.',
-      otra: 'Figura con los sistemas nervioso, endocrino y excretor alrededor del medio interno, unidos por flechas.',
+        'Como las capas de una cebolla: cada anillo del tronco tiene un nombre y una función.',
+      otra: 'Figura del rollizo en corte transversal con las partes nombradas del centro a la corteza.',
     },
   },
   {
     id: 'glosario',
-    title: 'Explicar «homeostasis» en el glosario',
+    title: 'Explicar «rollizo» en el glosario',
     dimension: 'Comprensión',
     severity: 'media',
     criterion: 'Lenguaje claro',
     detected:
-      'El término aparece tres veces y nunca se define con palabras de uso cotidiano.',
-    why: 'Un término central sin definición frena la lectura de quien no lo conoce de antes.',
+      'El término aparece como pieza comercial clave y no se define con palabras simples.',
+    why: 'Un término central del taller sin definición frena a quien no lo conoce de antes.',
     proposes:
       'Agregar una entrada breve de glosario lateral en la primera aparición.',
-    location: 'Sección 1 · Párrafo 1 · Pág. 1',
-    original: 'homeostasis',
-    aiProposal: 'Homeostasis: equilibrio interno estable del cuerpo.',
-    editedProposal: 'Homeostasis: equilibrio interno estable del cuerpo.',
+    location: 'Tecnología de la madera · Pág. 1',
+    original: 'ROLLIZO o ROLLO',
+    aiProposal:
+      'Rollizo (o rollo): tronco abatido con los extremos cortados, listo para remitir al mercado de maderas.',
+    editedProposal:
+      'Rollizo (o rollo): tronco abatido con los extremos cortados, listo para remitir al mercado de maderas.',
     variants: {
       simple:
-        'Homeostasis: cuando el cuerpo mantiene sus condiciones internas estables.',
-      breve: 'Homeostasis: equilibrio interno del cuerpo.',
+        'Rollizo: el tronco del árbol ya cortado en los extremos, como llega del monte.',
+      breve: 'Rollizo: tronco cortado listo para vender o aserrar.',
       pasos:
-        'Homeostasis\n1. El cuerpo detecta un cambio.\n2. Responde.\n3. Vuelve a un equilibrio estable.',
+        'Rollizo\n1. Se tala el árbol.\n2. Se cortan los extremos.\n3. Queda el tronco listo para el mercado.',
       ejemplo:
-        'Homeostasis: equilibrio interno. Ejemplo: mantener la temperatura aunque afuera haga frío o calor.',
-      otra: 'Homeostasis es la capacidad del cuerpo de conservar un equilibrio interno estable.',
+        'Rollizo: el tronco completo que llega al aserradero antes de convertirse en tablas.',
+      otra: 'En carpintería, rollizo es el fuste del árbol preparado para aserrar.',
     },
   },
   {
     id: 'audio',
-    title: 'Transcribir el audio de la sección 3',
+    title: 'Transcribir el audio de curado',
     dimension: 'Contenido multimedia',
     severity: 'media',
     criterion: 'Alternativa textual',
-    detected: 'Hay un audio de 45 segundos sin transcripción ni resumen.',
-    why: 'Quien no puede escuchar el audio pierde ese contenido por completo.',
+    detected: 'Hay un audio breve sobre curado sin transcripción ni resumen.',
+    why: 'Quien no puede escuchar el audio pierde la explicación del taller.',
     proposes: 'Publicar la transcripción debajo del reproductor.',
-    location: 'Sección 3 · Audio 1',
+    location: 'Curado de la madera · Audio',
     original: '(audio sin texto)',
     aiProposal:
-      'Transcripción: el medio interno cambia todo el tiempo. Los sistemas del cuerpo detectan esos cambios y responden para volver a un equilibrio estable.',
+      'Transcripción: la madera debe estar bien curada antes de usarla. Se puede secar al aire, lavarla en agua corriente y luego secarla, o usar un horno con calor, humedad y ventilación.',
     editedProposal:
-      'Transcripción: el medio interno cambia todo el tiempo. Los sistemas del cuerpo detectan esos cambios y responden para volver a un equilibrio estable.',
+      'Transcripción: la madera debe estar bien curada antes de usarla. Se puede secar al aire, lavarla en agua corriente y luego secarla, o usar un horno con calor, humedad y ventilación.',
     variants: {
       simple:
-        'El cuerpo nota los cambios internos y responde para seguir en equilibrio. Eso explica el audio.',
+        'Antes de trabajarla, la madera se cura: al aire, con lavado o en horno.',
       breve:
-        'El audio explica que el cuerpo responde a los cambios para mantener el equilibrio.',
+        'El audio explica los tres métodos de curado o secado de la madera.',
       pasos:
-        '1. El medio interno cambia.\n2. El cuerpo lo detecta.\n3. Los sistemas responden y vuelve el equilibrio.',
+        '1. Secado natural al aire.\n2. Lavado en agua y secado.\n3. Secado artificial en horno.',
       ejemplo:
-        'Como cuando corrés y el corazón se acelera: el cuerpo responde para seguir en equilibrio.',
-      otra: 'Texto del audio: los cambios del medio interno activan respuestas que devuelven el equilibrio.',
+        'Si las tablas llegan verdes al taller, primero hay que curarlas para que no se tuerzan.',
+      otra: 'Texto del audio: el curado prepara la madera y evita problemas al trabajarla.',
     },
   },
 ];
@@ -430,7 +432,7 @@ export const DETAIL_BARRIERS: DetailBarrier[] = BARRIERS.filter(
 
 export const RESULT_FILES = [
   {
-    name: 'Unidad_3_adaptado.pdf',
+    name: 'CARPINTERIA_I_TECNO_DE_MAT_adaptado.pdf',
     detail: 'Material con todas las adaptaciones aceptadas · 2.1 MB',
   },
   {
@@ -438,16 +440,16 @@ export const RESULT_FILES = [
     detail: 'Diagnóstico completo y registro de cambios · 380 KB',
   },
   {
-    name: 'Unidad_3_adaptado.docx',
+    name: 'CARPINTERIA_I_TECNO_DE_MAT_adaptado.docx',
     detail: 'Versión editable del material adaptado · 1.1 MB',
   },
 ] as const;
 
 export const APPLIED_CHANGES = [
-  'Comprensión — Párrafo introductorio simplificado',
-  'Accesibilidad visual — Alt-text añadido (imagen 1)',
-  'Estructura — Sección 2 dividida en subsecciones',
-  'Comprensión — Término “homeostasis” explicado en glosario',
+  'Comprensión — Definición de madera simplificada',
+  'Accesibilidad visual — Alt-text del esquema del tronco',
+  'Estructura — Curado dividido en subtítulos',
+  'Comprensión — Término “rollizo” explicado en glosario',
 ] as const;
 
 export function countWords(text: string) {

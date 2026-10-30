@@ -90,7 +90,7 @@ export function CargarStep() {
       mode === "archivo" && file
         ? { fileName: file.name, fileSize: file.size }
         : {
-            fileName: "texto-pegado.txt",
+            fileName: "CARPINTERIA I (TECNO DE MAT).txt",
             fileSize: new TextEncoder().encode(text).length,
           },
     );
