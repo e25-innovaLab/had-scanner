@@ -7,7 +7,7 @@ from app.models.barrier import Barrier
 from app.models.material import Material
 from app.utils.pdf_parser import extract_document
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.ai.adaptation_generator import generate_adaptation
@@ -209,3 +209,25 @@ def create_adaptation_proposal(
             status_code=502,
             detail="Unable to generate the adaptation proposal.",
         ) from exc
+
+def update_adaptation_proposal_status(
+    db: Session,
+    proposal_id: int,
+    new_status: str,
+):
+    proposal = proposal_repository.get_by_id(
+        db=db,
+        proposal_id=proposal_id,
+    )
+
+    if proposal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Adaptation proposal not found",
+        )
+
+    return proposal_repository.update_status(
+        db=db,
+        proposal=proposal,
+        new_status=new_status,
+    )
