@@ -183,11 +183,10 @@ def finalize_material(
     ]
 
     # 3. Retrieve accepted proposals.
-    # TEMPORARY: pending proposals are also considered accepted.
     proposals = finalization_repository.get_proposals_by_barriers(
         db=db,
         barrier_ids=barrier_ids,
-        statuses=["accepted", "pending"],
+        statuses=["accepted"],
     )
 
     # 4. Parse the original document.
