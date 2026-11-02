@@ -1,6 +1,6 @@
 'use client';
 
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/dialog';
 
 export function IaFab() {
+  const { pathname } = useLocation();
+  if (pathname === '/' || pathname === '/acceso') return null;
+
   return (
     <div className="fixed right-4 bottom-4 z-40 sm:right-6 sm:bottom-6">
       <Dialog>
@@ -19,11 +22,15 @@ export function IaFab() {
           render={
             <Button
               aria-label="Abrir asistente IA"
-              className="size-12 rounded-full text-xs font-semibold shadow-md"
+              className="relative size-12 rounded-full bg-ink text-xs font-semibold text-sidebar-primary-foreground shadow-md hover:bg-ink/90"
             />
           }
         >
           IA
+          <span
+            className="absolute top-1 right-1 size-2 rounded-full bg-primary"
+            aria-hidden="true"
+          />
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -40,7 +47,7 @@ export function IaFab() {
           </ul>
           <Button
             variant="outline"
-            className="h-10"
+            className="h-10 rounded-xl"
             nativeButton={false}
             render={<Link to="/analisis/cargar" />}
           >

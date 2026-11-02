@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -24,6 +25,7 @@ import {
   writeVeraSource,
   type VeraSource,
 } from '@/lib/api/vera-source';
+import { cn } from '@/lib/utils';
 
 export function HomeStart() {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ export function HomeStart() {
     readFlowResume()
   );
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
+  const [source, setSource] = useState<VeraSource>(VERA_SOURCE.mock);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,8 +46,8 @@ export function HomeStart() {
     };
   }, []);
 
-  function startWithSource(source: VeraSource) {
-    if (source === VERA_SOURCE.api && !backendUp) return;
+  function startAnalysis() {
+    if (source === VERA_SOURCE.api && backendUp !== true) return;
     clearFlowResume();
     setResume(null);
     writeVeraSource(source);
@@ -56,24 +59,26 @@ export function HomeStart() {
     : null;
   const apiDisabled = backendUp !== true;
   const apiChecking = backendUp === null;
+  const canStart =
+    source === VERA_SOURCE.mock || (source === VERA_SOURCE.api && !apiDisabled);
 
   return (
     <div className="space-y-4">
       {resume && continueHref ? (
-        <Card className="ring-1 ring-primary/25">
+        <Card className="shadow-sm ring-1 ring-primary/30">
           <CardHeader>
-            <CardTitle className="text-primary">Continuar análisis</CardTitle>
+            <CardTitle>Continuar análisis</CardTitle>
             <CardDescription>
               Hay un trabajo guardado en este navegador. Último paso:{' '}
               <span className="font-medium text-foreground">
                 {resumeStepLabel(resume.path)}
               </span>
-              . No requiere cuenta; solo queda en este dispositivo.
+              .
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 sm:flex-row">
             <Button
-              className="h-10 px-4"
+              className="h-10 rounded-xl px-4 font-semibold"
               nativeButton={false}
               render={<Link to={continueHref} />}
             >
@@ -82,64 +87,75 @@ export function HomeStart() {
             <Button
               type="button"
               variant="outline"
-              className="h-10 px-4"
+              className="h-10 rounded-xl px-4"
               onClick={() => {
                 clearFlowResume();
                 setResume(null);
               }}
             >
-              Descartar y elegir camino
+              Descartar y empezar de nuevo
             </Button>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-primary">+ Nuevo análisis</CardTitle>
-          <CardDescription>
-            Elegí el origen de datos para este recorrido. No se puede cambiar a
-            mitad del flujo; para cambiar, volvé al inicio y empezá de nuevo.
+      <Card className="shadow-sm ring-1 ring-border/70">
+        <CardHeader className="gap-2">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <Plus className="size-4" aria-hidden="true" />
+            </span>
+            Nuevo análisis
+          </CardTitle>
+          <CardDescription className="text-sm leading-6">
+            Subí un PDF, Word, PowerPoint o pegá texto directamente para
+            empezar.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setSource(VERA_SOURCE.mock)}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+                source === VERA_SOURCE.mock
+                  ? 'border-ink bg-ink text-sidebar-primary-foreground'
+                  : 'border-border bg-card text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Demo (mock)
+            </button>
+            <button
+              type="button"
+              disabled={apiDisabled}
+              onClick={() => setSource(VERA_SOURCE.api)}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-left text-sm transition-colors disabled:opacity-50',
+                source === VERA_SOURCE.api
+                  ? 'border-ink bg-ink text-sidebar-primary-foreground'
+                  : 'border-border bg-card text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {apiChecking ? 'API real…' : 'API real'}
+            </button>
+          </div>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {source === VERA_SOURCE.mock
+              ? 'Demo: flujo completo con la API simulada (texto o archivo).'
+              : backendUp === false
+                ? 'Backend no disponible ahora (`/health`).'
+                : 'API real: PDF vía FastAPI. Requiere backend local.'}
+          </p>
           <Button
             type="button"
-            className="h-10 px-4"
-            onClick={() => startWithSource(VERA_SOURCE.mock)}
+            size="lg"
+            className="h-11 rounded-xl px-5 font-semibold"
+            disabled={!canStart}
+            onClick={startAnalysis}
           >
-            Demo (mock)
+            Comenzar
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 px-4"
-            disabled={apiDisabled}
-            onClick={() => startWithSource(VERA_SOURCE.api)}
-          >
-            {apiChecking ? 'API real…' : 'API real'}
-          </Button>
-        </CardContent>
-        <CardContent className="pt-0">
-          <ul className="space-y-1 text-xs leading-5 text-muted-foreground">
-            <li>
-              <span className="font-medium text-foreground">Demo:</span> flujo
-              completo con la API simulada (texto o archivo).
-            </li>
-            <li>
-              <span className="font-medium text-foreground">API real:</span> PDF
-              vía FastAPI (upload + análisis async). Requiere backend local.
-              {backendUp === false ? (
-                <>
-                  {' '}
-                  <span className="text-danger-foreground">
-                    Backend no disponible ahora (`/health`).
-                  </span>
-                </>
-              ) : null}
-              {apiChecking ? <> Comprobando backend…</> : null}
-            </li>
-          </ul>
         </CardContent>
       </Card>
     </div>

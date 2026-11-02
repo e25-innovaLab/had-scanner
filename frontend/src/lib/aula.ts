@@ -1,5 +1,5 @@
 export const HOME_LINKS = [
-  { href: '/', label: 'Inicio' },
+  { href: '/inicio', label: 'Inicio' },
   { href: '/ayuda', label: 'Ayuda' },
   { href: '/configuracion', label: 'Configuración' },
 ] as const;

@@ -1,7 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { RequireGuest } from '@/components/aula/require-guest';
 import { AnalisisLayout } from '@/layouts/analisis-layout';
 import { HomeLayout } from '@/layouts/home-layout';
 import { RootLayout } from '@/layouts/root-layout';
+import { AccesoPage } from '@/pages/acceso-page';
 import { AdaptarPage } from '@/pages/analisis/adaptar-page';
 import { AnalizarPage } from '@/pages/analisis/analizar-page';
 import { CargarPage } from '@/pages/analisis/cargar-page';
@@ -17,12 +19,27 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<RootLayout />}>
-          <Route element={<HomeLayout />}>
-            <Route index element={<HomePage />} />
+          <Route index element={<AccesoPage />} />
+          <Route path="acceso" element={<Navigate to="/" replace />} />
+          <Route
+            element={
+              <RequireGuest>
+                <HomeLayout />
+              </RequireGuest>
+            }
+          >
+            <Route path="inicio" element={<HomePage />} />
             <Route path="ayuda" element={<AyudaPage />} />
             <Route path="configuracion" element={<ConfiguracionPage />} />
           </Route>
-          <Route path="analisis" element={<AnalisisLayout />}>
+          <Route
+            path="analisis"
+            element={
+              <RequireGuest>
+                <AnalisisLayout />
+              </RequireGuest>
+            }
+          >
             <Route index element={<Navigate to="cargar" replace />} />
             <Route path="cargar" element={<CargarPage />} />
             <Route path="analizar" element={<AnalizarPage />} />

@@ -75,7 +75,7 @@ export function ResultadoStep() {
   function finishAndLeave() {
     clearFlowResume();
     setConfirmOpen(false);
-    navigate('/');
+    navigate('/inicio');
   }
 
   if (!analysisId) {

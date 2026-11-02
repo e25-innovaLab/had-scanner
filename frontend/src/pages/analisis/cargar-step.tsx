@@ -204,7 +204,7 @@ export function CargarStep() {
 
       <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          to="/"
+          to="/inicio"
           className={cn(
             buttonVariants({ variant: "outline", size: "lg" }),
             "h-10 px-4",
