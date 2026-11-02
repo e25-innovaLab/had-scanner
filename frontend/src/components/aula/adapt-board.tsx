@@ -24,6 +24,11 @@ export type AdaptCounts = {
   discarded: number;
   pending: number;
   total: number;
+  nextPending: {
+    id: string;
+    dimensionId: string;
+    index: number;
+  } | null;
 };
 
 type Mode = 'empty' | 'generating' | 'ready';
@@ -161,6 +166,13 @@ export function AdaptBoard({
   const overlayEntry = barriers.find((entry) => entry.id === overlay?.entryId);
   const isBusy = Boolean(overlay);
 
+  const nextPendingIndex = useMemo(() => {
+    return barriers.findIndex((barrier) => {
+      const decision = stateById[barrier.id]?.decision ?? barrier.status;
+      return decision === 'pending';
+    });
+  }, [barriers, stateById]);
+
   const counts = useMemo(() => {
     let accepted = 0;
     let discarded = 0;
@@ -172,16 +184,21 @@ export function AdaptBoard({
       else if (decision === 'discarded') discarded += 1;
       else pending += 1;
     }
-    return { accepted, discarded, pending, total: barriers.length };
-  }, [barriers, stateById]);
-
-  const nextPendingIndex = useMemo(() => {
-    const idx = barriers.findIndex((barrier) => {
-      const decision = stateById[barrier.id]?.decision ?? barrier.status;
-      return decision === 'pending';
-    });
-    return idx;
-  }, [barriers, stateById]);
+    const next = nextPendingIndex >= 0 ? barriers[nextPendingIndex] : undefined;
+    return {
+      accepted,
+      discarded,
+      pending,
+      total: barriers.length,
+      nextPending: next
+        ? {
+            id: next.id,
+            dimensionId: next.dimensionId,
+            index: nextPendingIndex + 1,
+          }
+        : null,
+    };
+  }, [barriers, stateById, nextPendingIndex]);
 
   useEffect(() => {
     onCountsChange?.(counts);

@@ -78,11 +78,14 @@ export function DetailEditor({
         const { barriers: list } = await api.listBarriersFlat(analysisId);
         if (cancelled) return;
         setBarriers(list);
-        const start = Math.max(
-          0,
-          list.findIndex((item) => item.id === barrierFromQuery)
+        const fromQuery = barrierFromQuery
+          ? list.findIndex((item) => item.id === barrierFromQuery)
+          : -1;
+        const firstPending = list.findIndex(
+          (item) => item.status === 'pending'
         );
-        const idx = barrierFromQuery && start >= 0 ? start : 0;
+        const idx =
+          fromQuery >= 0 ? fromQuery : firstPending >= 0 ? firstPending : 0;
         setIndex(idx);
         applyBarrier(list[idx], {
           startsWithoutProposal,
@@ -95,6 +98,7 @@ export function DetailEditor({
             analysisId
           );
           if (
+            searchParams.get('barrera') !== current.id ||
             searchParams.get('i') !== String(idx + 1) ||
             searchParams.get('n') !== String(list.length) ||
             searchParams.get('dimension') !== current.dimensionId
