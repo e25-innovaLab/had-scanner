@@ -1,19 +1,30 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
+function diamond(cx: number, cy: number, size: number) {
+  return `${cx},${cy - size} ${cx + size},${cy} ${cx},${cy + size} ${cx - size},${cy}`;
+}
+
 export function VeraMark({ className }: { className?: string }) {
   return (
-    <span
+    <svg
+      viewBox="0 0 40 36"
+      className={cn("size-7 shrink-0", className)}
       aria-hidden="true"
-      className={cn(
-        "grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground shadow-sm",
-        className,
-      )}
     >
-      <svg viewBox="0 0 16 16" className="size-3.5 fill-current" aria-hidden="true">
-        <path d="M8 1.5 14.5 8 8 14.5 1.5 8 8 1.5Z" />
-      </svg>
-    </span>
+      <polygon
+        points={diamond(11, 12, 8.5)}
+        className="fill-vera-mark-lime"
+      />
+      <polygon
+        points={diamond(29, 12, 8.5)}
+        className="fill-vera-mark-forest"
+      />
+      <polygon
+        points={diamond(20, 23, 8.5)}
+        className="fill-vera-mark-olive"
+      />
+    </svg>
   );
 }
 
@@ -27,9 +38,14 @@ export function VeraLogo({
   className?: string;
 }) {
   return (
-    <Link to={to} className={cn("flex min-w-0 items-center gap-2.5 text-sm", className)}>
+    <Link
+      to={to}
+      className={cn("flex min-w-0 items-center gap-2.5 text-sm", className)}
+    >
       <VeraMark />
-      <span className="truncate font-semibold tracking-tight text-ink">VERA</span>
+      <span className="truncate text-[15px] font-bold tracking-wide text-vera-wordmark">
+        VERA
+      </span>
       {compact ? null : (
         <>
           <span className="text-muted-foreground" aria-hidden="true">

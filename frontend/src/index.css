@@ -56,6 +56,10 @@
   --color-primary-container: var(--primary-container);
   --color-tertiary-container: var(--tertiary-container);
   --color-ink: var(--ink);
+  --color-vera-mark-lime: var(--vera-mark-lime);
+  --color-vera-mark-olive: var(--vera-mark-olive);
+  --color-vera-mark-forest: var(--vera-mark-forest);
+  --color-vera-wordmark: var(--vera-wordmark);
   --color-glow: var(--glow);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -90,6 +94,10 @@
   --input: #d8dcd2;
   --ring: #8fbc2e;
   --ink: #2a2d33;
+  --vera-mark-lime: #87bd28;
+  --vera-mark-olive: #70912c;
+  --vera-mark-forest: #4b6426;
+  --vera-wordmark: #3e6128;
   --glow: #d8f08a;
   --sidebar: #f0f2ec;
   --sidebar-foreground: #1c1f1a;
