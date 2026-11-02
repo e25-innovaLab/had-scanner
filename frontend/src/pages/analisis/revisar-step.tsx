@@ -74,9 +74,9 @@ export function RevisarStep() {
     <>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         {cards.map((stat) => (
-          <Card key={stat.label} className="text-center">
+          <Card key={stat.label} className="text-center shadow-sm ring-1 ring-border/70">
             <CardContent className="space-y-1">
-              <p className="text-3xl font-semibold tracking-tight text-primary">
+              <p className="text-3xl font-semibold tracking-tight text-foreground">
                 {stat.value}
               </p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>

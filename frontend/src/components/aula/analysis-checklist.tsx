@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Circle, CircleAlert } from "lucide-react";
 import { MissingAnalysis } from "@/components/aula/missing-analysis";
@@ -26,7 +26,7 @@ import {
 import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
 
-export type AnalysisUiStatus = "analyzing" | "ready" | "failed";
+export type AnalysisUiStatus = "analyzing" | "ready" | "failed" | "incomplete";
 
 type Row = {
   id: string;
@@ -55,16 +55,21 @@ const PIPELINE = [
 ] as const;
 
 function rowsFromStep(step: string, failed: boolean): Row[] {
-  if (failed) {
-    return PIPELINE.map((p) => ({
-      id: p.id,
-      label: p.label,
-      status: "error" as const,
-    }));
-  }
-
   const idx = PIPELINE.findIndex((p) => p.id === step);
   const active = idx >= 0 ? idx : step === "completed" ? PIPELINE.length : 0;
+
+  if (failed) {
+    return PIPELINE.map((p, i) => ({
+      id: p.id,
+      label: p.label,
+      status:
+        i < active
+          ? ("done" as const)
+          : i === active
+            ? ("error" as const)
+            : ("pending" as const),
+    }));
+  }
 
   return PIPELINE.map((p, i) => ({
     id: p.id,
@@ -78,10 +83,27 @@ function rowsFromStep(step: string, failed: boolean): Row[] {
   }));
 }
 
+function resolveUiStatus(
+  rows: Row[],
+  base: "analyzing" | "ready" | "failed",
+): AnalysisUiStatus {
+  if (base !== "failed") return base;
+  const done = rows.filter((row) => row.status === "done").length;
+  const errors = rows.filter((row) => row.status === "error").length;
+  if (done > 0 && errors > 0) return "incomplete";
+  return "failed";
+}
+
+export type AnalysisChecklistSummary = {
+  status: AnalysisUiStatus;
+  doneCount: number;
+  totalCount: number;
+};
+
 export function AnalysisChecklist({
   onStatusChange,
 }: {
-  onStatusChange?: (status: AnalysisUiStatus) => void;
+  onStatusChange?: (summary: AnalysisChecklistSummary) => void;
 } = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -95,10 +117,21 @@ export function AnalysisChecklist({
   const [elapsedSec, setElapsedSec] = useState(0);
   const [retrying, setRetrying] = useState(false);
 
+  const doneCount = useMemo(
+    () => rows.filter((row) => row.status === "done").length,
+    [rows],
+  );
+  const errorRows = useMemo(
+    () => rows.filter((row) => row.status === "error"),
+    [rows],
+  );
+  const totalCount = rows.length;
+  const failedLabels = errorRows.map((row) => row.label).join(", ");
+
   useEffect(() => {
     if (!analysisId) return;
     setStatus("analyzing");
-    onStatusChange?.("analyzing");
+    onStatusChange?.({ status: "analyzing", doneCount: 0, totalCount: 0 });
   }, [analysisId, onStatusChange]);
 
   useEffect(() => {
@@ -107,8 +140,16 @@ export function AnalysisChecklist({
     const startedAt = ensureAnalysisStartedAt(analysisId);
     const endedAt = readAnalysisEndedAt(analysisId);
 
-    if (endedAt != null || status === "ready" || status === "failed") {
-      if (endedAt == null && (status === "ready" || status === "failed")) {
+    if (
+      endedAt != null ||
+      status === "ready" ||
+      status === "failed" ||
+      status === "incomplete"
+    ) {
+      if (
+        endedAt == null &&
+        (status === "ready" || status === "failed" || status === "incomplete")
+      ) {
         markAnalysisEnded(analysisId);
       }
       setElapsedSec(elapsedSecondsForAnalysis(analysisId));
@@ -132,9 +173,13 @@ export function AnalysisChecklist({
     let cancelled = false;
     let timer: number | undefined;
 
-    function applyStatus(next: AnalysisUiStatus) {
+    function applyStatus(next: AnalysisUiStatus, nextRows: Row[]) {
       setStatus(next);
-      onStatusChange?.(next);
+      onStatusChange?.({
+        status: next,
+        doneCount: nextRows.filter((row) => row.status === "done").length,
+        totalCount: nextRows.length,
+      });
     }
 
     async function poll() {
@@ -146,14 +191,18 @@ export function AnalysisChecklist({
               setMaterialId(a.material_id);
               setFileName(`material-${a.material_id}.pdf`);
               setFileSize(0);
-              const nextStatus: AnalysisUiStatus =
+              const nextRows = rowsFromStep(
+                a.current_step,
+                a.status === "failed",
+              );
+              setRows(nextRows);
+              const base =
                 a.status === "completed"
                   ? "ready"
                   : a.status === "failed"
                     ? "failed"
                     : "analyzing";
-              applyStatus(nextStatus);
-              setRows(rowsFromStep(a.current_step, a.status === "failed"));
+              applyStatus(resolveUiStatus(nextRows, base), nextRows);
               setError(
                 a.status === "failed"
                   ? (a.error_message ?? "No se pudo completar el análisis")
@@ -169,13 +218,16 @@ export function AnalysisChecklist({
         setRows(data.dimensionProgress);
         setFileName(data.originalFileName);
         setFileSize(data.originalFileSize);
-        const nextStatus: AnalysisUiStatus =
+        const base =
           data.status === "ready"
             ? "ready"
             : data.status === "failed"
               ? "failed"
               : "analyzing";
-        applyStatus(nextStatus);
+        applyStatus(
+          resolveUiStatus(data.dimensionProgress, base),
+          data.dimensionProgress,
+        );
         setError(null);
         if (data.status === "ready" || data.status === "failed") return;
         timer = window.setTimeout(() => void poll(), 700);
@@ -219,14 +271,19 @@ export function AnalysisChecklist({
     return <MissingAnalysis step="analizar el material" />;
   }
 
+  const incomplete = status === "incomplete";
+  const failed = status === "failed";
+
   return (
     <div className="space-y-4">
-      <Card className="flex-row items-center justify-between gap-3 px-(--card-spacing) py-3">
+      <Card className="flex-row items-center justify-between gap-3 px-(--card-spacing) py-3 shadow-sm ring-1 ring-border/70">
         <div className="flex min-w-0 items-center gap-3">
           <span
-            className="size-8 shrink-0 rounded-md bg-secondary"
+            className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/25 text-xs font-semibold text-foreground"
             aria-hidden="true"
-          />
+          >
+            PDF
+          </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{fileName}</p>
             <p className="text-xs text-muted-foreground">
@@ -235,12 +292,24 @@ export function AnalysisChecklist({
             </p>
           </div>
         </div>
-        <Pill tone="muted">
+        <Pill
+          tone={
+            status === "ready"
+              ? "ok"
+              : incomplete
+                ? "warn"
+                : failed
+                  ? "alta"
+                  : "step"
+          }
+        >
           {status === "ready"
             ? "Listo"
-            : status === "failed"
-              ? "Falló"
-              : "Analizando..."}
+            : incomplete
+              ? "Análisis incompleto"
+              : failed
+                ? "Falló"
+                : "Analizando..."}
         </Pill>
       </Card>
 
@@ -251,13 +320,34 @@ export function AnalysisChecklist({
         </p>
       ) : null}
 
-      {error ? (
-        <p className="text-sm text-danger-foreground" role="alert">
-          {error}
-        </p>
+      {incomplete ? (
+        <Card className="border-warning-foreground/20 bg-warning-soft text-warning-foreground shadow-none">
+          <CardContent className="space-y-2 py-4">
+            <p className="text-sm font-semibold">
+              No pudimos analizar {errorRows.length} de las {totalCount}{" "}
+              dimensiones
+            </p>
+            <p className="text-sm leading-6">
+              Podés reintentar {failedLabels || "las dimensiones fallidas"} o
+              continuar con las {doneCount} dimensiones analizadas. Si
+              continuás, el diagnóstico y el informe van a indicar que{" "}
+              {failedLabels || "esas dimensiones"}{" "}
+              {errorRows.length === 1 ? "quedó" : "quedaron"} sin analizar.
+            </p>
+          </CardContent>
+        </Card>
       ) : null}
 
-      {status === "failed" ? (
+      {failed && !incomplete && error ? (
+        <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
+          <CardContent className="space-y-2 py-4">
+            <p className="text-sm font-semibold">No se pudo completar el análisis</p>
+            <p className="text-sm leading-6">{error}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {failed || incomplete ? (
         <div className="flex flex-wrap gap-2">
           {materialId != null ? (
             <Button
@@ -278,7 +368,7 @@ export function AnalysisChecklist({
         </div>
       ) : null}
 
-      <Card>
+      <Card className="shadow-sm ring-1 ring-border/70">
         <CardContent className="space-y-3">
           {rows.map((row) => (
             <div
@@ -288,6 +378,7 @@ export function AnalysisChecklist({
               <StatusIcon status={row.status} />
               <span
                 className={cn(
+                  "min-w-0 flex-1",
                   row.status === "pending" && "text-muted-foreground",
                 )}
               >
@@ -297,12 +388,47 @@ export function AnalysisChecklist({
                 <span className="text-muted-foreground">analizando...</span>
               ) : null}
               {row.status === "error" ? (
-                <span className="text-danger-foreground">
-                  no se pudo analizar
-                </span>
+                <>
+                  <span className="text-danger-foreground">
+                    No se pudo analizar
+                  </span>
+                  {materialId != null ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg px-3"
+                      disabled={retrying}
+                      onClick={() => void retryAnalysis()}
+                    >
+                      Reintentar
+                    </Button>
+                  ) : null}
+                </>
               ) : null}
             </div>
           ))}
+          {(incomplete || status === "ready") && totalCount > 0 ? (
+            <div className="space-y-2 border-t border-border pt-3">
+              <p className="text-sm text-muted-foreground">
+                {doneCount} de {totalCount} dimensiones analizadas
+              </p>
+              <div
+                className="h-1.5 overflow-hidden rounded-full bg-secondary"
+                role="progressbar"
+                aria-valuenow={doneCount}
+                aria-valuemin={0}
+                aria-valuemax={totalCount}
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-[width]"
+                  style={{
+                    width: `${totalCount ? (doneCount / totalCount) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

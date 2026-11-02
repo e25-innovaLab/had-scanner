@@ -207,15 +207,15 @@ export function CargarStep() {
           to="/inicio"
           className={cn(
             buttonVariants({ variant: "outline", size: "lg" }),
-            "h-10 px-4",
+            "h-11 rounded-xl px-4",
           )}
         >
-          Volver al inicio
+          ← Volver al inicio
         </Link>
         <Button
           type="button"
           size="lg"
-          className="h-10 px-4"
+          className="h-11 rounded-xl px-4 font-semibold"
           disabled={!canContinue || submitting}
           onClick={() => void continueToAnalyze()}
         >

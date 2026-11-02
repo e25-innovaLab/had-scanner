@@ -3,7 +3,7 @@ import { ResultadoStep } from '@/pages/analisis/resultado-step';
 
 export function ResultadoPage() {
   return (
-    <div className="mx-auto w-full max-w-5xl pb-20">
+    <>
       <StepHeader
         step="05"
         actor="Sistema"
@@ -11,6 +11,6 @@ export function ResultadoPage() {
         description="Material adaptado + informe final de barreras y cambios aplicados. El original permanece intacto."
       />
       <ResultadoStep />
-    </div>
+    </>
   );
 }

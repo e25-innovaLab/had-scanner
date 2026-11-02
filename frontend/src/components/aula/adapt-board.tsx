@@ -368,12 +368,17 @@ export function AdaptBoard({
           ['Editadas', 0],
           ['Descartadas', counts.discarded],
         ].map(([label, value]) => (
-          <Card key={String(label)} className="items-center text-center">
+          <Card
+            key={String(label)}
+            className="items-center text-center shadow-sm ring-1 ring-border/70"
+          >
             <CardContent className="space-y-1">
-              <p className="text-3xl font-semibold tracking-tight text-primary">
+              <p className="text-3xl font-semibold tracking-tight text-foreground">
                 {value}
               </p>
-              <p className="text-sm text-muted-foreground">{label}</p>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {label}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -441,10 +446,10 @@ export function AdaptBoard({
                 className={cn(
                   'relative min-w-0 space-y-2 rounded-xl px-3 py-3 text-left ring-1 transition-[transform,box-shadow,background-color,ring-color]',
                   active
-                    ? 'scale-[1.04] bg-info py-4 text-info-foreground ring-2 ring-primary/40 shadow-sm'
+                    ? 'scale-[1.02] bg-card py-4 text-foreground ring-2 ring-ink shadow-sm'
                     : resolved
                       ? 'bg-success-soft/50 ring-success-foreground/25 hover:bg-success-soft/70'
-                      : 'bg-secondary/60 ring-border hover:bg-secondary hover:ring-primary/20'
+                      : 'bg-card ring-border hover:bg-secondary/60 hover:ring-primary/30'
                 )}
               >
                 {resolved ? (
@@ -452,7 +457,7 @@ export function AdaptBoard({
                     className={cn(
                       'absolute top-2 right-2 flex size-5 items-center justify-center rounded-full',
                       active
-                        ? 'bg-card text-success-foreground'
+                        ? 'bg-primary/30 text-success-foreground'
                         : 'bg-success-soft text-success-foreground'
                     )}
                     title="Dimensión revisada"
@@ -468,25 +473,16 @@ export function AdaptBoard({
                     remaining={value}
                     total={AI_ATTEMPTS_PER_BARRIER}
                   />
-                  <span
-                    className={cn(
-                      'text-xs',
-                      active
-                        ? 'text-info-foreground/80'
-                        : 'text-muted-foreground'
-                    )}
-                  >
+                  <span className="text-xs text-muted-foreground">
                     {value} de {AI_ATTEMPTS_PER_BARRIER}
                   </span>
                 </div>
                 <p
                   className={cn(
                     'text-[11px]',
-                    active
-                      ? 'text-info-foreground/70'
-                      : resolved
-                        ? 'text-success-foreground'
-                        : 'text-muted-foreground'
+                    resolved
+                      ? 'text-success-foreground'
+                      : 'text-muted-foreground'
                   )}
                 >
                   {resolved
@@ -502,7 +498,7 @@ export function AdaptBoard({
       {selectedGroup ? (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-primary">
+            <h2 className="text-sm font-semibold text-foreground">
               {selectedGroup.name}
             </h2>
             <p className="text-xs text-muted-foreground">
@@ -536,11 +532,16 @@ export function AdaptBoard({
                 key={entry.id}
                 className={cn(
                   'flex-row flex-wrap items-center gap-3 px-(--card-spacing) py-3 sm:flex-nowrap',
-                  isNext && 'ring-2 ring-primary/35'
+                  isNext && 'ring-2 ring-ink'
                 )}
               >
                 <span
-                  className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-muted-foreground"
+                  className={cn(
+                    'grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold',
+                    isNext
+                      ? 'bg-ink text-sidebar-primary-foreground'
+                      : 'bg-secondary text-muted-foreground'
+                  )}
                   aria-hidden="true"
                 >
                   {globalIndex + 1}
@@ -588,7 +589,10 @@ export function AdaptBoard({
                   <Button
                     type="button"
                     variant={isNext ? 'default' : 'outline'}
-                    className="h-9 px-3"
+                    className={cn(
+                      'h-9 rounded-xl px-3',
+                      isNext && 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90'
+                    )}
                     disabled={isBusy || state.mode === 'generating'}
                     onClick={() => openBarrier(entry)}
                   >

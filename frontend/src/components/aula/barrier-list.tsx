@@ -89,7 +89,7 @@ export function BarrierList({
   }
 
   return (
-    <Card className="gap-0 overflow-hidden py-0">
+    <Card className="gap-0 overflow-hidden py-0 shadow-sm ring-1 ring-border/70">
       {groups.map((group) => {
         const open = openId === group.id;
         const hasBarriers = group.items.length > 0;

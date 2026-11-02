@@ -34,6 +34,10 @@ export function UploadPanel({
   // Guardamos el objeto File completo
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [rejectedFile, setRejectedFile] = useState<{
+    name: string;
+    size: number;
+  } | null>(null);
 
   function notify(
     next: Partial<UploadSelection> & {
@@ -56,8 +60,9 @@ export function UploadPanel({
     const isValidExtension = ACCEPT_EXTENSIONS.includes(fileExtension);
 
     if (!isValidExtension) {
+      setRejectedFile({ name: file.name, size: file.size });
       setFileError(
-        'El formato del archivo no es compatible (PDF, Word o PowerPoint).'
+        `No se pudo cargar «${file.name}». El formato no es compatible (PDF, Word o PowerPoint). Probá otro archivo o pegá el texto en la pestaña «Pegar texto».`
       );
       setSelectedFile(null);
       notify({ file: null });
@@ -65,13 +70,18 @@ export function UploadPanel({
     }
 
     if (file.size > MAX_BYTES) {
-      setFileError('El archivo supera el tamaño máximo permitido de 50 MB.');
+      const mb = (file.size / (1024 * 1024)).toFixed(0);
+      setRejectedFile({ name: file.name, size: file.size });
+      setFileError(
+        `No se pudo cargar «${file.name}». El archivo pesa ${mb} MB y el máximo permitido es 50 MB. Probá comprimir el PDF, dividirlo en partes o pegar el texto en la pestaña «Pegar texto».`
+      );
       setSelectedFile(null);
       notify({ file: null });
       return;
     }
 
     setFileError(null);
+    setRejectedFile(null);
     setSelectedFile(file);
     notify({ file });
   }
@@ -120,10 +130,16 @@ export function UploadPanel({
   function resetFileSelection() {
     setSelectedFile(null);
     setFileError(null);
+    setRejectedFile(null);
     notify({ file: null });
     if (inputRef.current) {
       inputRef.current.value = '';
     }
+  }
+
+  function formatSize(bytes: number) {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
   }
 
   function changeMode(next: Mode) {
@@ -145,8 +161,10 @@ export function UploadPanel({
           aria-selected={mode === 'archivo'}
           variant="ghost"
           className={cn(
-            'h-8 rounded-full px-3',
-            mode === 'archivo' ? 'bg-info text-info-foreground' : 'bg-secondary'
+            'h-9 rounded-xl px-4',
+            mode === 'archivo'
+              ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
+              : 'bg-card text-muted-foreground ring-1 ring-border'
           )}
           onClick={() => changeMode('archivo')}
         >
@@ -158,8 +176,10 @@ export function UploadPanel({
           aria-selected={mode === 'texto'}
           variant="ghost"
           className={cn(
-            'h-8 rounded-full px-3',
-            mode === 'texto' ? 'bg-info text-info-foreground' : 'bg-secondary'
+            'h-9 rounded-xl px-4',
+            mode === 'texto'
+              ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
+              : 'bg-card text-muted-foreground ring-1 ring-border'
           )}
           onClick={() => changeMode('texto')}
         >
@@ -181,7 +201,7 @@ export function UploadPanel({
             onDrop={handleDrop}
           >
             <CardContent className="flex flex-col items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-xl bg-secondary text-muted-foreground">
+              <span className="grid size-11 place-items-center rounded-xl bg-primary/25 text-foreground">
                 <FileUp className="size-5" aria-hidden="true" />
               </span>
               <div className="space-y-1">
@@ -230,31 +250,65 @@ export function UploadPanel({
             </CardContent>
           </Card>
 
-          {/* Banner de error condicional */}
-          {fileError && (
-            <Card className="bg-destructive/10 text-destructive border-destructive/20">
-              <CardHeader className="flex flex-row items-start gap-3 space-y-0 p-4">
-                <AlertCircle className="size-5 shrink-0 text-destructive" />
-                <div className="space-y-1">
-                  <CardTitle className="text-sm font-semibold">
-                    No se pudo cargar el archivo
-                  </CardTitle>
-                  <p className="text-xs leading-5 text-destructive/90">
-                    {fileError}
+          {rejectedFile ? (
+            <Card className="flex-row items-center justify-between gap-3 px-(--card-spacing) py-3 shadow-sm ring-1 ring-border/70">
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className="size-9 shrink-0 rounded-lg bg-secondary"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {rejectedFile.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {rejectedFile.name.split('.').pop()?.toUpperCase()} ·{' '}
+                    {formatSize(rejectedFile.size)}
                   </p>
                 </div>
-                <Button
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="text-sm font-medium text-danger-foreground">
+                  ✕ No se pudo cargar
+                </span>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto h-7 px-2 text-xs"
-                  onClick={() => setFileError(null)}
+                  className="text-sm font-medium text-foreground underline-offset-2 hover:underline"
+                  onClick={resetFileSelection}
                 >
-                  Descartar
-                </Button>
+                  Quitar
+                </button>
+              </div>
+            </Card>
+          ) : null}
+
+          {fileError ? (
+            <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
+              <CardHeader className="gap-3 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 size-5 shrink-0" />
+                  <div className="space-y-2">
+                    <CardTitle className="text-sm font-semibold">
+                      {rejectedFile
+                        ? `No se pudo cargar «${rejectedFile.name}»`
+                        : 'No se pudo cargar el archivo'}
+                    </CardTitle>
+                    <p className="text-sm leading-6 text-danger-foreground/90">
+                      {fileError}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 rounded-xl bg-card px-3"
+                      onClick={() => inputRef.current?.click()}
+                    >
+                      Elegir otro archivo
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
             </Card>
-          )}
+          ) : null}
         </div>
       ) : (
         <Card>

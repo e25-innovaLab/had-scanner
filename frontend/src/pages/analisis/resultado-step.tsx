@@ -100,14 +100,20 @@ export function ResultadoStep() {
         </p>
       ) : null}
       <div className="space-y-4">
-        <Card className="bg-muted/50">
-          <CardHeader className="gap-1.5">
-            <CardTitle>Proceso completado</CardTitle>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {summary.accepted} adaptaciones aplicadas · {summary.discarded}{' '}
-              descartadas · {resolved} barreras resueltas de {summary.total} ·
-              el original permanece intacto
-            </p>
+        <Card className="border-transparent bg-tertiary-container shadow-none ring-1 ring-primary/25">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5">
+              <CardTitle className="text-base">Proceso completado</CardTitle>
+              <p className="text-sm leading-6 text-foreground/80">
+                {summary.accepted} adaptaciones aplicadas · {summary.discarded}{' '}
+                descartadas · {resolved} barreras resueltas de {summary.total} ·
+                el original permanece intacto
+              </p>
+            </div>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
+              <span className="size-1.5 rounded-full bg-primary-foreground" />
+              Listo para descarga
+            </span>
           </CardHeader>
         </Card>
 
@@ -144,7 +150,7 @@ export function ResultadoStep() {
           to={withAnalysisId('/analisis/adaptar', analysisId)}
           className={cn(
             buttonVariants({ variant: 'outline', size: 'lg' }),
-            'h-10 px-4'
+            'h-11 rounded-xl px-4'
           )}
         >
           Atrás
@@ -152,7 +158,7 @@ export function ResultadoStep() {
         <Button
           type="button"
           size="lg"
-          className="h-10 px-4"
+          className="h-11 rounded-xl px-4 font-semibold"
           onClick={() => setConfirmOpen(true)}
         >
           Finalizar
@@ -161,29 +167,31 @@ export function ResultadoStep() {
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent
-          className="sm:max-w-md"
+          className="gap-5 rounded-2xl sm:max-w-md"
           showCloseButton={false}
         >
-          <DialogHeader>
-            <DialogTitle>¿Ya descargaste tus archivos?</DialogTitle>
-            <DialogDescription className="text-sm leading-6">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="text-xl">
+              ¿Ya descargaste tus archivos?
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-6 text-muted-foreground">
               Estás usando VERA sin cuenta: al finalizar se borran el material
               adaptado y el informe. Si todavía no los descargaste, volvé y
               descargalos antes de salir.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="gap-2 sm:justify-between">
             <Button
               type="button"
               variant="outline"
-              className="h-10 px-4"
+              className="h-11 rounded-xl px-4"
               onClick={() => setConfirmOpen(false)}
             >
               Volver a descargar
             </Button>
             <Button
               type="button"
-              className="h-10 px-4"
+              className="h-11 rounded-xl px-4 font-semibold"
               onClick={finishAndLeave}
             >
               Finalizar y salir

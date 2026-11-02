@@ -59,6 +59,7 @@ export function DetailEditor({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [text, setText] = useState('');
   const [aiBaseline, setAiBaseline] = useState('');
@@ -139,6 +140,7 @@ export function DetailEditor({
         : (barrier.draft ?? proposal)
     );
     setGenerating(false);
+    setGenerateError(null);
     setNoteOpen(false);
   }
 
@@ -240,6 +242,7 @@ export function DetailEditor({
     )
       return;
     setGenerating(true);
+    setGenerateError(null);
     window.setTimeout(() => {
       void (async () => {
         try {
@@ -259,8 +262,13 @@ export function DetailEditor({
             )
           );
           setSaved(false);
+          setGenerateError(null);
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'No se pudo generar');
+          setGenerateError(
+            err instanceof Error
+              ? err.message
+              : 'La IA no respondió a tiempo. El intento no se descontó.'
+          );
         } finally {
           setGenerating(false);
         }
@@ -303,8 +311,20 @@ export function DetailEditor({
     navigate(detalleSearch(nextIndex, list), { replace: true });
   }
 
+  function isLastBarrierInDimension(list: ApiBarrier[], at: number) {
+    const current = list[at];
+    if (!current) return false;
+    return !list.some(
+      (item, i) => i > at && item.dimensionId === current.dimensionId
+    );
+  }
+
   function advance(fromStatuses?: ApiBarrier[]) {
     const list = fromStatuses ?? barriers;
+    if (suggestion && isLastBarrierInDimension(list, index)) {
+      navigate(resumenHref(suggestion.dimensionId));
+      return;
+    }
     const stillPending = list.filter((item) => item.status === 'pending');
     if (stillPending.length === 0) {
       goToResultado();
@@ -387,14 +407,22 @@ export function DetailEditor({
 
   const attemptsLabel =
     left === 0
-      ? `0 de ${AI_ATTEMPTS_PER_BARRIER} intentos`
+      ? `quedan 0 de ${AI_ATTEMPTS_PER_BARRIER} intentos`
       : `quedan ${left} de ${AI_ATTEMPTS_PER_BARRIER} intentos`;
 
-  const footerHint = saved
-    ? `Propuesta guardada. Usá Siguiente o continuá a ${nextLabel}.`
-    : left === 0
-      ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
-      : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
+  const lastInDimension = isLastBarrierInDimension(barriers, index);
+
+  const footerHint = generating
+    ? 'La propuesta aparece en unos segundos. Podés descartar la barrera si no querés esperar.'
+    : saved
+      ? lastInDimension
+        ? `Propuesta guardada. Es la última barrera de ${suggestion.dimension}.`
+        : `Propuesta guardada. Usá Continuar o seguí a ${nextLabel}.`
+      : lastInDimension
+        ? `Es la última barrera de ${suggestion.dimension}. Al guardar o descartar, la dimensión queda revisada y volvés a Adaptar.`
+        : left === 0
+          ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
+          : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
 
   return (
     <div
@@ -434,9 +462,12 @@ export function DetailEditor({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
           to={resumenHref(suggestion.dimensionId)}
-          className={cn(buttonVariants({ variant: 'outline' }), 'h-9 px-3')}
+          className={cn(
+            buttonVariants({ variant: 'outline' }),
+            'h-9 rounded-xl px-3'
+          )}
         >
-          ← Volver al resumen
+          ← Volver a Adaptar
         </Link>
         <BarrierPager
           index={index}
@@ -449,14 +480,14 @@ export function DetailEditor({
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Pill tone="step">Paso 04</Pill>
-          <Pill tone="role">Docente + IA</Pill>
+          <Pill tone="role">Docente</Pill>
           <Pill tone="outline">{suggestion.dimension}</Pill>
           <Pill tone={suggestion.severity}>
             {priorityName(suggestion.severity)}
           </Pill>
         </div>
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight text-balance text-primary sm:text-[1.7rem]">
+          <h1 className="text-2xl font-semibold tracking-tight text-balance text-foreground sm:text-[1.7rem]">
             {suggestion.title}
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
@@ -487,17 +518,19 @@ export function DetailEditor({
           </p>
         </Card>
 
-        <Card className="bg-info/40 ring-1 ring-info/50">
+        <Card className="bg-primary/10 ring-1 ring-primary/30">
           <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing)">
             <div className="flex flex-wrap items-center gap-2">
-              {hasProposal ? <Pill tone="step">IA</Pill> : null}
+              {hasProposal || generating ? (
+                <Pill tone="step">IA Propuesta</Pill>
+              ) : null}
               <span className="text-sm font-medium">
-                {hasProposal ? 'Propuesta' : 'Tu adaptación'}
+                {hasProposal || generating ? 'Propuesta' : 'Tu adaptación'}
               </span>
               {edited ? <Pill tone="role">Editado por vos</Pill> : null}
               {saved ? <Pill tone="ok">Guardada</Pill> : null}
             </div>
-            {hasProposal && !saved ? (
+            {hasProposal && !saved && !generating ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -509,48 +542,112 @@ export function DetailEditor({
               </Button>
             ) : null}
           </div>
-          <div className="px-(--card-spacing)">
-            <label className="sr-only" htmlFor="propuesta">
-              Propuesta editable
-            </label>
-            <textarea
-              id="propuesta"
-              value={text}
-              rows={6}
-              readOnly={saved}
-              placeholder={
-                hasProposal
-                  ? undefined
-                  : 'Escribí tu adaptación o generá una propuesta con IA.'
-              }
-              onChange={(event) => setText(event.target.value)}
-              onBlur={() => {
-                if (!saved) void persistDraft(text);
-              }}
-              className={cn(
-                'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
-                saved && 'cursor-default bg-muted text-foreground/90'
-              )}
-            />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing) text-xs text-muted-foreground">
-            <span>{meta}</span>
-            {edited && !saved ? (
-              <span className="font-medium text-info-foreground">
-                Cambios sin guardar
-              </span>
-            ) : null}
-            {saved ? <span>Propuesta aceptada</span> : null}
-          </div>
-          {!saved ? (
+
+          {generating ? (
+            <div className="space-y-3 px-(--card-spacing)">
+              <Card className="border-primary/30 bg-primary/20 text-foreground shadow-none">
+                <div className="px-(--card-spacing) py-3 text-sm leading-6">
+                  <p className="font-semibold">Generando propuesta con IA…</p>
+                  <p className="text-muted-foreground">
+                    Mientras tanto, podés leer la observación y el texto
+                    original. Si falla, el intento no se descuenta.
+                  </p>
+                </div>
+              </Card>
+              <div className="space-y-2 rounded-lg border border-border bg-card px-3 py-4">
+                <div className="h-3 w-full animate-pulse rounded bg-secondary" />
+                <div className="h-3 w-4/5 animate-pulse rounded bg-secondary" />
+                <div className="h-3 w-3/5 animate-pulse rounded bg-secondary" />
+              </div>
+            </div>
+          ) : generateError && !hasProposal ? (
+            <div className="px-(--card-spacing)">
+              <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
+                <div className="space-y-3 px-(--card-spacing) py-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">
+                      No pudimos generar la propuesta
+                    </p>
+                    <p className="text-sm leading-6">
+                      La IA no respondió a tiempo. El intento no se descontó:
+                      seguís teniendo {left} de {AI_ATTEMPTS_PER_BARRIER} para
+                      esta barrera.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      className="h-9 rounded-xl px-4"
+                      onClick={() => void generateProposal()}
+                    >
+                      Reintentar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 rounded-xl bg-card px-4"
+                      onClick={() => setGenerateError(null)}
+                    >
+                      Escribir mi versión
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          ) : (
+            <>
+              <div className="px-(--card-spacing)">
+                <label className="sr-only" htmlFor="propuesta">
+                  Propuesta editable
+                </label>
+                <textarea
+                  id="propuesta"
+                  value={text}
+                  rows={6}
+                  readOnly={saved}
+                  placeholder={
+                    hasProposal
+                      ? undefined
+                      : 'Escribí tu adaptación o generá una propuesta con IA.'
+                  }
+                  onChange={(event) => setText(event.target.value)}
+                  onBlur={() => {
+                    if (!saved) void persistDraft(text);
+                  }}
+                  className={cn(
+                    'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                    saved && 'cursor-default bg-muted text-foreground/90'
+                  )}
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing) text-xs text-muted-foreground">
+                <span>{meta}</span>
+                {edited && !saved ? (
+                  <span className="font-medium text-info-foreground">
+                    Cambios sin guardar
+                  </span>
+                ) : null}
+                {saved ? <span>Propuesta aceptada</span> : null}
+              </div>
+            </>
+          )}
+
+          {!saved && !generateError ? (
             <div className="space-y-3 px-(--card-spacing)">
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="font-medium">
-                  {hasProposal
+                  {hasProposal || generating
                     ? 'Pedir otra versión a la IA'
                     : 'Generar propuesta con IA'}
                 </span>
-                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span
+                  className={cn(
+                    'flex items-center gap-2 text-xs',
+                    left === 0
+                      ? 'font-medium text-danger-foreground'
+                      : 'text-muted-foreground'
+                  )}
+                >
                   <IntentMeter
                     remaining={left}
                     total={AI_ATTEMPTS_PER_BARRIER}
@@ -559,16 +656,16 @@ export function DetailEditor({
                 </span>
               </div>
 
-              {!hasProposal ? (
+              {!hasProposal && !generating ? (
                 <>
                   <Button
                     type="button"
                     className="h-9 px-4"
-                    disabled={left === 0 || generating}
+                    disabled={left === 0}
                     onClick={() => void generateProposal()}
                   >
                     <Sparkles data-icon="inline-start" aria-hidden="true" />
-                    {generating ? 'Generando...' : 'Generar propuesta'}
+                    Generar propuesta
                   </Button>
                   <p className="text-xs leading-5 text-muted-foreground">
                     Generar la primera propuesta usa 1 de los{' '}
@@ -585,7 +682,7 @@ export function DetailEditor({
                         type="button"
                         variant="outline"
                         className="h-8 rounded-full bg-white px-3"
-                        disabled={left === 0}
+                        disabled={left === 0 || generating}
                         onClick={() => void consume(action.id)}
                       >
                         {action.label}
@@ -595,7 +692,7 @@ export function DetailEditor({
                       type="button"
                       variant="outline"
                       className="h-8 rounded-full bg-white px-3"
-                      disabled={left === 0}
+                      disabled={left === 0 || generating}
                       onClick={() => void consume('otra')}
                     >
                       <RotateCcw data-icon="inline-start" aria-hidden="true" />
@@ -611,17 +708,18 @@ export function DetailEditor({
                         />
                         <div className="space-y-1 text-sm leading-6">
                           <p className="font-semibold">
-                            Usaste los {AI_ATTEMPTS_PER_BARRIER} intentos de IA
-                            de esta barrera.
+                            Usaste los {AI_ATTEMPTS_PER_BARRIER} intentos de
+                            esta barrera
                           </p>
                           <p>
-                            Todavía podés editar el texto a mano y guardar, o
-                            descartar la barrera.
+                            La IA ya no puede generar nuevas versiones. Todavía
+                            podés editar el texto a mano y guardar, o descartar
+                            la barrera.
                           </p>
                         </div>
                       </div>
                     </Card>
-                  ) : (
+                  ) : generating ? null : (
                     <p className="text-xs leading-5 text-muted-foreground">
                       Cada nueva versión usa 1 intento. Son{' '}
                       {AI_ATTEMPTS_PER_BARRIER} por barrera. Editar a mano o
@@ -631,11 +729,11 @@ export function DetailEditor({
                 </>
               )}
             </div>
-          ) : (
+          ) : saved ? (
             <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
               Para cambiar esta propuesta, usá Volver a editar.
             </p>
-          )}
+          ) : null}
         </Card>
       </div>
 
@@ -663,7 +761,7 @@ export function DetailEditor({
           <Button
             type="button"
             variant="outline"
-            className="h-10 px-4"
+            className="h-10 rounded-xl px-4"
             onClick={() => void resumeEditing()}
           >
             Volver a editar
@@ -672,7 +770,8 @@ export function DetailEditor({
           <Button
             type="button"
             variant="outline"
-            className="h-10 px-4"
+            className="h-10 rounded-xl px-4"
+            disabled={generating}
             onClick={() => void discardSuggestion()}
           >
             Descartar barrera
@@ -684,21 +783,29 @@ export function DetailEditor({
         {saved ? (
           <Button
             type="button"
-            className="h-10 px-4 bg-success-soft text-success-foreground hover:bg-success-soft/80"
+            className="h-10 rounded-xl px-4 font-semibold"
             onClick={() => advance()}
           >
             {allResolved || nextPendingIndex < 0
               ? 'Obtener resultado'
-              : 'Continuar'}
+              : lastInDimension
+                ? 'Volver a Adaptar'
+                : 'Continuar'}
           </Button>
         ) : (
           <Button
             type="button"
-            className="h-10 px-4"
-            disabled={!hasProposal && text.trim().length === 0}
+            className="h-10 rounded-xl px-4 font-semibold"
+            disabled={
+              generating ||
+              (!hasProposal && text.trim().length === 0) ||
+              Boolean(generateError && !hasProposal && text.trim().length === 0)
+            }
             onClick={() => void saveAndAccept()}
           >
-            Guardar y aceptar
+            {lastInDimension
+              ? 'Guardar y volver a Adaptar'
+              : 'Guardar y aceptar'}
           </Button>
         )}
       </div>

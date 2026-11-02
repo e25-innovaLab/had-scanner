@@ -8,7 +8,9 @@ export function AnalisisLayout() {
       <FlowNav />
       <FlowResumeTracker />
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">
-        <Outlet />
+        <div className="mx-auto w-full max-w-5xl pb-20">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

@@ -3,7 +3,6 @@
 import { Link } from 'react-router-dom';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import { Pill } from '@/components/aula/pill';
 import { SideNav } from '@/components/shell/side-nav';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
@@ -53,12 +52,6 @@ export function FlowNav() {
 
   return (
     <SideNav label="Pasos del análisis">
-      <div className="mb-1 px-3 md:mb-2">
-        <Pill tone="outline">{veraSourceLabel(veraSource)}</Pill>
-        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-          Fijo para este recorrido
-        </p>
-      </div>
       {FLOW_STEPS.map((step, index) => {
         const state =
           index < currentIndex
@@ -74,10 +67,12 @@ export function FlowNav() {
               to={stepHref(step.href)}
               aria-current={state === 'current' ? 'step' : undefined}
               className={cn(
-                'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors',
+                'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-colors',
                 state === 'current'
-                  ? 'bg-info font-medium text-info-foreground'
-                  : 'text-muted-foreground hover:bg-card hover:text-foreground'
+                  ? 'bg-ink font-medium text-sidebar-primary-foreground'
+                  : state === 'done'
+                    ? 'text-foreground hover:bg-card'
+                    : 'text-muted-foreground hover:bg-card hover:text-foreground'
               )}
             >
               {state === 'done' ? (
@@ -86,18 +81,32 @@ export function FlowNav() {
                   aria-hidden="true"
                 />
               ) : (
-                <span className="w-5 text-xs tabular-nums">{number}</span>
+                <span className="w-5 text-xs tabular-nums opacity-80">
+                  {number}
+                </span>
               )}
-              {step.label}
+              <span className="flex-1">{step.label}</span>
+              {state === 'current' ? (
+                <span
+                  className="size-1.5 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              ) : null}
             </Link>
             {isAdaptar && state === 'current' && showBarrierSub ? (
-              <p className="pl-10 text-xs text-muted-foreground">
+              <p className="space-y-0.5 pl-10 text-xs leading-4 text-muted-foreground">
+                <span className="block font-medium text-foreground/80">
+                  Detalle y edición
+                </span>
                 Barrera {barrierIndex} de {barrierTotal}
               </p>
             ) : null}
           </div>
         );
       })}
+      <p className="mt-3 hidden px-3 text-[11px] leading-4 text-muted-foreground md:block">
+        Origen: {veraSourceLabel(veraSource)}
+      </p>
     </SideNav>
   );
 }
