@@ -24,14 +24,6 @@ export default function App() {
           </Route>
           <Route path="analisis" element={<AnalisisLayout />}>
             <Route index element={<Navigate to="cargar" replace />} />
-            <Route path="cargar" element={<CargarPage />} />
-            <Route path="analizar" element={<AnalizarPage />} />
-            <Route path="revisar" element={<RevisarPage />} />
-            <Route path="adaptar" element={<AdaptarPage />} />
-            <Route path="detalle" element={<DetallePage />} />
-            <Route path="resultado" element={<ResultadoPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

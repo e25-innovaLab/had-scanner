@@ -27,6 +27,18 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
+      "/barriers": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/proposals": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/adaptations": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/health": {
         target: "http://localhost:8000",
         changeOrigin: true,

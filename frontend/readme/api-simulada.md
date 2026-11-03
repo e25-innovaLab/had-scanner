@@ -102,6 +102,29 @@ backend decide cómo persistir y cuándo escribir.
   o se regeneran en servidor.
 - Auth, errores y códigos HTTP más ricos.
 
+## Integración FastAPI actual
+
+El cliente reconoce los IDs numéricos como análisis del backend. En ese flujo
+usa estas rutas reales:
+
+| Acción | Ruta |
+| --- | --- |
+| Listar barreras | `GET /analysis/{analysis_id}` |
+| Crear propuesta | `POST /barriers/{barrier_id}/proposals` |
+| Consultar propuesta | `GET /proposals/{proposal_id}` |
+| Aceptar propuesta | `POST /adaptations/{proposal_id}/accept` |
+| Rechazar propuesta | `POST /adaptations/{proposal_id}/reject` |
+
+Vite proxya estas rutas, además de `/materials`, `/analysis` y `/health`, a
+`http://localhost:8000`. Los IDs de propuestas se conservan en `localStorage`
+porque la respuesta de análisis del backend no incluye propuestas asociadas a
+cada barrera.
+
+El backend actual todavía no implementa edición de borradores, reapertura ni
+exportación de archivos. En el flujo real esas acciones no se simulan: el
+detalle es de solo lectura y el resultado informa que la descarga no está
+disponible. El flujo mock conserva su comportamiento existente.
+
 ---
 
 ## Archivos ancla

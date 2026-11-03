@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { api } from '@/lib/api/client';
 import type { ExportFile } from '@/lib/api/types';
+import { isBackendId } from '@/lib/api/ids';
 import {
   clearFlowResume,
   resolveAnalysisId,
@@ -28,6 +29,7 @@ export function ResultadoStep() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
   const [files, setFiles] = useState<ExportFile[]>([]);
   const [applied, setApplied] = useState<string[]>([]);
   const [discarded, setDiscarded] = useState<string[]>([]);
@@ -37,6 +39,7 @@ export function ResultadoStep() {
     total: 0,
   });
   const [error, setError] = useState<string | null>(null);
+  const [exportUnavailable, setExportUnavailable] = useState(false);
   const [loading, setLoading] = useState(() => Boolean(analysisId));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId);
@@ -50,7 +53,35 @@ export function ResultadoStep() {
     if (!analysisId) return;
     let cancelled = false;
     void (async () => {
+      setExportUnavailable(false);
       try {
+        if (isBackendId(analysisId)) {
+          const { barriers } = await api.listBarriersFlat(analysisId);
+          if (cancelled) return;
+          const accepted = barriers.filter(
+            (barrier) => barrier.status === 'accepted'
+          );
+          const rejected = barriers.filter(
+            (barrier) => barrier.status === 'discarded'
+          );
+          setApplied(
+            accepted.map(
+              (barrier) =>
+                `${barrier.title}: ${barrier.currentProposal ?? ''}`.trim()
+            )
+          );
+          setDiscarded(rejected.map((barrier) => barrier.title));
+          setSummary({
+            accepted: accepted.length,
+            discarded: rejected.length,
+            total: barriers.length,
+          });
+          setFiles([]);
+          setExportUnavailable(true);
+          setError(null);
+          return;
+        }
+
         await api.export(analysisId);
         const data = await api.getExports(analysisId);
         if (cancelled) return;
@@ -102,25 +133,42 @@ export function ResultadoStep() {
       <div className="space-y-4">
         <Card className="bg-muted/50">
           <CardHeader className="gap-1.5">
-            <CardTitle>Proceso completado</CardTitle>
+            <CardTitle>
+              {usesBackendApi
+                ? 'Revisión de propuestas completada'
+                : 'Proceso completado'}
+            </CardTitle>
             <p className="text-sm leading-6 text-muted-foreground">
-              {summary.accepted} adaptaciones aplicadas · {summary.discarded}{' '}
-              descartadas · {resolved} barreras resueltas de {summary.total} ·
-              el original permanece intacto
+              {usesBackendApi
+                ? `${summary.accepted} propuestas aceptadas · ${summary.discarded} rechazadas · ${resolved} barreras revisadas de ${summary.total}. El backend conserva el material original.`
+                : `${summary.accepted} adaptaciones aplicadas · ${summary.discarded} descartadas · ${resolved} barreras resueltas de ${summary.total} · el original permanece intacto`}
             </p>
           </CardHeader>
         </Card>
 
-        <DownloadList files={files} />
+        {exportUnavailable ? (
+          <Card className="px-4 py-4 text-sm text-muted-foreground">
+            El backend todavía no ofrece generación ni descarga de archivos.
+            Las decisiones de las propuestas sí quedaron guardadas.
+          </Card>
+        ) : (
+          <DownloadList files={files} />
+        )}
 
         <Card>
           <CardHeader>
-            <CardTitle>Registro de cambios aplicados</CardTitle>
+            <CardTitle>
+              {usesBackendApi
+                ? 'Registro de decisiones'
+                : 'Registro de cambios aplicados'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {applied.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Todavía no hay adaptaciones aceptadas.
+                {usesBackendApi
+                  ? 'Todavía no hay propuestas aceptadas.'
+                  : 'Todavía no hay adaptaciones aceptadas.'}
               </p>
             ) : (
               <ul className="list-disc space-y-1 pl-5 text-sm leading-6">
@@ -131,7 +179,9 @@ export function ResultadoStep() {
             )}
             {discarded.length > 0 ? (
               <p className="text-sm leading-6 text-muted-foreground">
-                Descartadas (quedan registradas en el informe):{' '}
+                {usesBackendApi
+                  ? 'Rechazadas: '
+                  : 'Descartadas (quedan registradas en el informe): '}
                 {discarded.join(' · ')}
               </p>
             ) : null}
@@ -165,11 +215,15 @@ export function ResultadoStep() {
           showCloseButton={false}
         >
           <DialogHeader>
-            <DialogTitle>¿Ya descargaste tus archivos?</DialogTitle>
+            <DialogTitle>
+              {usesBackendApi
+                ? '¿Finalizar el recorrido?'
+                : '¿Ya descargaste tus archivos?'}
+            </DialogTitle>
             <DialogDescription className="text-sm leading-6">
-              Estás usando VERA sin cuenta: al finalizar se borran el material
-              adaptado y el informe. Si todavía no los descargaste, volvé y
-              descargalos antes de salir.
+              {usesBackendApi
+                ? 'Vas a volver al inicio. Las propuestas y decisiones permanecen guardadas en el backend.'
+                : 'Estás usando VERA sin cuenta: al finalizar se borran el material adaptado y el informe. Si todavía no los descargaste, volvé y descargalos antes de salir.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-between">
@@ -179,7 +233,7 @@ export function ResultadoStep() {
               className="h-10 px-4"
               onClick={() => setConfirmOpen(false)}
             >
-              Volver a descargar
+              {usesBackendApi ? 'Volver al resumen' : 'Volver a descargar'}
             </Button>
             <Button
               type="button"

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api/client';
 import type { ApiBarrier, BarrierDecision } from '@/lib/api/types';
+import { isBackendId } from '@/lib/api/ids';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
   AI_ATTEMPTS_PER_BARRIER,
@@ -65,6 +66,7 @@ export function AdaptBoard({
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
   const dimensionFromQuery = searchParams.get('dimension');
 
   const [barriers, setBarriers] = useState<ApiBarrier[]>([]);
@@ -217,6 +219,16 @@ export function AdaptBoard({
     if (isBusy || !analysisId) return;
     const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
     setOverlay({ entryId: entry.id, kind: 'edit' });
+    if (usesBackendApi) {
+      navigate(
+        detalleHref(entry, {
+          origen: 'ia',
+          desde: 'editar',
+          intentos: left,
+        })
+      );
+      return;
+    }
     window.setTimeout(() => {
       void api.reopen(analysisId, entry.id).finally(() => {
         navigate(
@@ -355,9 +367,11 @@ export function AdaptBoard({
 
       {counts.total > 0 ? (
         <p className="text-sm leading-6 text-muted-foreground">
-          {reviewed === 0
-            ? `Se detectaron ${counts.total} barreras. Revisalas una a una: pedí una propuesta a la IA, escribí la tuya o descartala.`
-            : `Llevás ${reviewed} de ${counts.total} barreras revisadas. Podés seguir donde lo dejaste o abrir cualquier barrera desde la lista.`}
+          {usesBackendApi
+            ? `Se detectaron ${counts.total} barreras. Generá una propuesta y aceptala o rechazala desde el detalle.`
+            : reviewed === 0
+              ? `Se detectaron ${counts.total} barreras. Revisalas una a una: pedí una propuesta a la IA, escribí la tuya o descartala.`
+              : `Llevás ${reviewed} de ${counts.total} barreras revisadas. Podés seguir donde lo dejaste o abrir cualquier barrera desde la lista.`}
         </p>
       ) : null}
 
@@ -365,7 +379,7 @@ export function AdaptBoard({
         {[
           ['Pendientes', counts.pending],
           ['Aceptadas', counts.accepted],
-          ['Editadas', 0],
+          ...(usesBackendApi ? [] : [['Editadas', 0]]),
           ['Descartadas', counts.discarded],
         ].map(([label, value]) => (
           <Card key={String(label)} className="items-center text-center">
@@ -387,7 +401,9 @@ export function AdaptBoard({
                 No quedan barreras pendientes
               </p>
               <p className="text-sm text-muted-foreground">
-                Ya podés obtener el material adaptado y el informe.
+                {usesBackendApi
+                  ? 'Podés consultar el resumen de propuestas. La exportación todavía no está disponible en el backend.'
+                  : 'Ya podés obtener el material adaptado y el informe.'}
               </p>
             </div>
             <Button
@@ -405,10 +421,15 @@ export function AdaptBoard({
 
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Intentos de IA por dimensión</CardTitle>
+          <CardTitle>
+            {usesBackendApi
+              ? 'Estado por dimensión'
+              : 'Intentos de IA por dimensión'}
+          </CardTitle>
           <p className="text-xs text-muted-foreground sm:text-right">
-            Cada barrera tiene {AI_ATTEMPTS_PER_BARRIER} intentos propios ·
-            elegí una dimensión para ver su lista
+            {usesBackendApi
+              ? 'Elegí una dimensión para ver sus propuestas y decisiones'
+              : `Cada barrera tiene ${AI_ATTEMPTS_PER_BARRIER} intentos propios · elegí una dimensión para ver su lista`}
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-3">
@@ -463,12 +484,8 @@ export function AdaptBoard({
                 <p className="pr-6 text-xs leading-4 font-medium wrap-break-word">
                   {group.name}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <IntentMeter
-                    remaining={value}
-                    total={AI_ATTEMPTS_PER_BARRIER}
-                  />
-                  <span
+                {usesBackendApi ? (
+                  <p
                     className={cn(
                       'text-xs',
                       active
@@ -476,9 +493,26 @@ export function AdaptBoard({
                         : 'text-muted-foreground'
                     )}
                   >
-                    {value} de {AI_ATTEMPTS_PER_BARRIER}
-                  </span>
-                </div>
+                    {group.items.length} barreras
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <IntentMeter
+                      remaining={value}
+                      total={AI_ATTEMPTS_PER_BARRIER}
+                    />
+                    <span
+                      className={cn(
+                        'text-xs',
+                        active
+                          ? 'text-info-foreground/80'
+                          : 'text-muted-foreground'
+                      )}
+                    >
+                      {value} de {AI_ATTEMPTS_PER_BARRIER}
+                    </span>
+                  </div>
+                )}
                 <p
                   className={cn(
                     'text-[11px]',
@@ -530,6 +564,10 @@ export function AdaptBoard({
               decision === 'accepted' || state.mode === 'ready'
                 ? 'Ver o cambiar'
                 : 'Revisar';
+            const resolvedActionLabel =
+              usesBackendApi && decision === 'accepted'
+                ? 'Ver propuesta'
+                : actionLabel;
 
             return (
               <Card
@@ -559,7 +597,9 @@ export function AdaptBoard({
                     Dónde: {entry.where}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Intentos IA: {left} de {AI_ATTEMPTS_PER_BARRIER}
+                    {usesBackendApi
+                      ? 'Propuestas gestionadas por el backend'
+                      : `Intentos IA: ${left} de ${AI_ATTEMPTS_PER_BARRIER}`}
                   </p>
                 </div>
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end">
@@ -592,7 +632,9 @@ export function AdaptBoard({
                     disabled={isBusy || state.mode === 'generating'}
                     onClick={() => openBarrier(entry)}
                   >
-                    {state.mode === 'generating' ? 'Generando…' : actionLabel}
+                    {state.mode === 'generating'
+                      ? 'Generando…'
+                      : resolvedActionLabel}
                   </Button>
                 </div>
               </Card>
@@ -600,10 +642,20 @@ export function AdaptBoard({
           })}
 
           <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Revisar</span> genera
-            una propuesta con IA (1 intento) y abre el detalle.{' '}
-            <span className="font-medium text-foreground">Ver o cambiar</span>{' '}
-            retoma una propuesta ya aceptada o generada.
+            {usesBackendApi ? (
+              <>
+                <span className="font-medium text-foreground">Revisar</span>{' '}
+                genera una propuesta en el backend. Las propuestas existentes
+                se pueden consultar, aceptar o rechazar.
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-foreground">Revisar</span>{' '}
+                genera una propuesta con IA (1 intento) y abre el detalle.{' '}
+                <span className="font-medium text-foreground">Ver o cambiar</span>{' '}
+                retoma una propuesta ya aceptada o generada.
+              </>
+            )}
           </p>
         </div>
       ) : (

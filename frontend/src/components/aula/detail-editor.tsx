@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { api } from '@/lib/api/client';
 import type { ApiBarrier } from '@/lib/api/types';
+import { isBackendId } from '@/lib/api/ids';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
   AI_ATTEMPTS_PER_BARRIER,
@@ -48,6 +49,7 @@ export function DetailEditor({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
   const startsWithoutProposal = searchParams.get('origen') === 'manual';
   const desde = searchParams.get('desde');
   const fromGenerate = desde === 'generar';
@@ -218,7 +220,7 @@ export function DetailEditor({
   }
 
   async function persistDraft(value: string) {
-    if (!analysisId || !suggestion) return;
+    if (!analysisId || !suggestion || usesBackendApi) return;
     setText(value);
     try {
       await api.saveDraft(analysisId, suggestion.id, value);
@@ -392,9 +394,11 @@ export function DetailEditor({
 
   const footerHint = saved
     ? `Propuesta guardada. Usá Siguiente o continuá a ${nextLabel}.`
-    : left === 0
-      ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
-      : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
+    : usesBackendApi
+      ? 'Aceptá o rechazá la propuesta para continuar.'
+      : left === 0
+        ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
+        : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
 
   return (
     <div
@@ -460,7 +464,9 @@ export function DetailEditor({
             {suggestion.title}
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-            {saved
+            {usesBackendApi
+              ? 'El backend permite generar una propuesta y aceptarla o rechazarla. La edición manual y la reapertura todavía no están disponibles.'
+              : saved
               ? 'Propuesta guardada. Podés continuar con la siguiente barrera o volver a editar para generar otra o ajustarla a mano.'
               : hasProposal
                 ? 'Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente.'
@@ -497,7 +503,7 @@ export function DetailEditor({
               {edited ? <Pill tone="role">Editado por vos</Pill> : null}
               {saved ? <Pill tone="ok">Guardada</Pill> : null}
             </div>
-            {hasProposal && !saved ? (
+            {hasProposal && !saved && !usesBackendApi ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -517,22 +523,30 @@ export function DetailEditor({
               id="propuesta"
               value={text}
               rows={6}
-              readOnly={saved}
+              readOnly={saved || usesBackendApi}
               placeholder={
                 hasProposal
                   ? undefined
-                  : 'Escribí tu adaptación o generá una propuesta con IA.'
+                  : usesBackendApi
+                    ? 'Generá una propuesta con IA.'
+                    : 'Escribí tu adaptación o generá una propuesta con IA.'
               }
               onChange={(event) => setText(event.target.value)}
               onBlur={() => {
-                if (!saved) void persistDraft(text);
+                if (!saved && !usesBackendApi) void persistDraft(text);
               }}
               className={cn(
                 'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
-                saved && 'cursor-default bg-muted text-foreground/90'
+                (saved || usesBackendApi) &&
+                  'cursor-default bg-muted text-foreground/90'
               )}
             />
           </div>
+          {usesBackendApi ? (
+            <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
+              La API actual no permite guardar cambios manuales en la propuesta.
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing) text-xs text-muted-foreground">
             <span>{meta}</span>
             {edited && !saved ? (
@@ -550,13 +564,19 @@ export function DetailEditor({
                     ? 'Pedir otra versión a la IA'
                     : 'Generar propuesta con IA'}
                 </span>
-                <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <IntentMeter
-                    remaining={left}
-                    total={AI_ATTEMPTS_PER_BARRIER}
-                  />
-                  {attemptsLabel}
-                </span>
+                {usesBackendApi ? (
+                  <span className="text-xs text-muted-foreground">
+                    Gestionada por el backend
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <IntentMeter
+                      remaining={left}
+                      total={AI_ATTEMPTS_PER_BARRIER}
+                    />
+                    {attemptsLabel}
+                  </span>
+                )}
               </div>
 
               {!hasProposal ? (
@@ -571,38 +591,51 @@ export function DetailEditor({
                     {generating ? 'Generando...' : 'Generar propuesta'}
                   </Button>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Generar la primera propuesta usa 1 de los{' '}
-                    {AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera. Editar a
-                    mano no consume intentos.
+                    {usesBackendApi
+                      ? 'La propuesta se genera y se guarda en el backend.'
+                      : `Generar la primera propuesta usa 1 de los ${AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera. Editar a mano no consume intentos.`}
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="flex flex-wrap gap-2">
-                    {VERSION_ACTIONS.map((action) => (
-                      <Button
-                        key={action.id}
-                        type="button"
-                        variant="outline"
-                        className="h-8 rounded-full bg-white px-3"
-                        disabled={left === 0}
-                        onClick={() => void consume(action.id)}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
+                  {usesBackendApi ? (
                     <Button
                       type="button"
                       variant="outline"
                       className="h-8 rounded-full bg-white px-3"
-                      disabled={left === 0}
+                      disabled={generating}
                       onClick={() => void consume('otra')}
                     >
                       <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                      Otra versión
+                      Generar otra propuesta
                     </Button>
-                  </div>
-                  {left === 0 ? (
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {VERSION_ACTIONS.map((action) => (
+                        <Button
+                          key={action.id}
+                          type="button"
+                          variant="outline"
+                          className="h-8 rounded-full bg-white px-3"
+                          disabled={left === 0}
+                          onClick={() => void consume(action.id)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 rounded-full bg-white px-3"
+                        disabled={left === 0}
+                        onClick={() => void consume('otra')}
+                      >
+                        <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                        Otra versión
+                      </Button>
+                    </div>
+                  )}
+                  {!usesBackendApi && left === 0 ? (
                     <Card className="bg-warning-soft text-warning-foreground ring-1 ring-warning-foreground/20">
                       <div className="flex gap-3 px-(--card-spacing) py-3">
                         <Info
@@ -621,7 +654,7 @@ export function DetailEditor({
                         </div>
                       </div>
                     </Card>
-                  ) : (
+                  ) : !usesBackendApi ? (
                     <p className="text-xs leading-5 text-muted-foreground">
                       Cada nueva versión usa 1 intento. Son{' '}
                       {AI_ATTEMPTS_PER_BARRIER} por barrera. Editar a mano o
@@ -633,49 +666,55 @@ export function DetailEditor({
             </div>
           ) : (
             <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
-              Para cambiar esta propuesta, usá Volver a editar.
+              {usesBackendApi
+                ? 'El backend no permite reabrir ni modificar propuestas aceptadas.'
+                : 'Para cambiar esta propuesta, usá Volver a editar.'}
             </p>
           )}
         </Card>
       </div>
 
-      <div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-9 px-2"
-          aria-expanded={noteOpen}
-          onClick={() => setNoteOpen((open) => !open)}
-        >
-          + Agregar una nota para el informe (opcional)
-        </Button>
-        {noteOpen ? (
-          <textarea
-            rows={3}
-            placeholder="Esta nota queda en el informe, no en el material adaptado."
-            className="mt-2 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
-        ) : null}
-      </div>
+      {!usesBackendApi ? (
+        <div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-9 px-2"
+            aria-expanded={noteOpen}
+            onClick={() => setNoteOpen((open) => !open)}
+          >
+            + Agregar una nota para el informe (opcional)
+          </Button>
+          {noteOpen ? (
+            <textarea
+              rows={3}
+              placeholder="Esta nota queda en el informe, no en el material adaptado."
+              className="mt-2 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 lg:flex-row lg:items-center lg:justify-between">
         {saved ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 px-4"
-            onClick={() => void resumeEditing()}
-          >
-            Volver a editar
-          </Button>
-        ) : (
+          usesBackendApi ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 px-4"
+              onClick={() => void resumeEditing()}
+            >
+              Volver a editar
+            </Button>
+          )
+        ) : usesBackendApi && !suggestion.hasProposal ? null : (
           <Button
             type="button"
             variant="outline"
             className="h-10 px-4"
             onClick={() => void discardSuggestion()}
           >
-            Descartar barrera
+            {usesBackendApi ? 'Rechazar propuesta' : 'Descartar barrera'}
           </Button>
         )}
         <p className="text-sm text-muted-foreground lg:flex-1 lg:px-4 lg:text-center">
@@ -695,7 +734,11 @@ export function DetailEditor({
           <Button
             type="button"
             className="h-10 px-4"
-            disabled={!hasProposal && text.trim().length === 0}
+            disabled={
+              usesBackendApi
+                ? !suggestion.hasProposal
+                : !hasProposal && text.trim().length === 0
+            }
             onClick={() => void saveAndAccept()}
           >
             Guardar y aceptar
