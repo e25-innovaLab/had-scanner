@@ -29,12 +29,8 @@ def create(
 def get_by_id(
     db: Session,
     proposal_id: int,
-) -> Optional[AdaptationProposal]:
-    return (
-        db.query(AdaptationProposal)
-        .filter(AdaptationProposal.id == proposal_id)
-        .first()
-    )
+) -> AdaptationProposal | None:
+    return db.get(AdaptationProposal, proposal_id)
 
 
 def update_status(

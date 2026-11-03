@@ -231,3 +231,13 @@ def update_adaptation_proposal_status(
         proposal=proposal,
         new_status=new_status,
     )
+
+
+def get_adaptation_proposal(
+    db: Session,
+    proposal_id: int,
+):
+    return proposal_repository.get_by_id(
+        db=db,
+        proposal_id=proposal_id,
+    )
