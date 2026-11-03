@@ -108,8 +108,9 @@ export function HomeStart() {
             Nuevo análisis
           </CardTitle>
           <CardDescription className="text-sm leading-6">
-            Subí un PDF, Word, PowerPoint o pegá texto directamente para
-            empezar.
+            {source === VERA_SOURCE.api
+              ? 'Subí un PDF para analizarlo con el backend local.'
+              : 'Subí un PDF, Word, PowerPoint o pegá texto directamente para empezar.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-const ACCEPT_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
-const ACCEPT_STRING = ACCEPT_EXTENSIONS.join(',');
+const DEMO_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+const PDF_ONLY_EXTENSIONS = ['.pdf'];
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
 type Mode = 'archivo' | 'texto';
@@ -21,9 +21,14 @@ export type UploadSelection = {
 
 export function UploadPanel({
   onSelectionChange,
+  pdfOnly = false,
 }: {
   onSelectionChange?: (selection: UploadSelection) => void;
+  /** Camino API real: solo PDF, sin pestaña “Pegar texto”. */
+  pdfOnly?: boolean;
 } = {}) {
+  const acceptExtensions = pdfOnly ? PDF_ONLY_EXTENSIONS : DEMO_EXTENSIONS;
+  const acceptString = acceptExtensions.join(',');
   const inputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0); // Previene el parpadeo en dragLeave al pasar por elementos hijos
 
@@ -38,6 +43,8 @@ export function UploadPanel({
     name: string;
     size: number;
   } | null>(null);
+
+  const effectiveMode: Mode = pdfOnly ? 'archivo' : mode;
 
   function notify(
     next: Partial<UploadSelection> & {
@@ -57,12 +64,14 @@ export function UploadPanel({
     if (!file) return;
 
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const isValidExtension = ACCEPT_EXTENSIONS.includes(fileExtension);
+    const isValidExtension = acceptExtensions.includes(fileExtension);
 
     if (!isValidExtension) {
       setRejectedFile({ name: file.name, size: file.size });
       setFileError(
-        `No se pudo cargar «${file.name}». El formato no es compatible (PDF, Word o PowerPoint). Probá otro archivo o pegá el texto en la pestaña «Pegar texto».`
+        pdfOnly
+          ? `No se pudo cargar «${file.name}». En API real solo se acepta PDF.`
+          : `No se pudo cargar «${file.name}». El formato no es compatible (PDF, Word o PowerPoint). Probá otro archivo o pegá el texto en la pestaña «Pegar texto».`
       );
       setSelectedFile(null);
       notify({ file: null });
@@ -73,7 +82,9 @@ export function UploadPanel({
       const mb = (file.size / (1024 * 1024)).toFixed(0);
       setRejectedFile({ name: file.name, size: file.size });
       setFileError(
-        `No se pudo cargar «${file.name}». El archivo pesa ${mb} MB y el máximo permitido es 50 MB. Probá comprimir el PDF, dividirlo en partes o pegar el texto en la pestaña «Pegar texto».`
+        pdfOnly
+          ? `No se pudo cargar «${file.name}». El archivo pesa ${mb} MB y el máximo permitido es 50 MB. Probá comprimir o dividir el PDF.`
+          : `No se pudo cargar «${file.name}». El archivo pesa ${mb} MB y el máximo permitido es 50 MB. Probá comprimir el PDF, dividirlo en partes o pegar el texto en la pestaña «Pegar texto».`
       );
       setSelectedFile(null);
       notify({ file: null });
@@ -143,51 +154,53 @@ export function UploadPanel({
   }
 
   function changeMode(next: Mode) {
+    if (pdfOnly && next === 'texto') return;
     setMode(next);
     notify({ mode: next });
   }
 
   return (
     <div className="space-y-4">
-      {/* Selector de modo */}
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Forma de carga"
-      >
-        <Button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'archivo'}
-          variant="ghost"
-          className={cn(
-            'h-9 rounded-xl px-4',
-            mode === 'archivo'
-              ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
-              : 'bg-card text-muted-foreground ring-1 ring-border'
-          )}
-          onClick={() => changeMode('archivo')}
+      {!pdfOnly ? (
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Forma de carga"
         >
-          Subir archivo
-        </Button>
-        <Button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'texto'}
-          variant="ghost"
-          className={cn(
-            'h-9 rounded-xl px-4',
-            mode === 'texto'
-              ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
-              : 'bg-card text-muted-foreground ring-1 ring-border'
-          )}
-          onClick={() => changeMode('texto')}
-        >
-          Pegar texto
-        </Button>
-      </div>
+          <Button
+            type="button"
+            role="tab"
+            aria-selected={effectiveMode === 'archivo'}
+            variant="ghost"
+            className={cn(
+              'h-9 rounded-xl px-4',
+              effectiveMode === 'archivo'
+                ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
+                : 'bg-card text-muted-foreground ring-1 ring-border'
+            )}
+            onClick={() => changeMode('archivo')}
+          >
+            Subir archivo
+          </Button>
+          <Button
+            type="button"
+            role="tab"
+            aria-selected={effectiveMode === 'texto'}
+            variant="ghost"
+            className={cn(
+              'h-9 rounded-xl px-4',
+              effectiveMode === 'texto'
+                ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
+                : 'bg-card text-muted-foreground ring-1 ring-border'
+            )}
+            onClick={() => changeMode('texto')}
+          >
+            Pegar texto
+          </Button>
+        </div>
+      ) : null}
 
-      {mode === 'archivo' ? (
+      {effectiveMode === 'archivo' ? (
         <div className="space-y-3">
           <Card
             className={cn(
@@ -208,18 +221,22 @@ export function UploadPanel({
                 <p className="font-medium">
                   {selectedFile
                     ? selectedFile.name
-                    : 'Arrastra tu archivo aquí'}
+                    : pdfOnly
+                      ? 'Arrastrá tu PDF aquí'
+                      : 'Arrastra tu archivo aquí'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  PDF, Word, PowerPoint — máx. 50 MB
+                  {pdfOnly
+                    ? 'Solo PDF — máx. 50 MB'
+                    : 'PDF, Word, PowerPoint — máx. 50 MB'}
                 </p>
               </div>
 
               <input
                 ref={inputRef}
                 type="file"
-                accept={ACCEPT_STRING}
-                aria-label="Seleccionar archivo"
+                accept={acceptString}
+                aria-label={pdfOnly ? 'Seleccionar PDF' : 'Seleccionar archivo'}
                 className="sr-only"
                 onChange={handleFileChange}
               />
@@ -231,7 +248,13 @@ export function UploadPanel({
                   className="h-10 px-4"
                   onClick={() => inputRef.current?.click()}
                 >
-                  {selectedFile ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  {selectedFile
+                    ? pdfOnly
+                      ? 'Cambiar PDF'
+                      : 'Cambiar archivo'
+                    : pdfOnly
+                      ? 'Seleccionar PDF'
+                      : 'Seleccionar archivo'}
                 </Button>
 
                 {selectedFile && (
