@@ -1,5 +1,6 @@
 import { Check, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { VeraLogo } from "@/components/shell/vera-logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,7 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { VeraLogo } from "@/components/shell/vera-logo";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { startGuestSession } from "@/lib/api/guest-session";
 
 export function AccesoPage() {
@@ -106,19 +114,52 @@ export function AccesoPage() {
         </Card>
       </div>
 
-      <Card className="mt-6 border-border/80 shadow-sm">
-        <CardHeader className="grid-cols-[auto_1fr] items-start gap-x-3 border-l-4 border-l-primary pl-4">
-          <div className="space-y-2">
-            <CardTitle className="text-base">Antes de empezar</CardTitle>
-            <CardDescription className="text-sm leading-6">
-              El contenido se envía a un servicio externo de IA para el análisis.
-              Los archivos se eliminan después del procesamiento. No incluyas
-              datos personales de estudiantes.
-            </CardDescription>
-            <p className="text-sm font-medium text-foreground">
+      <Card className="mt-6 border-border/80 border-l-4 border-l-primary shadow-sm ring-1 ring-border/60">
+        <CardHeader className="gap-2">
+          <CardTitle className="text-base">Antes de empezar</CardTitle>
+          <CardDescription className="text-sm leading-6">
+            El contenido se envía a un servicio externo de IA para el análisis.
+            Los archivos se eliminan después del procesamiento. No incluyas
+            datos personales de estudiantes.
+          </CardDescription>
+          <Dialog>
+            <DialogTrigger
+              render={
+                <button
+                  type="button"
+                  className="justify-self-start text-left text-sm font-medium text-foreground underline-offset-2 hover:underline"
+                />
+              }
+            >
               Más información sobre privacidad →
-            </p>
-          </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Privacidad en VERA</DialogTitle>
+                <DialogDescription>
+                  Cómo tratamos el material que subís al analizar con IA.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 text-sm leading-6 text-muted-foreground">
+                <p>
+                  VERA envía el contenido del material a un proveedor externo de
+                  inteligencia artificial (p. ej. Gemini) solo para detectar
+                  barreras y proponer adaptaciones.
+                </p>
+                <p>
+                  Los archivos subidos se usan para el análisis y se eliminan
+                  después del procesamiento. En el modo sin cuenta, el trabajo
+                  no se guarda en la nube ni entre dispositivos: vive en esta
+                  sesión del navegador.
+                </p>
+                <p>
+                  No incluyas datos personales de estudiantes ni información
+                  sensible en el material. Si el documento los tiene, redactalos
+                  antes de subirlo.
+                </p>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
       </Card>
     </div>

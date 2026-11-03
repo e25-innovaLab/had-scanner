@@ -2,8 +2,9 @@
 
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
-import { CircleHelp, House, Settings } from 'lucide-react';
+import { CircleHelp, CircleUser, House, Settings } from 'lucide-react';
 import { SideNav } from '@/components/shell/side-nav';
+import { clearGuestSession } from '@/lib/api/guest-session';
 import { HOME_LINKS } from '@/lib/aula';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +12,7 @@ const ICONS = {
   '/inicio': House,
   '/ayuda': CircleHelp,
   '/configuracion': Settings,
+  '/': CircleUser,
 } as const;
 
 export function HomeNav() {
@@ -21,11 +23,13 @@ export function HomeNav() {
       {HOME_LINKS.map((link) => {
         const active = pathname === link.href;
         const Icon = ICONS[link.href];
+        const isAccount = link.href === '/';
         return (
           <Link
             key={link.href}
             to={link.href}
             aria-current={active ? 'page' : undefined}
+            onClick={isAccount ? () => clearGuestSession() : undefined}
             className={cn(
               'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-colors',
               active
