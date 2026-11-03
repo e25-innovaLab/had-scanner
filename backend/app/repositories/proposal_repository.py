@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.models.adaptation_proposal import AdaptationProposal
 
@@ -30,3 +31,16 @@ def get_by_id(
     proposal_id: int,
 ) -> AdaptationProposal | None:
     return db.get(AdaptationProposal, proposal_id)
+
+
+def update_status(
+    db: Session,
+    proposal: AdaptationProposal,
+    new_status: str,
+) -> AdaptationProposal:
+    proposal.status = new_status
+
+    db.commit()
+    db.refresh(proposal)
+
+    return proposal
