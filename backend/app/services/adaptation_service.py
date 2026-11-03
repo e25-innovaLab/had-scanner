@@ -209,3 +209,12 @@ def create_adaptation_proposal(
             status_code=502,
             detail="Unable to generate the adaptation proposal.",
         ) from exc
+
+def get_adaptation_proposal(
+    db: Session,
+    proposal_id: int,
+):
+    return proposal_repository.get_by_id(
+        db=db,
+        proposal_id=proposal_id,
+    )

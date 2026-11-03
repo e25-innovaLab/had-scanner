@@ -24,3 +24,9 @@ def create(
     db.refresh(proposal)
 
     return proposal
+
+def get_by_id(
+    db: Session,
+    proposal_id: int,
+) -> AdaptationProposal | None:
+    return db.get(AdaptationProposal, proposal_id)
