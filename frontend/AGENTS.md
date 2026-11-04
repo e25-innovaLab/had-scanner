@@ -1,16 +1,9 @@
-# Frontend: Vite + React + TypeScript
+<!-- BEGIN:nextjs-agent-rules -->
 
-## Objetivo
-App VERA en Vite + React + TypeScript (producto actual en `frontend/`).
+# This is NOT the Next.js you know
 
-## Docs
-- Contrato mock: `docs/api-simulada.md`
-- Arquitectura UI: `docs/frontend-explicado.md`
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-## App a correr
-- `frontend/`: Vite + React + TS
-- Mock: Express en `mock/server.ts` (`pnpm dev` = mock + Vite)
-- Flujo: Cargar → Analizar → Revisar → Adaptar → Detalle → Resultado
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
-## Preservar
-Mismo UX y contrato HTTP `/api/analyses…`
+<!-- END:nextjs-agent-rules -->
