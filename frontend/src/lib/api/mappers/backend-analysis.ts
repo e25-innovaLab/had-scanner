@@ -103,6 +103,7 @@ const TYPE_TO_DIMENSION: Record<string, (typeof DIMENSIONS)[number]> = {
       hasProposal: false,
       draft: null,
       currentProposal: null,
+      currentProposalId: null,
       criterion: dimension,
       detected: b.description,
       original: b.evidences[0]?.anchor ?? `(Fragmento en ${where})`,
@@ -200,4 +201,9 @@ const TYPE_TO_DIMENSION: Record<string, (typeof DIMENSIONS)[number]> = {
       originalFileSize: 0,
       dimensionProgress: toDimensionProgress(analysis),
     };
+  }
+
+  export function toFlatBarriers(analysis: BackendAnalysis): ApiBarrier[] {
+    const analysisId = String(analysis.analysis_id);
+    return analysis.barriers.map((b) => toApiBarrier(b, analysisId));
   }

@@ -75,7 +75,7 @@ export function DetailEditor({
     let cancelled = false;
     void (async () => {
       try {
-        const { barriers: list } = await api.listBarriersFlat(analysisId);
+        const { barriers: list } = await api.getBarriersFlatForUi(analysisId);
         if (cancelled) return;
         setBarriers(list);
         const fromQuery = barrierFromQuery

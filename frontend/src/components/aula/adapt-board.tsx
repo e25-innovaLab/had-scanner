@@ -90,7 +90,7 @@ export function AdaptBoard({
 
   const load = useCallback(async () => {
     if (!analysisId) return;
-    const { barriers: list } = await api.listBarriersFlat(analysisId);
+    const { barriers: list } = await api.getBarriersFlatForUi(analysisId);
     setBarriers(list);
     setStateById(
       Object.fromEntries(list.map((item) => [item.id, toState(item)]))
@@ -130,13 +130,6 @@ export function AdaptBoard({
       cancelled = true;
     };
   }, [analysisId, load, pathname]);
-
-  useEffect(() => {
-    if (!dimensionFromQuery || barriers.length === 0) return;
-    if (barriers.some((b) => b.dimensionId === dimensionFromQuery)) {
-      setSelectedDimensionId(dimensionFromQuery);
-    }
-  }, [dimensionFromQuery, barriers]);
 
   const dimensions = useMemo(() => {
     const order: string[] = [];

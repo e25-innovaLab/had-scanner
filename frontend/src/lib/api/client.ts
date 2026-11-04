@@ -8,9 +8,17 @@ import type {
   MaterialListResponse,
   Material,
   BackendAnalysis,
+  BackendProposal,
 } from "@/lib/api/types";
-import { toBarriersResponse } from "./mappers/backend-analysis";
+import { toBarriersResponse, toFlatBarriers } from "./mappers/backend-analysis";
+import { toCreateProposalResult } from "./mappers/backend-proposal";
 import { isBackendId } from "./ids";
+import {
+  saveCachedProposal,
+  getCachedProposal,
+  clearCachedProposal,
+  applyCachedProposals,
+} from "./proposal-cache";
 
 const DEFAULT_BASE = "";
 
@@ -114,11 +122,32 @@ export const api = {
     );
   },
 
-  createProposal(
+  async createProposal(
     analysisId: string,
     barrierId: string,
     body?: { variant?: keyof ApiBarrier["variants"] },
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
+    if (isBackendId(analysisId)) {
+      // El BE no tiene variants todavía; se ignora body.variant
+      const raw = await request<BackendProposal>(
+        `/barriers/${encodeURIComponent(barrierId)}/proposals`,
+        { method: "POST", body: JSON.stringify({}) },
+      );
+
+      const { barriers } = await this.getBarriersFlatForUi(analysisId);
+      const barrier = barriers.find((b) => b.id === barrierId);
+      if (!barrier) {
+        throw new Error("Barrera no encontrada tras generar la propuesta.");
+      }
+      const result = toCreateProposalResult(analysisId, barrier, raw);
+      saveCachedProposal(analysisId, barrierId, {
+        proposalId: result.proposal.id,
+        text: result.proposal.text,
+        original: result.barrier.original,
+      });
+      return result;
+    }
+
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/proposals`,
       {
@@ -128,11 +157,21 @@ export const api = {
     );
   },
 
-  saveDraft(
+  async saveDraft(
     analysisId: string,
     barrierId: string,
     draft: string,
   ): Promise<ApiBarrier> {
+    if (isBackendId(analysisId)) {
+      const cached = getCachedProposal(analysisId, barrierId);
+      if (cached) {
+        saveCachedProposal(analysisId, barrierId, { ...cached, text: draft });
+      }
+      const { barriers } = await this.getBarriersFlatForUi(analysisId);
+      const barrier = barriers.find((b) => b.id === barrierId);
+      if (!barrier) throw new Error("Barrera no encontrada.");
+      return { ...barrier, draft, hasProposal: Boolean(draft.trim()) };
+    }
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/draft`,
       {
@@ -142,11 +181,35 @@ export const api = {
     );
   },
 
-  accept(
+  async accept(
     analysisId: string,
     barrierId: string,
     draft?: string,
   ): Promise<ApiBarrier> {
+    if (isBackendId(analysisId)) {
+      const cached = getCachedProposal(analysisId, barrierId);
+      if (!cached?.proposalId) {
+        throw new Error(
+          "No hay propuesta para aceptar. Generá una con IA primero.",
+        );
+      }
+      await request(
+        `/adaptations/${encodeURIComponent(cached.proposalId)}/accept`,
+        { method: "POST", body: JSON.stringify({}) },
+      );
+      clearCachedProposal(analysisId, barrierId);
+      const { barriers } = await this.getBarriersFlatForUi(analysisId);
+      const barrier = barriers.find((b) => b.id === barrierId);
+      if (!barrier) throw new Error("Barrera no encontrada.");
+      return {
+        ...barrier,
+        status: "accepted",
+        draft: draft ?? barrier.draft,
+        hasProposal: true,
+        currentProposal: draft ?? barrier.currentProposal,
+        currentProposalId: null,
+      };
+    }
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/accept`,
       {
@@ -156,14 +219,41 @@ export const api = {
     );
   },
 
-  discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
+  async discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
+    if (isBackendId(analysisId)) {
+      const cached = getCachedProposal(analysisId, barrierId);
+      if (!cached?.proposalId) {
+        throw new Error(
+          "No hay propuesta para descartar. Generá una con IA primero.",
+        );
+      }
+      await request(
+        `/adaptations/${encodeURIComponent(cached.proposalId)}/reject`,
+        { method: "POST", body: JSON.stringify({}) },
+      );
+      clearCachedProposal(analysisId, barrierId);
+      const { barriers } = await this.getBarriersFlatForUi(analysisId);
+      const barrier = barriers.find((b) => b.id === barrierId);
+      if (!barrier) throw new Error("Barrera no encontrada.");
+      return {
+        ...barrier,
+        status: "discarded",
+        currentProposalId: null,
+      };
+    }
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/discard`,
       { method: "POST", body: JSON.stringify({}) },
     );
   },
 
-  reopen(analysisId: string, barrierId: string): Promise<ApiBarrier> {
+  async reopen(analysisId: string, barrierId: string): Promise<ApiBarrier> {
+    if (isBackendId(analysisId)) {
+      const { barriers } = await this.getBarriersFlatForUi(analysisId);
+      const barrier = barriers.find((b) => b.id === barrierId);
+      if (!barrier) throw new Error("Barrera no encontrada.");
+      return { ...barrier, status: "pending" };
+    }
     return request(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/reopen`,
       { method: "POST", body: JSON.stringify({}) },
@@ -216,10 +306,9 @@ export const api = {
   },
 
   analyzeMaterial(materialId: number): Promise<BackendAnalysis> {
-    return request<BackendAnalysis>(
-      `/materials/${materialId}/analysis`,
-      { method: "POST" },
-    );
+    return request<BackendAnalysis>(`/materials/${materialId}/analysis`, {
+      method: "POST",
+    });
   },
 
   getBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
@@ -229,18 +318,46 @@ export const api = {
   async getBarriersForUi(analysisId: string): Promise<BarriersResponse> {
     if (isBackendId(analysisId)) {
       const analysis = await this.getBackendAnalysis(Number(analysisId));
-  
+
       if (analysis.status === "processing") {
-        throw new Error("El análisis aún está en curso. Volvé cuando esté listo.");
+        throw new Error(
+          "El análisis aún está en curso. Volvé cuando esté listo.",
+        );
       }
       if (analysis.status === "failed") {
         throw new Error(
-          analysis.error_message ?? "El análisis falló y no hay barreras para revisar.",
+          analysis.error_message ??
+            "El análisis falló y no hay barreras para revisar.",
         );
       }
-  
+
       return toBarriersResponse(analysis);
     }
     return this.listBarriers(analysisId);
-  }
+  },
+
+  async getBarriersFlatForUi(
+    analysisId: string,
+  ): Promise<{ barriers: ApiBarrier[] }> {
+    if (isBackendId(analysisId)) {
+      const analysis = await this.getBackendAnalysis(Number(analysisId));
+
+      if (analysis.status === "processing") {
+        throw new Error(
+          "El análisis aún está en curso. Volvé cuando esté listo.",
+        );
+      }
+      if (analysis.status === "failed") {
+        throw new Error(
+          analysis.error_message ??
+            "El análisis falló y no hay barreras para adaptar.",
+        );
+      }
+
+      return {
+        barriers: applyCachedProposals(analysisId, toFlatBarriers(analysis)),
+      };
+    }
+    return this.listBarriersFlat(analysisId);
+  },
 };
