@@ -660,7 +660,7 @@ export function DetailEditor({
                       {AI_ATTEMPTS_PER_BARRIER} por barrera. Editar a mano o
                       restaurar no consume intentos.
                     </p>
-                  )}
+                  ) : null}
                 </>
               )}
             </div>
