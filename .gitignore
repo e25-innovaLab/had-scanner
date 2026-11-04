@@ -1,3 +1,7 @@
+# Backend
+backend/
+docs/
+
 # dependencies
 node_modules/
 .pnp
@@ -21,6 +25,7 @@ npm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.direnv/
 
 # vercel
 .vercel
