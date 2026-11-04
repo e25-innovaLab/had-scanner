@@ -10,6 +10,7 @@ import { Pill } from '@/components/aula/pill';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api/client';
+import { isBackendId } from '@/lib/api/ids';
 import type { ApiBarrier, BarrierDecision } from '@/lib/api/types';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
@@ -70,6 +71,7 @@ export function AdaptBoard({
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
   const dimensionFromQuery = searchParams.get('dimension');
 
   const [barriers, setBarriers] = useState<ApiBarrier[]>([]);
@@ -227,6 +229,16 @@ export function AdaptBoard({
     if (isBusy || !analysisId) return;
     const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
     setOverlay({ entryId: entry.id, kind: 'edit' });
+    if (usesBackendApi) {
+      navigate(
+        detalleHref(entry, {
+          origen: 'ia',
+          desde: 'editar',
+          intentos: left,
+        })
+      );
+      return;
+    }
     window.setTimeout(() => {
       void api.reopen(analysisId, entry.id).finally(() => {
         navigate(

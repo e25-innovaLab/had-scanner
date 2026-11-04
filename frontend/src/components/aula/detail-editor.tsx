@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { api } from '@/lib/api/client';
+import { isBackendId } from '@/lib/api/ids';
 import type { ApiBarrier } from '@/lib/api/types';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
@@ -48,6 +49,7 @@ export function DetailEditor({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
   const startsWithoutProposal = searchParams.get('origen') === 'manual';
   const desde = searchParams.get('desde');
   const fromGenerate = desde === 'generar';
@@ -224,7 +226,7 @@ export function DetailEditor({
   }
 
   async function persistDraft(value: string) {
-    if (!analysisId || !suggestion) return;
+    if (!analysisId || !suggestion || usesBackendApi) return;
     setText(value);
     try {
       await api.saveDraft(analysisId, suggestion.id, value);
@@ -422,11 +424,13 @@ export function DetailEditor({
       ? lastInDimension
         ? `Propuesta guardada. Es la última barrera de ${suggestion.dimension}.`
         : `Propuesta guardada. Usá Continuar o seguí a ${nextLabel}.`
-      : lastInDimension
-        ? `Es la última barrera de ${suggestion.dimension}. Al guardar o descartar, la dimensión queda revisada y volvés a Adaptar.`
-        : left === 0
-          ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
-          : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
+      : usesBackendApi
+        ? 'Aceptá o rechazá la propuesta para continuar.'
+        : lastInDimension
+          ? `Es la última barrera de ${suggestion.dimension}. Al guardar o descartar, la dimensión queda revisada y volvés a Adaptar.`
+          : left === 0
+            ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
+            : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
 
   return (
     <div
@@ -498,8 +502,12 @@ export function DetailEditor({
             {saved
               ? 'Propuesta guardada. Podés continuar con la siguiente barrera o volver a editar para generar otra o ajustarla a mano.'
               : hasProposal
-                ? 'Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente.'
-                : 'El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano.'}
+                ? usesBackendApi
+                  ? 'Revisá la observación y la propuesta. Aceptá o rechazá: la API actual no guarda ediciones manuales.'
+                  : 'Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente.'
+                : usesBackendApi
+                  ? 'El original está a la izquierda. Generá una propuesta con IA.'
+                  : 'El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano.'}
           </p>
         </div>
       </header>
@@ -534,7 +542,7 @@ export function DetailEditor({
               {edited ? <Pill tone="role">Editado por vos</Pill> : null}
               {saved ? <Pill tone="ok">Guardada</Pill> : null}
             </div>
-            {hasProposal && !saved && !generating ? (
+            {hasProposal && !saved && !generating && !usesBackendApi ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -586,14 +594,16 @@ export function DetailEditor({
                     >
                       Reintentar
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-9 rounded-xl bg-card px-4"
-                      onClick={() => setGenerateError(null)}
-                    >
-                      Escribir mi versión
-                    </Button>
+                    {!usesBackendApi ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 rounded-xl bg-card px-4"
+                        onClick={() => setGenerateError(null)}
+                      >
+                        Escribir mi versión
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </Card>
@@ -608,25 +618,34 @@ export function DetailEditor({
                   id="propuesta"
                   value={text}
                   rows={6}
-                  readOnly={saved}
+                  readOnly={saved || usesBackendApi}
                   placeholder={
                     hasProposal
                       ? undefined
-                      : 'Escribí tu adaptación o generá una propuesta con IA.'
+                      : usesBackendApi
+                        ? 'Generá una propuesta con IA.'
+                        : 'Escribí tu adaptación o generá una propuesta con IA.'
                   }
                   onChange={(event) => setText(event.target.value)}
                   onBlur={() => {
-                    if (!saved) void persistDraft(text);
+                    if (!saved && !usesBackendApi) void persistDraft(text);
                   }}
                   className={cn(
                     'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
-                    saved && 'cursor-default bg-muted text-foreground/90'
+                    (saved || usesBackendApi) &&
+                      'cursor-default bg-muted text-foreground/90'
                   )}
                 />
               </div>
+              {usesBackendApi ? (
+                <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
+                  La API actual no permite guardar cambios manuales en la
+                  propuesta.
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing) text-xs text-muted-foreground">
                 <span>{meta}</span>
-                {edited && !saved ? (
+                {edited && !saved && !usesBackendApi ? (
                   <span className="font-medium text-info-foreground">
                     Cambios sin guardar
                   </span>
@@ -672,9 +691,9 @@ export function DetailEditor({
                     Generar propuesta
                   </Button>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Generar la primera propuesta usa 1 de los{' '}
-                    {AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera. Editar a
-                    mano no consume intentos.
+                    {usesBackendApi
+                      ? `Generar la primera propuesta usa 1 de los ${AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera.`
+                      : `Generar la primera propuesta usa 1 de los ${AI_ATTEMPTS_PER_BARRIER} intentos de esta barrera. Editar a mano no consume intentos.`}
                   </p>
                 </>
               ) : (
@@ -762,15 +781,17 @@ export function DetailEditor({
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 lg:flex-row lg:items-center lg:justify-between">
         {saved ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 rounded-xl px-4"
-            onClick={() => void resumeEditing()}
-          >
-            Volver a editar
-          </Button>
-        ) : (
+          usesBackendApi ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-xl px-4"
+              onClick={() => void resumeEditing()}
+            >
+              Volver a editar
+            </Button>
+          )
+        ) : usesBackendApi && !suggestion.hasProposal && !hasProposal ? null : (
           <Button
             type="button"
             variant="outline"
@@ -778,7 +799,7 @@ export function DetailEditor({
             disabled={generating}
             onClick={() => void discardSuggestion()}
           >
-            Descartar barrera
+            {usesBackendApi ? 'Rechazar propuesta' : 'Descartar barrera'}
           </Button>
         )}
         <p className="text-sm text-muted-foreground lg:flex-1 lg:px-4 lg:text-center">
@@ -802,14 +823,24 @@ export function DetailEditor({
             className="h-10 rounded-xl px-4 font-semibold"
             disabled={
               generating ||
-              (!hasProposal && text.trim().length === 0) ||
-              Boolean(generateError && !hasProposal && text.trim().length === 0)
+              (usesBackendApi
+                ? !hasProposal
+                : (!hasProposal && text.trim().length === 0) ||
+                  Boolean(
+                    generateError &&
+                      !hasProposal &&
+                      text.trim().length === 0
+                  ))
             }
             onClick={() => void saveAndAccept()}
           >
-            {lastInDimension
-              ? 'Guardar y volver a Adaptar'
-              : 'Guardar y aceptar'}
+            {usesBackendApi
+              ? lastInDimension
+                ? 'Aceptar y volver a Adaptar'
+                : 'Aceptar propuesta'
+              : lastInDimension
+                ? 'Guardar y volver a Adaptar'
+                : 'Guardar y aceptar'}
           </Button>
         )}
       </div>
