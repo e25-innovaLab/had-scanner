@@ -397,7 +397,7 @@ export function AnalysisChecklist({
                       disabled={retrying}
                       onClick={() => void retryAnalysis()}
                     >
-                      Reintentar
+                      {retrying ? "Reiniciando…" : "Reintentar"}
                     </Button>
                   ) : null}
                 </>

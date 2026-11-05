@@ -100,7 +100,7 @@ export function BarrierList({
           >
             <button
               type="button"
-              className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/40"
+              className="flex w-full items-center gap-3 px-4 py-4 text-left transition-[background-color,transform] hover:bg-muted/40 active:bg-muted/60 active:scale-[0.995]"
               aria-expanded={open}
               onClick={() => setOpenId(open ? '' : group.id)}
             >
