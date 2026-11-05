@@ -27,10 +27,9 @@ export function IaFab() {
           }
         >
           IA
-          <span
-            className="absolute top-1 right-1 size-2 rounded-full bg-primary"
-            aria-hidden="true"
-          />
+          <span className="ia-fab-orbit pointer-events-none absolute inset-0" aria-hidden="true">
+            <span className="ia-fab-dot absolute top-1 right-1 size-2 rounded-full bg-primary" />
+          </span>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
