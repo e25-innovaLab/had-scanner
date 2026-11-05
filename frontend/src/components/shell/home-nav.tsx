@@ -31,7 +31,7 @@ export function HomeNav() {
             aria-current={active ? 'page' : undefined}
             onClick={isAccount ? () => clearGuestSession() : undefined}
             className={cn(
-              'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color,transform] active:scale-[0.98]',
+              'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color]',
               active
                 ? 'bg-ink font-medium text-sidebar-primary-foreground active:bg-ink/90'
                 : 'text-muted-foreground hover:bg-card hover:text-foreground active:bg-muted'

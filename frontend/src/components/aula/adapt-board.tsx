@@ -466,9 +466,9 @@ export function AdaptBoard({
                   );
                 }}
                 className={cn(
-                  'relative min-w-0 space-y-2 rounded-xl px-3 py-3 text-left ring-1 transition-[transform,box-shadow,background-color,ring-color] active:scale-[0.98]',
+                  'relative min-w-0 space-y-2 rounded-xl px-3 py-3 text-left ring-1 transition-[transform,box-shadow,background-color,ring-color]',
                   active
-                    ? 'scale-[1.02] bg-card py-4 text-foreground shadow-sm ring-2 ring-ink active:scale-[1.01]'
+                    ? 'scale-[1.02] bg-card py-4 text-foreground shadow-sm ring-2 ring-ink'
                     : resolved
                       ? 'bg-success-soft/50 ring-success-foreground/25 hover:bg-success-soft/70 active:bg-success-soft'
                       : 'bg-card ring-border hover:bg-secondary/60 hover:ring-primary/30 active:bg-secondary'

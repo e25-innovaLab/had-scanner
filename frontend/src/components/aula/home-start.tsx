@@ -119,7 +119,7 @@ export function HomeStart() {
               type="button"
               onClick={() => setSource(VERA_SOURCE.mock)}
               className={cn(
-                'rounded-xl border px-3 py-2 text-left text-sm transition-[color,background-color,border-color,transform] active:scale-[0.98]',
+                'rounded-xl border px-3 py-2 text-left text-sm transition-[color,background-color,border-color]',
                 source === VERA_SOURCE.mock
                   ? 'border-ink bg-ink text-sidebar-primary-foreground active:bg-ink/90'
                   : 'border-border bg-card text-muted-foreground hover:text-foreground active:bg-muted'
@@ -132,7 +132,7 @@ export function HomeStart() {
               disabled={apiDisabled}
               onClick={() => setSource(VERA_SOURCE.api)}
               className={cn(
-                'rounded-xl border px-3 py-2 text-left text-sm transition-[color,background-color,border-color,transform] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
+                'rounded-xl border px-3 py-2 text-left text-sm transition-[color,background-color,border-color] disabled:pointer-events-none disabled:opacity-50',
                 source === VERA_SOURCE.api
                   ? 'border-ink bg-ink text-sidebar-primary-foreground active:bg-ink/90'
                   : 'border-border bg-card text-muted-foreground hover:text-foreground active:bg-muted'
