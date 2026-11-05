@@ -128,43 +128,36 @@ export function AnalysisChecklist({
   const totalCount = rows.length;
   const failedLabels = errorRows.map((row) => row.label).join(", ");
 
-  useEffect(() => {
-    if (!analysisId) return;
+  const [activeAnalysisId, setActiveAnalysisId] = useState(analysisId);
+
+  if (analysisId !== activeAnalysisId) {
+    setActiveAnalysisId(analysisId);
     setStatus("analyzing");
-    onStatusChange?.({ status: "analyzing", doneCount: 0, totalCount: 0 });
-  }, [analysisId, onStatusChange]);
+    setRows([]);
+    setError(null);
+    setMaterialId(null);
+    setElapsedSec(0);
+    setFileName("Material");
+    setFileSize(0);
+    setRetrying(false);
+  }
+
+  const isFinished =
+    status === "ready" || status === "failed" || status === "incomplete";
+
+  const displayElapsedSec =
+    analysisId && (isFinished || readAnalysisEndedAt(analysisId) != null)
+      ? elapsedSecondsForAnalysis(analysisId)
+      : elapsedSec;
 
   useEffect(() => {
-    if (!analysisId) return;
+    if (!analysisId || status !== "analyzing") return;
+    if (readAnalysisEndedAt(analysisId) != null) return;
 
     const startedAt = ensureAnalysisStartedAt(analysisId);
-    const endedAt = readAnalysisEndedAt(analysisId);
-
-    if (
-      endedAt != null ||
-      status === "ready" ||
-      status === "failed" ||
-      status === "incomplete"
-    ) {
-      if (
-        endedAt == null &&
-        (status === "ready" || status === "failed" || status === "incomplete")
-      ) {
-        markAnalysisEnded(analysisId);
-      }
-      setElapsedSec(elapsedSecondsForAnalysis(analysisId));
-      return;
-    }
-
-    if (status !== "analyzing") return;
-
-    const tick = () => {
-      setElapsedSec(
-        Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
-      );
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
+    const id = window.setInterval(() => {
+      setElapsedSec(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    }, 1000);
     return () => window.clearInterval(id);
   }, [analysisId, status]);
 
@@ -174,6 +167,9 @@ export function AnalysisChecklist({
     let timer: number | undefined;
 
     function applyStatus(next: AnalysisUiStatus, nextRows: Row[]) {
+      if (next === "ready" || next === "failed" || next === "incomplete") {
+        markAnalysisEnded(analysisId!);
+      }
       setStatus(next);
       onStatusChange?.({
         status: next,
@@ -259,9 +255,7 @@ export function AnalysisChecklist({
       navigate(withAnalysisId("/analisis/analizar", id));
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "No se pudo reiniciar el análisis",
+        err instanceof Error ? err.message : "No se pudo reiniciar el análisis",
       );
       setRetrying(false);
     }
@@ -288,7 +282,7 @@ export function AnalysisChecklist({
             <p className="truncate text-sm font-medium">{fileName}</p>
             <p className="text-xs text-muted-foreground">
               {fileSize ? formatSize(fileSize) : "—"}
-              {` · ${formatElapsed(elapsedSec)}`}
+              {` · ${formatElapsed(displayElapsedSec)}`}
             </p>
           </div>
         </div>
@@ -341,7 +335,9 @@ export function AnalysisChecklist({
       {failed && !incomplete && error ? (
         <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
           <CardContent className="space-y-2 py-4">
-            <p className="text-sm font-semibold">No se pudo completar el análisis</p>
+            <p className="text-sm font-semibold">
+              No se pudo completar el análisis
+            </p>
             <p className="text-sm leading-6">{error}</p>
           </CardContent>
         </Card>

@@ -68,7 +68,7 @@ export function CargarStep() {
     navigate(withAnalysisId("/analisis/analizar", id));
   }
 
-  async function useExistingMaterial(material: Material) {
+  async function analyzeExistingMaterial(material: Material) {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
@@ -191,7 +191,7 @@ export function CargarStep() {
               variant="outline"
               size="sm"
               disabled={submitting}
-              onClick={() => void useExistingMaterial(duplicateMaterial)}
+              onClick={() => void analyzeExistingMaterial(duplicateMaterial)}
             >
               Analizar “{duplicateMaterial.name}” de nuevo
             </Button>
@@ -202,7 +202,7 @@ export function CargarStep() {
       {useRealApi ? (
         <MaterialsHistory
           disabled={submitting}
-          onUseMaterial={useExistingMaterial}
+          onUseMaterial={analyzeExistingMaterial}
         />
       ) : null}
 

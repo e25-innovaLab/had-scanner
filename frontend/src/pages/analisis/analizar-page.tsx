@@ -1,16 +1,27 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { resolveAnalysisId } from "@/lib/api/url";
 import {
   AnalysisChecklist,
   type AnalysisChecklistSummary,
   type AnalysisUiStatus,
-} from '@/components/aula/analysis-checklist';
-import { AnalysisFlowFooter } from '@/components/aula/analysis-flow-footer';
-import { StepHeader } from '@/components/aula/step-header';
+} from "@/components/aula/analysis-checklist";
+import { AnalysisFlowFooter } from "@/components/aula/analysis-flow-footer";
+import { StepHeader } from "@/components/aula/step-header";
 
 export function AnalizarPage() {
-  const [status, setStatus] = useState<AnalysisUiStatus>('analyzing');
+  const [searchParams] = useSearchParams();
+  const analysisId = resolveAnalysisId(searchParams.get("analysisId"));
+  const [status, setStatus] = useState<AnalysisUiStatus>("analyzing");
   const [doneCount, setDoneCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeId, setActiveId] = useState(analysisId);
+  if (analysisId !== activeId) {
+    setActiveId(analysisId);
+    setStatus("analyzing");
+    setDoneCount(0);
+    setTotalCount(0);
+  }
 
   const onStatusChange = useCallback((summary: AnalysisChecklistSummary) => {
     setStatus(summary.status);
@@ -18,18 +29,18 @@ export function AnalizarPage() {
     setTotalCount(summary.totalCount);
   }, []);
 
-  const nextDisabled = status !== 'ready' && status !== 'incomplete';
+  const nextDisabled = status !== "ready" && status !== "incomplete";
   const nextLabel =
-    status === 'incomplete' && doneCount > 0 && totalCount > 0
+    status === "incomplete" && doneCount > 0 && totalCount > 0
       ? `Continuar con ${doneCount} de ${totalCount} →`
-      : 'Siguiente: Revisar';
+      : "Siguiente: Revisar";
   const nextHint =
-    status === 'analyzing'
-      ? 'Esperá a que el análisis termine para continuar.'
-      : status === 'failed'
-        ? 'El análisis falló. Reintentá o volvé a Cargar.'
-        : status === 'incomplete'
-          ? 'Podés continuar con las dimensiones analizadas; el informe marcará las que faltan.'
+    status === "analyzing"
+      ? "Esperá a que el análisis termine para continuar."
+      : status === "failed"
+        ? "El análisis falló. Reintentá o volvé a Cargar."
+        : status === "incomplete"
+          ? "Podés continuar con las dimensiones analizadas; el informe marcará las que faltan."
           : null;
 
   return (
