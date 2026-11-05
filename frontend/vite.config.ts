@@ -31,11 +31,11 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
-      "/proposals": {
+      "/adaptations": {
         target: "http://localhost:8000",
         changeOrigin: true,
       },
-      "/adaptations": {
+      "/proposals": {
         target: "http://localhost:8000",
         changeOrigin: true,
       },

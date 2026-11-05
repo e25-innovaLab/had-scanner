@@ -30,7 +30,7 @@ export function TutorialDialog() {
         <ol className="space-y-3">
           {FLOW_STEPS.map((step, index) => (
             <li key={step.href} className="flex gap-3 text-sm">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-info text-xs font-medium text-info-foreground">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                 {index + 1}
               </span>
               <span className="pt-0.5">

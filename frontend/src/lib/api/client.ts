@@ -94,7 +94,9 @@ function storedBackendProposalId(
   barrierId: string,
 ): number | null {
   if (typeof window === "undefined") {
-    throw new Error("Las propuestas del backend solo se pueden consultar en el navegador.");
+    throw new Error(
+      "Las propuestas del backend solo se pueden consultar en el navegador.",
+    );
   }
   const proposalId = window.localStorage.getItem(
     backendProposalKey(analysisId, barrierId),
@@ -112,7 +114,9 @@ function rememberBackendProposal(
   proposalId: number,
 ): void {
   if (typeof window === "undefined") {
-    throw new Error("Las propuestas del backend solo se pueden guardar en el navegador.");
+    throw new Error(
+      "Las propuestas del backend solo se pueden guardar en el navegador.",
+    );
   }
   window.localStorage.setItem(
     backendProposalKey(analysisId, barrierId),
@@ -136,6 +140,7 @@ function withBackendProposal(
     hasProposal: true,
     draft: null,
     currentProposal: proposal.proposed_content,
+    currentProposalId: String(proposal.proposal_id),
   };
 }
 
@@ -186,23 +191,35 @@ export const api = {
 
   listBarriersFlat(analysisId: string): Promise<{ barriers: ApiBarrier[] }> {
     if (isBackendId(analysisId)) {
-      return this.getBackendAnalysis(Number(analysisId)).then(async (analysis) => {
-        if (analysis.status === "processing") {
-          throw new Error("El análisis aún está en curso. Volvé cuando esté listo.");
-        }
-        if (analysis.status === "failed") {
-          throw new Error(
-            analysis.error_message ?? "El análisis falló y no hay barreras para revisar.",
-          );
-        }
+      return this.getBackendAnalysis(Number(analysisId)).then(
+        async (analysis) => {
+          if (analysis.status === "processing") {
+            throw new Error(
+              "El análisis aún está en curso. Volvé cuando esté listo.",
+            );
+          }
+          if (analysis.status === "failed") {
+            throw new Error(
+              analysis.error_message ??
+                "El análisis falló y no hay barreras para revisar.",
+            );
+          }
 
-        return { barriers: await mapBackendBarriers(analysisId, analysis) };
-      });
+          return { barriers: await mapBackendBarriers(analysisId, analysis) };
+        },
+      );
     }
 
     return request<{ barriers: ApiBarrier[] }>(
       `/api/analyses/${encodeURIComponent(analysisId)}/barriers?flat=1`,
     );
+  },
+
+  /** Alias: misma hidratación que listBarriersFlat (analysis + GET /proposals). */
+  getBarriersFlatForUi(
+    analysisId: string,
+  ): Promise<{ barriers: ApiBarrier[] }> {
+    return this.listBarriersFlat(analysisId);
   },
 
   getBarrier(analysisId: string, barrierId: string): Promise<ApiBarrier> {
@@ -231,7 +248,9 @@ export const api = {
           (barrier) => String(barrier.id) === barrierId,
         );
         if (!backendBarrier) {
-          throw new Error("No se encontró la barrera asociada a la propuesta.");
+          throw new Error(
+            "No se encontró la barrera asociada a la propuesta.",
+          );
         }
         const barrier = withBackendProposal(
           toApiBarrier(backendBarrier, analysisId),
@@ -287,11 +306,7 @@ export const api = {
     draft?: string,
   ): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      return this.updateBackendProposalStatus(
-        analysisId,
-        barrierId,
-        "accept",
-      );
+      return this.updateBackendProposalStatus(analysisId, barrierId, "accept");
     }
 
     return request(
@@ -305,11 +320,7 @@ export const api = {
 
   discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      return this.updateBackendProposalStatus(
-        analysisId,
-        barrierId,
-        "reject",
-      );
+      return this.updateBackendProposalStatus(analysisId, barrierId, "reject");
     }
 
     return request(
@@ -337,7 +348,10 @@ export const api = {
   }> {
     if (isBackendId(analysisId)) {
       return Promise.reject(
-        new ApiError(501, "El backend todavía no ofrece exportación de archivos."),
+        new ApiError(
+          501,
+          "El backend todavía no ofrece exportación de archivos.",
+        ),
       );
     }
 
@@ -356,7 +370,10 @@ export const api = {
   }> {
     if (isBackendId(analysisId)) {
       return Promise.reject(
-        new ApiError(501, "El backend todavía no ofrece exportación de archivos."),
+        new ApiError(
+          501,
+          "El backend todavía no ofrece exportación de archivos.",
+        ),
       );
     }
 
@@ -389,10 +406,9 @@ export const api = {
   },
 
   analyzeMaterial(materialId: number): Promise<BackendAnalysis> {
-    return request<BackendAnalysis>(
-      `/materials/${materialId}/analysis`,
-      { method: "POST" },
-    );
+    return request<BackendAnalysis>(`/materials/${materialId}/analysis`, {
+      method: "POST",
+    });
   },
 
   getBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
@@ -430,11 +446,14 @@ export const api = {
       const analysis = await this.getBackendAnalysis(Number(analysisId));
 
       if (analysis.status === "processing") {
-        throw new Error("El análisis aún está en curso. Volvé cuando esté listo.");
+        throw new Error(
+          "El análisis aún está en curso. Volvé cuando esté listo.",
+        );
       }
       if (analysis.status === "failed") {
         throw new Error(
-          analysis.error_message ?? "El análisis falló y no hay barreras para revisar.",
+          analysis.error_message ??
+            "El análisis falló y no hay barreras para revisar.",
         );
       }
 
@@ -455,5 +474,5 @@ export const api = {
       };
     }
     return this.listBarriers(analysisId);
-  }
+  },
 };

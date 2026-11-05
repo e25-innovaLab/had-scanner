@@ -53,8 +53,11 @@ export function CargarStep() {
     null,
   );
 
-  const canContinue =
-    mode === "archivo" ? Boolean(file) : text.trim().length > 0;
+  const canContinue = useRealApi
+    ? Boolean(file && file.name.toLowerCase().endsWith(".pdf"))
+    : mode === "archivo"
+      ? Boolean(file)
+      : text.trim().length > 0;
 
   async function startAnalysisForMaterial(materialId: number) {
     setStatusLabel("Iniciando análisis…");
@@ -156,6 +159,7 @@ export function CargarStep() {
   return (
     <>
       <UploadPanel
+        pdfOnly={useRealApi}
         onSelectionChange={({
           file: nextFile,
           text: nextText,
@@ -163,15 +167,15 @@ export function CargarStep() {
         }) => {
           setFile(nextFile);
           setText(nextText);
-          setMode(nextMode);
+          setMode(useRealApi ? "archivo" : nextMode);
           setError(null);
           setDuplicateMaterial(null);
         }}
       />
       {useRealApi ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          Camino API real: usá un PDF. El historial reutiliza materiales ya
-          subidos.
+          API real: solo PDF (máx. 50 MB). El historial reutiliza materiales ya
+          subidos. Para Word, PowerPoint o texto pegado, usá Demo (mock).
         </p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
@@ -204,18 +208,18 @@ export function CargarStep() {
 
       <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          to="/"
+          to="/inicio"
           className={cn(
             buttonVariants({ variant: "outline", size: "lg" }),
-            "h-10 px-4",
+            "h-11 rounded-xl px-4",
           )}
         >
-          Volver al inicio
+          ← Volver al inicio
         </Link>
         <Button
           type="button"
           size="lg"
-          className="h-10 px-4"
+          className="h-11 rounded-xl px-4 font-semibold"
           disabled={!canContinue || submitting}
           onClick={() => void continueToAnalyze()}
         >

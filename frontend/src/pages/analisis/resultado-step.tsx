@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { api } from '@/lib/api/client';
+import { isBackendId } from '@/lib/api/ids';
 import type { ExportFile } from '@/lib/api/types';
 import { isBackendId } from '@/lib/api/ids';
 import {
@@ -65,9 +66,8 @@ export function ResultadoStep() {
             (barrier) => barrier.status === 'discarded'
           );
           setApplied(
-            accepted.map(
-              (barrier) =>
-                `${barrier.title}: ${barrier.currentProposal ?? ''}`.trim()
+            accepted.map((barrier) =>
+              `${barrier.title}: ${barrier.currentProposal ?? ''}`.trim()
             )
           );
           setDiscarded(rejected.map((barrier) => barrier.title));
@@ -106,7 +106,7 @@ export function ResultadoStep() {
   function finishAndLeave() {
     clearFlowResume();
     setConfirmOpen(false);
-    navigate('/');
+    navigate('/inicio');
   }
 
   if (!analysisId) {
@@ -131,18 +131,26 @@ export function ResultadoStep() {
         </p>
       ) : null}
       <div className="space-y-4">
-        <Card className="bg-muted/50">
-          <CardHeader className="gap-1.5">
-            <CardTitle>
-              {usesBackendApi
-                ? 'Revisión de propuestas completada'
-                : 'Proceso completado'}
-            </CardTitle>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {usesBackendApi
-                ? `${summary.accepted} propuestas aceptadas · ${summary.discarded} rechazadas · ${resolved} barreras revisadas de ${summary.total}. El backend conserva el material original.`
-                : `${summary.accepted} adaptaciones aplicadas · ${summary.discarded} descartadas · ${resolved} barreras resueltas de ${summary.total} · el original permanece intacto`}
-            </p>
+        <Card className="border-transparent bg-tertiary-container shadow-none ring-1 ring-primary/25">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5">
+              <CardTitle className="text-base">
+                {usesBackendApi
+                  ? 'Revisión de propuestas completada'
+                  : 'Proceso completado'}
+              </CardTitle>
+              <p className="text-sm leading-6 text-foreground/80">
+                {usesBackendApi
+                  ? `${summary.accepted} propuestas aceptadas · ${summary.discarded} rechazadas · ${resolved} barreras revisadas de ${summary.total}. El backend conserva el material original.`
+                  : `${summary.accepted} adaptaciones aplicadas · ${summary.discarded} descartadas · ${resolved} barreras resueltas de ${summary.total} · el original permanece intacto`}
+              </p>
+            </div>
+            {!exportUnavailable ? (
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
+                <span className="size-1.5 rounded-full bg-primary-foreground" />
+                Listo para descarga
+              </span>
+            ) : null}
           </CardHeader>
         </Card>
 
@@ -194,7 +202,7 @@ export function ResultadoStep() {
           to={withAnalysisId('/analisis/adaptar', analysisId)}
           className={cn(
             buttonVariants({ variant: 'outline', size: 'lg' }),
-            'h-10 px-4'
+            'h-11 rounded-xl px-4'
           )}
         >
           Atrás
@@ -202,7 +210,7 @@ export function ResultadoStep() {
         <Button
           type="button"
           size="lg"
-          className="h-10 px-4"
+          className="h-11 rounded-xl px-4 font-semibold"
           onClick={() => setConfirmOpen(true)}
         >
           Finalizar
@@ -211,33 +219,33 @@ export function ResultadoStep() {
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent
-          className="sm:max-w-md"
+          className="gap-5 rounded-2xl sm:max-w-md"
           showCloseButton={false}
         >
-          <DialogHeader>
-            <DialogTitle>
+          <DialogHeader className="gap-2">
+            <DialogTitle className="text-xl">
               {usesBackendApi
                 ? '¿Finalizar el recorrido?'
                 : '¿Ya descargaste tus archivos?'}
             </DialogTitle>
-            <DialogDescription className="text-sm leading-6">
+            <DialogDescription className="text-sm leading-6 text-muted-foreground">
               {usesBackendApi
                 ? 'Vas a volver al inicio. Las propuestas y decisiones permanecen guardadas en el backend.'
                 : 'Estás usando VERA sin cuenta: al finalizar se borran el material adaptado y el informe. Si todavía no los descargaste, volvé y descargalos antes de salir.'}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="gap-2 sm:justify-between">
             <Button
               type="button"
               variant="outline"
-              className="h-10 px-4"
+              className="h-11 rounded-xl px-4"
               onClick={() => setConfirmOpen(false)}
             >
               {usesBackendApi ? 'Volver al resumen' : 'Volver a descargar'}
             </Button>
             <Button
               type="button"
-              className="h-10 px-4"
+              className="h-11 rounded-xl px-4 font-semibold"
               onClick={finishAndLeave}
             >
               Finalizar y salir

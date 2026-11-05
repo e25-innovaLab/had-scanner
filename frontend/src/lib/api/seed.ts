@@ -54,6 +54,7 @@ export function seedBarriersForAnalysis(analysisId: string): ApiBarrier[] {
         hasProposal: false,
         draft: null,
         currentProposal: null,
+        currentProposalId: null,
         criterion: detail?.criterion ?? group.name,
         detected: detail?.detected ?? item.why,
         original: detail?.original ?? `(Fragmento en ${item.where})`,

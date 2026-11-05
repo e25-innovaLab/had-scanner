@@ -38,7 +38,7 @@ export function DownloadList({
   }
 
   return (
-    <Card className="gap-0 divide-y divide-border overflow-hidden py-0">
+    <Card className="gap-0 divide-y divide-border overflow-hidden py-0 shadow-sm ring-1 ring-border/70">
       {files.map((file) => (
         <div
           key={file.name}

@@ -44,6 +44,7 @@ export type ApiBarrier = {
   hasProposal: boolean;
   draft: string | null;
   currentProposal: string | null;
+  currentProposalId: string | null;
   criterion: string;
   detected: string;
   original: string;
@@ -155,4 +156,13 @@ export type BackendAnalysis = {
   score: number;
   error_message?: string | null;
   barriers: BackendBarrier[];
+};
+
+export type BackendProposal = {
+  proposal_id: number;
+  barrier_id: number;
+  status: string;
+  original_content: string;
+  proposed_content: string;
+  explanation: string;
 };

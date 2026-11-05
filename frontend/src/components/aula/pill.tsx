@@ -2,14 +2,15 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 const tones = {
-  step: 'bg-info text-info-foreground',
+  step: 'bg-primary/25 text-foreground',
   role: 'bg-secondary text-muted-foreground',
   alta: 'bg-alta text-alta-foreground',
   media: 'bg-media text-media-foreground',
   baja: 'bg-baja text-baja-foreground',
   ok: 'bg-success-soft text-success-foreground',
+  warn: 'bg-warning-soft text-warning-foreground',
   muted: 'bg-secondary text-muted-foreground',
-  outline: 'bg-white text-foreground ring-1 ring-border',
+  outline: 'bg-card text-foreground ring-1 ring-border',
 } as const;
 
 export function Pill({
