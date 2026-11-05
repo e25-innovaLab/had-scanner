@@ -1,7 +1,3 @@
-# Backend
-backend/
-docs/
-
 # dependencies
 node_modules/
 .pnp

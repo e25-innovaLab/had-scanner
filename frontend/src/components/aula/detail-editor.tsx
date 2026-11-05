@@ -21,7 +21,6 @@ import {
 import { api } from '@/lib/api/client';
 import { isBackendId } from '@/lib/api/ids';
 import type { ApiBarrier } from '@/lib/api/types';
-import { isBackendId } from '@/lib/api/ids';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
   AI_ATTEMPTS_PER_BARRIER,
@@ -500,9 +499,7 @@ export function DetailEditor({
             {suggestion.title}
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-            {usesBackendApi
-              ? 'El backend permite generar una propuesta y aceptarla o rechazarla. La edición manual y la reapertura todavía no están disponibles.'
-              : saved
+            {saved
               ? 'Propuesta guardada. Podés continuar con la siguiente barrera o volver a editar para generar otra o ajustarla a mano.'
               : hasProposal
                 ? usesBackendApi
@@ -722,35 +719,10 @@ export function DetailEditor({
                       onClick={() => void consume('otra')}
                     >
                       <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                      Generar otra propuesta
+                      Otra versión
                     </Button>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {VERSION_ACTIONS.map((action) => (
-                        <Button
-                          key={action.id}
-                          type="button"
-                          variant="outline"
-                          className="h-8 rounded-full bg-white px-3"
-                          disabled={left === 0}
-                          onClick={() => void consume(action.id)}
-                        >
-                          {action.label}
-                        </Button>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-8 rounded-full bg-white px-3"
-                        disabled={left === 0}
-                        onClick={() => void consume('otra')}
-                      >
-                        <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                        Otra versión
-                      </Button>
-                    </div>
-                  )}
-                  {!usesBackendApi && left === 0 ? (
+                  </div>
+                  {left === 0 ? (
                     <Card className="bg-warning-soft text-warning-foreground ring-1 ring-warning-foreground/20">
                       <div className="flex gap-3 px-(--card-spacing) py-3">
                         <Info
@@ -776,40 +748,36 @@ export function DetailEditor({
                       {AI_ATTEMPTS_PER_BARRIER} por barrera. Editar a mano o
                       restaurar no consume intentos.
                     </p>
-                  ) : null}
+                  )}
                 </>
               )}
             </div>
           ) : saved ? (
             <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
-              {usesBackendApi
-                ? 'El backend no permite reabrir ni modificar propuestas aceptadas.'
-                : 'Para cambiar esta propuesta, usá Volver a editar.'}
+              Para cambiar esta propuesta, usá Volver a editar.
             </p>
           ) : null}
         </Card>
       </div>
 
-      {!usesBackendApi ? (
-        <div>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-9 px-2"
-            aria-expanded={noteOpen}
-            onClick={() => setNoteOpen((open) => !open)}
-          >
-            + Agregar una nota para el informe (opcional)
-          </Button>
-          {noteOpen ? (
-            <textarea
-              rows={3}
-              placeholder="Esta nota queda en el informe, no en el material adaptado."
-              className="mt-2 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          ) : null}
-        </div>
-      ) : null}
+      <div>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-9 px-2"
+          aria-expanded={noteOpen}
+          onClick={() => setNoteOpen((open) => !open)}
+        >
+          + Agregar una nota para el informe (opcional)
+        </Button>
+        {noteOpen ? (
+          <textarea
+            rows={3}
+            placeholder="Esta nota queda en el informe, no en el material adaptado."
+            className="mt-2 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+        ) : null}
+      </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 lg:flex-row lg:items-center lg:justify-between">
         {saved ? (
