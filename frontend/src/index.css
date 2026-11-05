@@ -187,3 +187,37 @@
     width: 100%;
   }
 }
+
+@keyframes ia-fab-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ia-fab-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  6% {
+    transform: scale(1.65);
+  }
+  14% {
+    transform: scale(1);
+  }
+}
+
+.ia-fab-orbit {
+  animation: ia-fab-orbit 3s linear infinite;
+}
+
+.ia-fab-dot {
+  animation: ia-fab-beat 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-fab-orbit,
+  .ia-fab-dot {
+    animation: none;
+  }
+}
