@@ -193,7 +193,9 @@ export function CargarStep() {
               disabled={submitting}
               onClick={() => void analyzeExistingMaterial(duplicateMaterial)}
             >
-              Analizar “{duplicateMaterial.name}” de nuevo
+              {submitting
+                ? "Iniciando…"
+                : `Analizar “${duplicateMaterial.name}” de nuevo`}
             </Button>
           ) : null}
         </div>

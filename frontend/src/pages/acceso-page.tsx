@@ -127,7 +127,7 @@ export function AccesoPage() {
               render={
                 <button
                   type="button"
-                  className="justify-self-start text-left text-sm font-medium text-foreground underline-offset-2 hover:underline"
+                  className="justify-self-start rounded-md text-left text-sm font-medium text-foreground underline-offset-2 transition-opacity hover:underline active:opacity-70"
                 />
               }
             >

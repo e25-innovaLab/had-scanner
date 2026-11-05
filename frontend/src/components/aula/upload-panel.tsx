@@ -296,7 +296,7 @@ export function UploadPanel({
                 </span>
                 <button
                   type="button"
-                  className="text-sm font-medium text-foreground underline-offset-2 hover:underline"
+                  className="rounded-md px-1 text-sm font-medium text-foreground underline-offset-2 transition-opacity hover:underline active:opacity-70"
                   onClick={resetFileSelection}
                 >
                   Quitar

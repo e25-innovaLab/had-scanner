@@ -61,7 +61,12 @@ export function DetailEditor({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [pendingVariant, setPendingVariant] = useState<VariantId | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [actionPending, setActionPending] = useState<
+    'save' | 'discard' | 'resume' | null
+  >(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [text, setText] = useState('');
   const [aiBaseline, setAiBaseline] = useState('');
@@ -247,6 +252,7 @@ export function DetailEditor({
       hasProposal
     )
       return;
+    setPendingVariant(null);
     setGenerating(true);
     setGenerateError(null);
     window.setTimeout(() => {
@@ -277,13 +283,18 @@ export function DetailEditor({
           );
         } finally {
           setGenerating(false);
+          setPendingVariant(null);
         }
       })();
     }, GENERATE_TIMEOUT_MS);
   }
 
   async function consume(variant: VariantId) {
-    if (!analysisId || !suggestion || saved || left <= 0) return;
+    if (!analysisId || !suggestion || saved || left <= 0 || generating) return;
+    setPendingVariant(variant);
+    setGenerating(true);
+    setGenerateError(null);
+    setError(null);
     try {
       const { barrier } = await api.createProposal(analysisId, suggestion.id, {
         variant,
@@ -299,10 +310,24 @@ export function DetailEditor({
             : item
         )
       );
+      setSaved(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'No se pudo generar variante'
       );
+    } finally {
+      setGenerating(false);
+      setPendingVariant(null);
+    }
+  }
+
+  async function restoreAiProposal() {
+    if (!analysisId || !suggestion || restoring || generating) return;
+    setRestoring(true);
+    try {
+      await persistDraft(aiBaseline);
+    } finally {
+      window.setTimeout(() => setRestoring(false), 350);
     }
   }
 
@@ -349,7 +374,8 @@ export function DetailEditor({
   }
 
   async function saveAndAccept() {
-    if (!analysisId || !suggestion) return;
+    if (!analysisId || !suggestion || actionPending || generating) return;
+    setActionPending('save');
     try {
       await api.accept(analysisId, suggestion.id, text);
       setSaved(true);
@@ -363,11 +389,14 @@ export function DetailEditor({
       advance(nextList);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo aceptar');
+    } finally {
+      setActionPending(null);
     }
   }
 
   async function discardSuggestion() {
-    if (!analysisId || !suggestion) return;
+    if (!analysisId || !suggestion || actionPending || generating) return;
+    setActionPending('discard');
     try {
       await api.discard(analysisId, suggestion.id);
       setSaved(false);
@@ -380,11 +409,14 @@ export function DetailEditor({
       advance(nextList);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo descartar');
+    } finally {
+      setActionPending(null);
     }
   }
 
   async function resumeEditing() {
-    if (!analysisId || !suggestion) return;
+    if (!analysisId || !suggestion || actionPending || generating) return;
+    setActionPending('resume');
     try {
       await api.reopen(analysisId, suggestion.id);
       setSaved(false);
@@ -392,6 +424,8 @@ export function DetailEditor({
       setBarrierStatusLocal(suggestion.id, 'pending');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo reabrir');
+    } finally {
+      setActionPending(null);
     }
   }
 
@@ -546,11 +580,17 @@ export function DetailEditor({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 px-2 text-muted-foreground"
-                onClick={() => void persistDraft(aiBaseline)}
+                className="h-8 px-2 text-muted-foreground active:scale-[0.97] active:bg-muted"
+                disabled={restoring}
+                aria-pressed={restoring}
+                onClick={() => void restoreAiProposal()}
               >
-                <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                Restaurar propuesta IA
+                <RotateCcw
+                  data-icon="inline-start"
+                  aria-hidden="true"
+                  className={cn(restoring && 'animate-spin')}
+                />
+                {restoring ? 'Restaurando…' : 'Restaurar propuesta IA'}
               </Button>
             ) : null}
           </div>
@@ -559,7 +599,14 @@ export function DetailEditor({
             <div className="space-y-3 px-(--card-spacing)">
               <Card className="border-primary/30 bg-primary/20 text-foreground shadow-none">
                 <div className="px-(--card-spacing) py-3 text-sm leading-6">
-                  <p className="font-semibold">Generando propuesta con IA…</p>
+                  <p className="font-semibold">
+                    {pendingVariant
+                      ? `Generando versión «${
+                          VERSION_ACTIONS.find((a) => a.id === pendingVariant)
+                            ?.label ?? 'Otra versión'
+                        }»…`
+                      : 'Generando propuesta con IA…'}
+                  </p>
                   <p className="text-muted-foreground">
                     Mientras tanto, podés leer la observación y el texto
                     original. Si falla, el intento no se descuenta.
@@ -704,22 +751,42 @@ export function DetailEditor({
                         key={action.id}
                         type="button"
                         variant="outline"
-                        className="h-8 rounded-full bg-white px-3"
+                        className={cn(
+                          'h-8 rounded-full bg-white px-3 transition-transform active:scale-[0.96] active:bg-muted',
+                          pendingVariant === action.id &&
+                            'border-primary bg-primary/15 text-foreground ring-2 ring-primary/40',
+                        )}
                         disabled={left === 0 || generating}
+                        aria-busy={pendingVariant === action.id}
                         onClick={() => void consume(action.id)}
                       >
-                        {action.label}
+                        {pendingVariant === action.id
+                          ? 'Generando…'
+                          : action.label}
                       </Button>
                     ))}
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-8 rounded-full bg-white px-3"
+                      className={cn(
+                        'h-8 rounded-full bg-white px-3 transition-transform active:scale-[0.96] active:bg-muted',
+                        pendingVariant === 'otra' &&
+                          'border-primary bg-primary/15 text-foreground ring-2 ring-primary/40',
+                      )}
                       disabled={left === 0 || generating}
+                      aria-busy={pendingVariant === 'otra'}
                       onClick={() => void consume('otra')}
                     >
-                      <RotateCcw data-icon="inline-start" aria-hidden="true" />
-                      Otra versión
+                      <RotateCcw
+                        data-icon="inline-start"
+                        aria-hidden="true"
+                        className={cn(
+                          pendingVariant === 'otra' && 'animate-spin',
+                        )}
+                      />
+                      {pendingVariant === 'otra'
+                        ? 'Generando…'
+                        : 'Otra versión'}
                     </Button>
                   </div>
                   {left === 0 ? (
@@ -786,9 +853,10 @@ export function DetailEditor({
               type="button"
               variant="outline"
               className="h-10 rounded-xl px-4"
+              disabled={actionPending != null}
               onClick={() => void resumeEditing()}
             >
-              Volver a editar
+              {actionPending === 'resume' ? 'Reabriendo…' : 'Volver a editar'}
             </Button>
           )
         ) : usesBackendApi && !suggestion.hasProposal && !hasProposal ? null : (
@@ -796,10 +864,16 @@ export function DetailEditor({
             type="button"
             variant="outline"
             className="h-10 rounded-xl px-4"
-            disabled={generating}
+            disabled={generating || actionPending != null}
             onClick={() => void discardSuggestion()}
           >
-            {usesBackendApi ? 'Rechazar propuesta' : 'Descartar barrera'}
+            {actionPending === 'discard'
+              ? usesBackendApi
+                ? 'Rechazando…'
+                : 'Descartando…'
+              : usesBackendApi
+                ? 'Rechazar propuesta'
+                : 'Descartar barrera'}
           </Button>
         )}
         <p className="text-sm text-muted-foreground lg:flex-1 lg:px-4 lg:text-center">
@@ -809,6 +883,7 @@ export function DetailEditor({
           <Button
             type="button"
             className="h-10 rounded-xl px-4 font-semibold"
+            disabled={actionPending != null}
             onClick={() => advance()}
           >
             {allResolved || nextPendingIndex < 0
@@ -823,6 +898,7 @@ export function DetailEditor({
             className="h-10 rounded-xl px-4 font-semibold"
             disabled={
               generating ||
+              actionPending != null ||
               (usesBackendApi
                 ? !hasProposal
                 : (!hasProposal && text.trim().length === 0) ||
@@ -834,13 +910,17 @@ export function DetailEditor({
             }
             onClick={() => void saveAndAccept()}
           >
-            {usesBackendApi
-              ? lastInDimension
-                ? 'Aceptar y volver a Adaptar'
-                : 'Aceptar propuesta'
-              : lastInDimension
-                ? 'Guardar y volver a Adaptar'
-                : 'Guardar y aceptar'}
+            {actionPending === 'save'
+              ? usesBackendApi
+                ? 'Aceptando…'
+                : 'Guardando…'
+              : usesBackendApi
+                ? lastInDimension
+                  ? 'Aceptar y volver a Adaptar'
+                  : 'Aceptar propuesta'
+                : lastInDimension
+                  ? 'Guardar y volver a Adaptar'
+                  : 'Guardar y aceptar'}
           </Button>
         )}
       </div>
