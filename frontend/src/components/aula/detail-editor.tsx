@@ -580,7 +580,7 @@ export function DetailEditor({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 px-2 text-muted-foreground active:scale-[0.97] active:bg-muted"
+                className="h-8 px-2 text-muted-foreground"
                 disabled={restoring}
                 aria-pressed={restoring}
                 onClick={() => void restoreAiProposal()}
@@ -595,31 +595,7 @@ export function DetailEditor({
             ) : null}
           </div>
 
-          {generating ? (
-            <div className="space-y-3 px-(--card-spacing)">
-              <Card className="border-primary/30 bg-primary/20 text-foreground shadow-none">
-                <div className="px-(--card-spacing) py-3 text-sm leading-6">
-                  <p className="font-semibold">
-                    {pendingVariant
-                      ? `Generando versión «${
-                          VERSION_ACTIONS.find((a) => a.id === pendingVariant)
-                            ?.label ?? 'Otra versión'
-                        }»…`
-                      : 'Generando propuesta con IA…'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    Mientras tanto, podés leer la observación y el texto
-                    original. Si falla, el intento no se descuenta.
-                  </p>
-                </div>
-              </Card>
-              <div className="space-y-2 rounded-lg border border-border bg-card px-3 py-4">
-                <div className="h-3 w-full animate-pulse rounded bg-secondary" />
-                <div className="h-3 w-4/5 animate-pulse rounded bg-secondary" />
-                <div className="h-3 w-3/5 animate-pulse rounded bg-secondary" />
-              </div>
-            </div>
-          ) : generateError && !hasProposal ? (
+          {generateError && !hasProposal ? (
             <div className="px-(--card-spacing)">
               <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
                 <div className="space-y-3 px-(--card-spacing) py-4">
@@ -657,7 +633,28 @@ export function DetailEditor({
             </div>
           ) : (
             <>
-              <div className="px-(--card-spacing)">
+              {generating ? (
+                <div className="px-(--card-spacing)">
+                  <Card className="border-primary/30 bg-primary/20 text-foreground shadow-none">
+                    <div className="px-(--card-spacing) py-3 text-sm leading-6">
+                      <p className="font-semibold">
+                        {pendingVariant
+                          ? `Generando versión «${
+                              VERSION_ACTIONS.find(
+                                (a) => a.id === pendingVariant,
+                              )?.label ?? 'Otra versión'
+                            }»…`
+                          : 'Generando propuesta con IA…'}
+                      </p>
+                      <p className="text-muted-foreground">
+                        El texto actual se mantiene visible. Si falla, el
+                        intento no se descuenta.
+                      </p>
+                    </div>
+                  </Card>
+                </div>
+              ) : null}
+              <div className="relative px-(--card-spacing)">
                 <label className="sr-only" htmlFor="propuesta">
                   Propuesta editable
                 </label>
@@ -665,7 +662,8 @@ export function DetailEditor({
                   id="propuesta"
                   value={text}
                   rows={6}
-                  readOnly={saved || usesBackendApi}
+                  readOnly={saved || usesBackendApi || generating}
+                  aria-busy={generating}
                   placeholder={
                     hasProposal
                       ? undefined
@@ -675,12 +673,15 @@ export function DetailEditor({
                   }
                   onChange={(event) => setText(event.target.value)}
                   onBlur={() => {
-                    if (!saved && !usesBackendApi) void persistDraft(text);
+                    if (!saved && !usesBackendApi && !generating) {
+                      void persistDraft(text);
+                    }
                   }}
                   className={cn(
-                    'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                    'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground transition-opacity focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
                     (saved || usesBackendApi) &&
-                      'cursor-default bg-muted text-foreground/90'
+                      'cursor-default bg-muted text-foreground/90',
+                    generating && 'cursor-wait opacity-60',
                   )}
                 />
               </div>
@@ -752,7 +753,7 @@ export function DetailEditor({
                         type="button"
                         variant="outline"
                         className={cn(
-                          'h-8 rounded-full bg-white px-3 transition-transform active:scale-[0.96] active:bg-muted',
+                          'h-8 rounded-full bg-white px-3',
                           pendingVariant === action.id &&
                             'border-primary bg-primary/15 text-foreground ring-2 ring-primary/40',
                         )}
@@ -769,7 +770,7 @@ export function DetailEditor({
                       type="button"
                       variant="outline"
                       className={cn(
-                        'h-8 rounded-full bg-white px-3 transition-transform active:scale-[0.96] active:bg-muted',
+                        'h-8 rounded-full bg-white px-3',
                         pendingVariant === 'otra' &&
                           'border-primary bg-primary/15 text-foreground ring-2 ring-primary/40',
                       )}

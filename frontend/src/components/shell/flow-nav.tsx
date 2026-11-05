@@ -67,7 +67,7 @@ export function FlowNav() {
               to={stepHref(step.href)}
               aria-current={state === 'current' ? 'step' : undefined}
               className={cn(
-                'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color,transform] active:scale-[0.98]',
+                'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color]',
                 state === 'current'
                   ? 'bg-ink font-medium text-sidebar-primary-foreground active:bg-ink/90'
                   : state === 'done'
