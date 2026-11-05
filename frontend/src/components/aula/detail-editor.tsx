@@ -39,6 +39,14 @@ const VERSION_ACTIONS = [
   { id: 'ejemplo', label: 'Agregar un ejemplo' },
 ] as const;
 
+const TEXT_FADE_MS = 180;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 type VariantId = keyof ApiBarrier['variants'];
 
 export function DetailEditor({
@@ -69,6 +77,7 @@ export function DetailEditor({
   >(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [text, setText] = useState('');
+  const [textOpaque, setTextOpaque] = useState(true);
   const [aiBaseline, setAiBaseline] = useState('');
   const [hasProposal, setHasProposal] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -242,6 +251,16 @@ export function DetailEditor({
     }
   }
 
+  async function swapProposalText(next: string) {
+    setTextOpaque(false);
+    await sleep(TEXT_FADE_MS);
+    setText(next);
+    setGenerating(false);
+    setPendingVariant(null);
+    await sleep(16);
+    setTextOpaque(true);
+  }
+
   async function generateProposal() {
     if (
       !analysisId ||
@@ -262,7 +281,6 @@ export function DetailEditor({
             analysisId,
             suggestion.id
           );
-          setText(barrier.draft ?? barrier.currentProposal ?? '');
           setAiBaseline(barrier.currentProposal ?? '');
           setHasProposal(true);
           setLeft(barrier.remainingAttempts);
@@ -275,15 +293,18 @@ export function DetailEditor({
           );
           setSaved(false);
           setGenerateError(null);
+          await swapProposalText(
+            barrier.draft ?? barrier.currentProposal ?? '',
+          );
         } catch (err) {
           setGenerateError(
             err instanceof Error
               ? err.message
               : 'La IA no respondió a tiempo. El intento no se descontó.'
           );
-        } finally {
           setGenerating(false);
           setPendingVariant(null);
+          setTextOpaque(true);
         }
       })();
     }, GENERATE_TIMEOUT_MS);
@@ -299,7 +320,6 @@ export function DetailEditor({
       const { barrier } = await api.createProposal(analysisId, suggestion.id, {
         variant,
       });
-      setText(barrier.draft ?? barrier.currentProposal ?? '');
       setAiBaseline(barrier.currentProposal ?? '');
       setHasProposal(true);
       setLeft(barrier.remainingAttempts);
@@ -311,23 +331,28 @@ export function DetailEditor({
         )
       );
       setSaved(false);
+      await swapProposalText(barrier.draft ?? barrier.currentProposal ?? '');
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'No se pudo generar variante'
       );
-    } finally {
       setGenerating(false);
       setPendingVariant(null);
+      setTextOpaque(true);
     }
   }
 
   async function restoreAiProposal() {
     if (!analysisId || !suggestion || restoring || generating) return;
     setRestoring(true);
+    setTextOpaque(false);
     try {
+      await sleep(TEXT_FADE_MS);
       await persistDraft(aiBaseline);
+      await sleep(16);
+      setTextOpaque(true);
     } finally {
-      window.setTimeout(() => setRestoring(false), 350);
+      window.setTimeout(() => setRestoring(false), 200);
     }
   }
 
@@ -678,10 +703,11 @@ export function DetailEditor({
                     }
                   }}
                   className={cn(
-                    'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground transition-opacity focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                    'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground transition-opacity duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
                     (saved || usesBackendApi) &&
                       'cursor-default bg-muted text-foreground/90',
-                    generating && 'cursor-wait opacity-60',
+                    generating && 'cursor-wait',
+                    !textOpaque || generating ? 'opacity-40' : 'opacity-100',
                   )}
                 />
               </div>
