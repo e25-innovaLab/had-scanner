@@ -12,29 +12,37 @@ from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.barrier_evidence import BarrierEvidence
 
-
 # Alembic Config object
 config = context.config
-
 
 # Use DATABASE_URL from environment
 database_url = os.getenv("DATABASE_URL")
 
 if database_url:
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace(
+            "postgres://",
+            "postgresql+psycopg://",
+            1,
+        )
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace(
+            "postgresql://",
+            "postgresql+psycopg://",
+            1,
+        )
+
     config.set_main_option(
         "sqlalchemy.url",
-        database_url,
+        database_url.replace("%", "%%"),
     )
-
 
 # Configure Python logging
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-
 # Metadata used by Alembic for autogenerate
 target_metadata = Base.metadata
-
 
 def run_migrations_offline() -> None:
     """Run migrations in offline mode."""

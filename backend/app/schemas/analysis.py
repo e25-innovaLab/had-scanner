@@ -36,5 +36,7 @@ class AnalysisResponse(BaseModel):
     analysis_id: int = Field(validation_alias="id")
     material_id: int
     status: str
+    current_step: str
     score: int
+    error_message: str | None = None
     barriers: list[BarrierResponse]
