@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { api } from '@/lib/api/client';
 import { isBackendId } from '@/lib/api/ids';
+import { proposalGenerationMessage } from '@/lib/api/proposal-errors';
 import type { ApiBarrier } from '@/lib/api/types';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
@@ -297,11 +298,7 @@ export function DetailEditor({
             barrier.draft ?? barrier.currentProposal ?? '',
           );
         } catch (err) {
-          setGenerateError(
-            err instanceof Error
-              ? err.message
-              : 'La IA no respondió a tiempo. El intento no se descontó.'
-          );
+          setGenerateError(proposalGenerationMessage(err));
           setGenerating(false);
           setPendingVariant(null);
           setTextOpaque(true);
@@ -333,9 +330,7 @@ export function DetailEditor({
       setSaved(false);
       await swapProposalText(barrier.draft ?? barrier.currentProposal ?? '');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'No se pudo generar variante'
-      );
+      setError(proposalGenerationMessage(err));
       setGenerating(false);
       setPendingVariant(null);
       setTextOpaque(true);
@@ -628,11 +623,13 @@ export function DetailEditor({
                     <p className="text-sm font-semibold">
                       No pudimos generar la propuesta
                     </p>
-                    <p className="text-sm leading-6">
-                      La IA no respondió a tiempo. El intento no se descontó:
-                      seguís teniendo {left} de {AI_ATTEMPTS_PER_BARRIER} para
-                      esta barrera.
-                    </p>
+                    <p className="text-sm leading-6">{generateError}</p>
+                    {!usesBackendApi ? (
+                      <p className="text-sm leading-6">
+                        Seguís teniendo {left} de {AI_ATTEMPTS_PER_BARRIER}{' '}
+                        intentos para esta barrera.
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -651,7 +648,16 @@ export function DetailEditor({
                       >
                         Escribir mi versión
                       </Button>
-                    ) : null}
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 rounded-xl bg-card px-4"
+                        onClick={() => setGenerateError(null)}
+                      >
+                        Cerrar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>

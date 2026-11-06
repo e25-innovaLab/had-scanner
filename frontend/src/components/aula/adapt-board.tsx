@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Pencil, Sparkles } from 'lucide-react';
+import { AlertCircle, Check, Pencil, Sparkles } from 'lucide-react';
 import { IntentMeter } from '@/components/aula/intent-meter';
 import { MissingAnalysis } from '@/components/aula/missing-analysis';
 import { Pill } from '@/components/aula/pill';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api/client';
 import { isBackendId } from '@/lib/api/ids';
+import { proposalGenerationMessage } from '@/lib/api/proposal-errors';
 import type { ApiBarrier, BarrierDecision } from '@/lib/api/types';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
@@ -39,6 +40,13 @@ type BarrierState = {
   proposal: string | null;
   decision: BarrierDecision;
   remaining: number;
+  generateFail: string | null;
+};
+
+type OverlayState = {
+  entryId: string;
+  kind: 'generate' | 'edit' | 'generate-error';
+  message?: string;
 };
 
 function toState(barrier: ApiBarrier): BarrierState {
@@ -47,6 +55,7 @@ function toState(barrier: ApiBarrier): BarrierState {
     proposal: barrier.currentProposal ?? barrier.draft,
     decision: barrier.status,
     remaining: barrier.remainingAttempts,
+    generateFail: null,
   };
 }
 
@@ -77,10 +86,7 @@ export function AdaptBoard({
   const [barriers, setBarriers] = useState<ApiBarrier[]>([]);
   const [stateById, setStateById] = useState<Record<string, BarrierState>>({});
   const [selectedDimensionId, setSelectedDimensionId] = useState<string>('');
-  const [overlay, setOverlay] = useState<{
-    entryId: string;
-    kind: 'generate' | 'edit';
-  } | null>(null);
+  const [overlay, setOverlay] = useState<OverlayState | null>(null);
   const [loading, setLoading] = useState(() => Boolean(analysisId));
   const [error, setError] = useState<string | null>(null);
   const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId);
@@ -159,7 +165,7 @@ export function AdaptBoard({
   );
 
   const overlayEntry = barriers.find((entry) => entry.id === overlay?.entryId);
-  const isBusy = Boolean(overlay);
+  const isBusy = Boolean(overlay && overlay.kind !== 'generate-error');
 
   const nextPendingIndex = useMemo(() => {
     return barriers.findIndex((barrier) => {
@@ -256,10 +262,15 @@ export function AdaptBoard({
     const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
     if (left <= 0 || isBusy || !analysisId) return;
 
+    setError(null);
     setOverlay({ entryId: entry.id, kind: 'generate' });
     setStateById((current) => ({
       ...current,
-      [entry.id]: { ...current[entry.id], mode: 'generating' },
+      [entry.id]: {
+        ...current[entry.id],
+        mode: 'generating',
+        generateFail: null,
+      },
     }));
 
     window.setTimeout(() => {
@@ -273,6 +284,7 @@ export function AdaptBoard({
               mode: 'ready',
               remaining: barrier.remainingAttempts,
               proposal: barrier.draft ?? barrier.currentProposal ?? null,
+              generateFail: null,
             },
           }));
           navigate(
@@ -283,15 +295,28 @@ export function AdaptBoard({
             })
           );
         } catch (err) {
-          setOverlay(null);
+          const message = proposalGenerationMessage(err);
+          setOverlay({
+            entryId: entry.id,
+            kind: 'generate-error',
+            message,
+          });
           setStateById((current) => ({
             ...current,
-            [entry.id]: { ...current[entry.id], mode: 'empty' },
+            [entry.id]: {
+              ...current[entry.id],
+              mode: 'empty',
+              generateFail: message,
+            },
           }));
-          setError(err instanceof Error ? err.message : 'No se pudo generar');
+          setError(message);
         }
       })();
     }, GENERATE_TIMEOUT_MS);
+  }
+
+  function dismissGenerateError() {
+    setOverlay(null);
   }
 
   function openBarrier(entry: ApiBarrier) {
@@ -327,16 +352,30 @@ export function AdaptBoard({
       {overlay && overlayEntry ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4"
-          role="status"
-          aria-live="polite"
-          aria-busy="true"
+          role={overlay.kind === 'generate-error' ? 'alertdialog' : 'status'}
+          aria-live="assertive"
+          aria-busy={overlay.kind !== 'generate-error'}
+          aria-labelledby="adapt-overlay-title"
+          aria-describedby="adapt-overlay-desc"
         >
           <Card className="w-full max-w-md shadow-lg">
             <CardContent className="space-y-4 py-8 text-center">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10">
+              <div
+                className={cn(
+                  'mx-auto flex size-12 items-center justify-center rounded-full',
+                  overlay.kind === 'generate-error'
+                    ? 'bg-danger-soft'
+                    : 'bg-primary/10'
+                )}
+              >
                 {overlay.kind === 'generate' ? (
                   <Sparkles
                     className="size-6 animate-pulse text-primary"
+                    aria-hidden="true"
+                  />
+                ) : overlay.kind === 'generate-error' ? (
+                  <AlertCircle
+                    className="size-6 text-danger-foreground"
                     aria-hidden="true"
                   />
                 ) : (
@@ -344,32 +383,65 @@ export function AdaptBoard({
                 )}
               </div>
               <div className="space-y-1.5">
-                <p className="text-base font-semibold">
+                <p
+                  id="adapt-overlay-title"
+                  className="text-base font-semibold"
+                >
                   {overlay.kind === 'generate'
                     ? 'Generando propuesta con IA'
-                    : 'Abriendo edición'}
+                    : overlay.kind === 'generate-error'
+                      ? 'No se pudo generar la propuesta'
+                      : 'Abriendo edición'}
                 </p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {overlayEntry.title}
+                <p
+                  id="adapt-overlay-desc"
+                  className="text-sm leading-6 text-muted-foreground"
+                >
+                  {overlay.kind === 'generate-error'
+                    ? (overlay.message ??
+                      'La IA no pudo completar la solicitud.')
+                    : overlayEntry.title}
                 </p>
               </div>
-              <div className="mx-auto h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-secondary">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{
-                    animation: `adapt-generate-progress ${
-                      overlay.kind === 'generate'
-                        ? GENERATE_TIMEOUT_MS
-                        : RESUME_EDIT_TIMEOUT_MS
-                    }ms linear forwards`,
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {overlay.kind === 'generate'
-                  ? 'Cuando termine, vas a ver el detalle de la propuesta.'
-                  : 'Te llevamos al detalle para seguir ajustando la propuesta.'}
-              </p>
+              {overlay.kind === 'generate-error' ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button
+                    type="button"
+                    className="h-9 rounded-xl px-4"
+                    onClick={() => generate(overlayEntry)}
+                  >
+                    Reintentar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 rounded-xl px-4"
+                    onClick={dismissGenerateError}
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        animation: `adapt-generate-progress ${
+                          overlay.kind === 'generate'
+                            ? GENERATE_TIMEOUT_MS
+                            : RESUME_EDIT_TIMEOUT_MS
+                        }ms linear forwards`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {overlay.kind === 'generate'
+                      ? 'Cuando termine, vas a ver el detalle de la propuesta.'
+                      : 'Te llevamos al detalle para seguir ajustando la propuesta.'}
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -582,8 +654,18 @@ export function AdaptBoard({
                     Dónde: {entry.where}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Intentos IA: {left} de {AI_ATTEMPTS_PER_BARRIER}
+                    {usesBackendApi
+                      ? 'Si la generación falla, no se descuenta un intento.'
+                      : `Intentos IA: ${left} de ${AI_ATTEMPTS_PER_BARRIER}`}
                   </p>
+                  {state.generateFail ? (
+                    <p
+                      className="text-xs leading-5 text-danger-foreground"
+                      role="status"
+                    >
+                      Último intento falló. Podés reintentar con Revisar.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end">
                   <span
@@ -610,15 +692,20 @@ export function AdaptBoard({
                   </span>
                   <Button
                     type="button"
-                    variant={isNext ? 'default' : 'outline'}
+                    variant={isNext || state.generateFail ? 'default' : 'outline'}
                     className={cn(
                       'h-9 rounded-xl px-3',
-                      isNext && 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90'
+                      (isNext || state.generateFail) &&
+                        'bg-ink text-sidebar-primary-foreground hover:bg-ink/90'
                     )}
                     disabled={isBusy || state.mode === 'generating'}
                     onClick={() => openBarrier(entry)}
                   >
-                    {state.mode === 'generating' ? 'Generando…' : actionLabel}
+                    {state.mode === 'generating'
+                      ? 'Generando…'
+                      : state.generateFail
+                        ? 'Reintentar'
+                        : actionLabel}
                   </Button>
                 </div>
               </Card>
