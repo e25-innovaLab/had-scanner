@@ -20,12 +20,16 @@ import {
 } from '@/components/ui/dialog';
 import { api } from '@/lib/api/client';
 import { isBackendId } from '@/lib/api/ids';
-import { proposalGenerationMessage } from '@/lib/api/proposal-errors';
+import {
+  PROPOSAL_JOB_STATUS,
+  clearProposalJob,
+  startProposal,
+  useProposalJob,
+} from '@/lib/api/proposal-jobs';
 import type { ApiBarrier } from '@/lib/api/types';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
 import {
   AI_ATTEMPTS_PER_BARRIER,
-  GENERATE_TIMEOUT_MS,
   countSentences,
   countWords,
   readingLabel,
@@ -69,7 +73,6 @@ export function DetailEditor({
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [pendingVariant, setPendingVariant] = useState<VariantId | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
@@ -83,6 +86,34 @@ export function DetailEditor({
   const [hasProposal, setHasProposal] = useState(false);
   const [saved, setSaved] = useState(false);
   const [left, setLeft] = useState(AI_ATTEMPTS_PER_BARRIER);
+  const [appliedJobKey, setAppliedJobKey] = useState<string | null>(null);
+
+  function applyBarrier(
+    barrier: ApiBarrier | undefined,
+    opts: { startsWithoutProposal: boolean; fromGenerate: boolean }
+  ) {
+    if (!barrier) return;
+    const forceProposal = opts.fromGenerate || !opts.startsWithoutProposal;
+    const proposal = barrier.currentProposal ?? barrier.draft ?? '';
+    const showProposal =
+      opts.fromGenerate ||
+      barrier.hasProposal ||
+      Boolean(proposal) ||
+      (forceProposal && Boolean(proposal) && !opts.startsWithoutProposal);
+
+    setLeft(barrier.remainingAttempts);
+    setSaved(barrier.status === 'accepted');
+    setHasProposal(showProposal || Boolean(barrier.hasProposal && proposal));
+    setAiBaseline(barrier.currentProposal ?? proposal);
+    setText(
+      opts.startsWithoutProposal && !barrier.hasProposal && !proposal
+        ? (barrier.draft ?? '')
+        : (barrier.draft ?? proposal)
+    );
+    setPendingVariant(null);
+    setGenerateError(null);
+    setNoteOpen(false);
+  }
 
   useEffect(() => {
     if (!analysisId) {
@@ -139,33 +170,63 @@ export function DetailEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisId, barrierFromQuery, startsWithoutProposal, fromGenerate]);
 
-  function applyBarrier(
-    barrier: ApiBarrier | undefined,
-    opts: { startsWithoutProposal: boolean; fromGenerate: boolean }
-  ) {
-    if (!barrier) return;
-    const forceProposal = opts.fromGenerate || !opts.startsWithoutProposal;
-    const proposal = barrier.currentProposal ?? barrier.draft ?? '';
-    const showProposal =
-      opts.fromGenerate ||
-      barrier.hasProposal ||
-      (forceProposal && Boolean(proposal) && !opts.startsWithoutProposal);
-
-    setLeft(barrier.remainingAttempts);
-    setSaved(barrier.status === 'accepted');
-    setHasProposal(showProposal || Boolean(barrier.hasProposal && proposal));
-    setAiBaseline(barrier.currentProposal ?? proposal);
-    setText(
-      opts.startsWithoutProposal && !barrier.hasProposal
-        ? (barrier.draft ?? '')
-        : (barrier.draft ?? proposal)
-    );
-    setGenerating(false);
-    setGenerateError(null);
-    setNoteOpen(false);
-  }
-
   const suggestion = barriers[index];
+  const proposalJob = useProposalJob(analysisId, suggestion?.id);
+  const generating = proposalJob?.status === PROPOSAL_JOB_STATUS.PENDING;
+
+  useEffect(() => {
+    setAppliedJobKey(null);
+  }, [suggestion?.id]);
+
+  useEffect(() => {
+    if (!analysisId || !suggestion || !proposalJob) return;
+
+    const jobKey = `${proposalJob.analysisId}:${proposalJob.barrierId}:${proposalJob.status}`;
+    if (jobKey === appliedJobKey) return;
+
+    if (proposalJob.status === PROPOSAL_JOB_STATUS.PENDING) {
+      setGenerateError(null);
+      if (proposalJob.variant) {
+        setPendingVariant(proposalJob.variant);
+      }
+      return;
+    }
+
+    if (
+      proposalJob.status === PROPOSAL_JOB_STATUS.SUCCESS &&
+      proposalJob.barrier
+    ) {
+      const barrier = proposalJob.barrier;
+      setAppliedJobKey(jobKey);
+      setAiBaseline(barrier.currentProposal ?? '');
+      setHasProposal(true);
+      setLeft(barrier.remainingAttempts);
+      setBarriers((current) =>
+        current.map((item) => (item.id === barrier.id ? barrier : item))
+      );
+      setSaved(false);
+      setGenerateError(null);
+      clearProposalJob(analysisId, suggestion.id);
+      void swapProposalText(barrier.draft ?? barrier.currentProposal ?? '');
+      return;
+    }
+
+    if (proposalJob.status === PROPOSAL_JOB_STATUS.ERROR) {
+      const message =
+        proposalJob.error ?? 'No se pudo generar la propuesta.';
+      setAppliedJobKey(jobKey);
+      if (proposalJob.variant) {
+        setError(message);
+      } else {
+        setGenerateError(message);
+      }
+      setPendingVariant(null);
+      setTextOpaque(true);
+      clearProposalJob(analysisId, suggestion.id);
+    }
+    // swapProposalText is stable enough for this effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisId, suggestion, proposalJob, appliedJobKey]);
 
   const pendingCount = useMemo(
     () => barriers.filter((item) => item.status === 'pending').length,
@@ -256,13 +317,12 @@ export function DetailEditor({
     setTextOpaque(false);
     await sleep(TEXT_FADE_MS);
     setText(next);
-    setGenerating(false);
     setPendingVariant(null);
     await sleep(16);
     setTextOpaque(true);
   }
 
-  async function generateProposal() {
+  function generateProposal() {
     if (
       !analysisId ||
       !suggestion ||
@@ -273,68 +333,25 @@ export function DetailEditor({
     )
       return;
     setPendingVariant(null);
-    setGenerating(true);
     setGenerateError(null);
-    window.setTimeout(() => {
-      void (async () => {
-        try {
-          const { barrier } = await api.createProposal(
-            analysisId,
-            suggestion.id
-          );
-          setAiBaseline(barrier.currentProposal ?? '');
-          setHasProposal(true);
-          setLeft(barrier.remainingAttempts);
-          setBarriers((current) =>
-            current.map((item) =>
-              item.id === suggestion.id
-                ? { ...item, remainingAttempts: barrier.remainingAttempts }
-                : item
-            )
-          );
-          setSaved(false);
-          setGenerateError(null);
-          await swapProposalText(
-            barrier.draft ?? barrier.currentProposal ?? '',
-          );
-        } catch (err) {
-          setGenerateError(proposalGenerationMessage(err));
-          setGenerating(false);
-          setPendingVariant(null);
-          setTextOpaque(true);
-        }
-      })();
-    }, GENERATE_TIMEOUT_MS);
+    setAppliedJobKey(null);
+    startProposal(analysisId, suggestion.id, {
+      barrierTitle: suggestion.title,
+      dimensionId: suggestion.dimensionId,
+    });
   }
 
-  async function consume(variant: VariantId) {
+  function consume(variant: VariantId) {
     if (!analysisId || !suggestion || saved || left <= 0 || generating) return;
     setPendingVariant(variant);
-    setGenerating(true);
     setGenerateError(null);
     setError(null);
-    try {
-      const { barrier } = await api.createProposal(analysisId, suggestion.id, {
-        variant,
-      });
-      setAiBaseline(barrier.currentProposal ?? '');
-      setHasProposal(true);
-      setLeft(barrier.remainingAttempts);
-      setBarriers((current) =>
-        current.map((item) =>
-          item.id === suggestion.id
-            ? { ...item, remainingAttempts: barrier.remainingAttempts }
-            : item
-        )
-      );
-      setSaved(false);
-      await swapProposalText(barrier.draft ?? barrier.currentProposal ?? '');
-    } catch (err) {
-      setError(proposalGenerationMessage(err));
-      setGenerating(false);
-      setPendingVariant(null);
-      setTextOpaque(true);
-    }
+    setAppliedJobKey(null);
+    startProposal(analysisId, suggestion.id, {
+      variant,
+      barrierTitle: suggestion.title,
+      dimensionId: suggestion.dimensionId,
+    });
   }
 
   async function restoreAiProposal() {

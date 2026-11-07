@@ -11,14 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api/client';
 import { isBackendId } from '@/lib/api/ids';
-import { proposalGenerationMessage } from '@/lib/api/proposal-errors';
+import {
+  PROPOSAL_JOB_STATUS,
+  clearProposalJob,
+  startProposal,
+  useProposalJobs,
+} from '@/lib/api/proposal-jobs';
 import type { ApiBarrier, BarrierDecision } from '@/lib/api/types';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
-import {
-  AI_ATTEMPTS_PER_BARRIER,
-  GENERATE_TIMEOUT_MS,
-  RESUME_EDIT_TIMEOUT_MS,
-} from '@/lib/aula';
+import { AI_ATTEMPTS_PER_BARRIER, RESUME_EDIT_TIMEOUT_MS } from '@/lib/aula';
 import { cn } from '@/lib/utils';
 
 export type AdaptCounts = {
@@ -45,7 +46,7 @@ type BarrierState = {
 
 type OverlayState = {
   entryId: string;
-  kind: 'generate' | 'edit' | 'generate-error';
+  kind: 'edit' | 'generate-error';
   message?: string;
 };
 
@@ -90,6 +91,7 @@ export function AdaptBoard({
   const [loading, setLoading] = useState(() => Boolean(analysisId));
   const [error, setError] = useState<string | null>(null);
   const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId);
+  const proposalJobs = useProposalJobs();
 
   if (analysisId !== prevAnalysisId) {
     setPrevAnalysisId(analysisId);
@@ -165,7 +167,84 @@ export function AdaptBoard({
   );
 
   const overlayEntry = barriers.find((entry) => entry.id === overlay?.entryId);
-  const isBusy = Boolean(overlay && overlay.kind !== 'generate-error');
+  const isOpeningEdit = overlay?.kind === 'edit';
+
+  useEffect(() => {
+    if (!analysisId || loading) return;
+
+    for (const job of proposalJobs) {
+      if (job.analysisId !== analysisId) continue;
+
+      if (job.status === PROPOSAL_JOB_STATUS.PENDING) {
+        setStateById((current) => {
+          const previous = current[job.barrierId];
+          if (!previous || previous.mode === 'generating') return current;
+          return {
+            ...current,
+            [job.barrierId]: {
+              ...previous,
+              mode: 'generating',
+              generateFail: null,
+            },
+          };
+        });
+        continue;
+      }
+
+      if (job.status === PROPOSAL_JOB_STATUS.SUCCESS && job.barrier) {
+        const barrier = job.barrier;
+        const i = barriers.findIndex((item) => item.id === barrier.id) + 1;
+        const n = barriers.length;
+        setStateById((current) => ({
+          ...current,
+          [job.barrierId]: {
+            ...(current[job.barrierId] ?? toState(barrier)),
+            mode: 'ready',
+            remaining: barrier.remainingAttempts,
+            proposal: barrier.draft ?? barrier.currentProposal ?? null,
+            generateFail: null,
+          },
+        }));
+        setBarriers((current) =>
+          current.map((item) => (item.id === barrier.id ? barrier : item))
+        );
+        clearProposalJob(job.analysisId, job.barrierId);
+        navigate(
+          withAnalysisId(
+            `/analisis/detalle?origen=ia&desde=generar&barrera=${encodeURIComponent(barrier.id)}&dimension=${encodeURIComponent(barrier.dimensionId)}&intentos=${barrier.remainingAttempts}&i=${i > 0 ? i : 1}&n=${n > 0 ? n : 1}`,
+            analysisId
+          )
+        );
+        continue;
+      }
+
+      if (job.status === PROPOSAL_JOB_STATUS.ERROR) {
+        const message =
+          job.error ?? 'La IA no pudo completar la solicitud.';
+        setOverlay({
+          entryId: job.barrierId,
+          kind: 'generate-error',
+          message,
+        });
+        setStateById((current) => ({
+          ...current,
+          [job.barrierId]: {
+            ...(current[job.barrierId] ?? {
+              mode: 'empty',
+              proposal: null,
+              decision: 'pending',
+              remaining: AI_ATTEMPTS_PER_BARRIER,
+              generateFail: null,
+            }),
+            mode: 'empty',
+            generateFail: message,
+          },
+        }));
+        setError(message);
+        clearProposalJob(job.analysisId, job.barrierId);
+      }
+    }
+  }, [analysisId, proposalJobs, navigate, loading, barriers]);
 
   const nextPendingIndex = useMemo(() => {
     return barriers.findIndex((barrier) => {
@@ -232,7 +311,8 @@ export function AdaptBoard({
   }
 
   function resumeEdit(entry: ApiBarrier) {
-    if (isBusy || !analysisId) return;
+    if (isOpeningEdit || !analysisId) return;
+    if (stateById[entry.id]?.mode === 'generating') return;
     const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
     setOverlay({ entryId: entry.id, kind: 'edit' });
     if (usesBackendApi) {
@@ -260,10 +340,11 @@ export function AdaptBoard({
 
   function generate(entry: ApiBarrier) {
     const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
-    if (left <= 0 || isBusy || !analysisId) return;
+    if (left <= 0 || isOpeningEdit || !analysisId) return;
+    if (stateById[entry.id]?.mode === 'generating') return;
 
     setError(null);
-    setOverlay({ entryId: entry.id, kind: 'generate' });
+    setOverlay(null);
     setStateById((current) => ({
       ...current,
       [entry.id]: {
@@ -272,47 +353,10 @@ export function AdaptBoard({
         generateFail: null,
       },
     }));
-
-    window.setTimeout(() => {
-      void (async () => {
-        try {
-          const { barrier } = await api.createProposal(analysisId, entry.id);
-          setStateById((current) => ({
-            ...current,
-            [entry.id]: {
-              ...current[entry.id],
-              mode: 'ready',
-              remaining: barrier.remainingAttempts,
-              proposal: barrier.draft ?? barrier.currentProposal ?? null,
-              generateFail: null,
-            },
-          }));
-          navigate(
-            detalleHref(entry, {
-              origen: 'ia',
-              desde: 'generar',
-              intentos: barrier.remainingAttempts,
-            })
-          );
-        } catch (err) {
-          const message = proposalGenerationMessage(err);
-          setOverlay({
-            entryId: entry.id,
-            kind: 'generate-error',
-            message,
-          });
-          setStateById((current) => ({
-            ...current,
-            [entry.id]: {
-              ...current[entry.id],
-              mode: 'empty',
-              generateFail: message,
-            },
-          }));
-          setError(message);
-        }
-      })();
-    }, GENERATE_TIMEOUT_MS);
+    startProposal(analysisId, entry.id, {
+      barrierTitle: entry.title,
+      dimensionId: entry.dimensionId,
+    });
   }
 
   function dismissGenerateError() {
@@ -354,7 +398,7 @@ export function AdaptBoard({
           className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4"
           role={overlay.kind === 'generate-error' ? 'alertdialog' : 'status'}
           aria-live="assertive"
-          aria-busy={overlay.kind !== 'generate-error'}
+          aria-busy={overlay.kind === 'edit'}
           aria-labelledby="adapt-overlay-title"
           aria-describedby="adapt-overlay-desc"
         >
@@ -368,12 +412,7 @@ export function AdaptBoard({
                     : 'bg-primary/10'
                 )}
               >
-                {overlay.kind === 'generate' ? (
-                  <Sparkles
-                    className="size-6 animate-pulse text-primary"
-                    aria-hidden="true"
-                  />
-                ) : overlay.kind === 'generate-error' ? (
+                {overlay.kind === 'generate-error' ? (
                   <AlertCircle
                     className="size-6 text-danger-foreground"
                     aria-hidden="true"
@@ -387,11 +426,9 @@ export function AdaptBoard({
                   id="adapt-overlay-title"
                   className="text-base font-semibold"
                 >
-                  {overlay.kind === 'generate'
-                    ? 'Generando propuesta con IA'
-                    : overlay.kind === 'generate-error'
-                      ? 'No se pudo generar la propuesta'
-                      : 'Abriendo edición'}
+                  {overlay.kind === 'generate-error'
+                    ? 'No se pudo generar la propuesta'
+                    : 'Abriendo edición'}
                 </p>
                 <p
                   id="adapt-overlay-desc"
@@ -427,18 +464,12 @@ export function AdaptBoard({
                     <div
                       className="h-full rounded-full bg-primary"
                       style={{
-                        animation: `adapt-generate-progress ${
-                          overlay.kind === 'generate'
-                            ? GENERATE_TIMEOUT_MS
-                            : RESUME_EDIT_TIMEOUT_MS
-                        }ms linear forwards`,
+                        animation: `adapt-generate-progress ${RESUME_EDIT_TIMEOUT_MS}ms linear forwards`,
                       }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {overlay.kind === 'generate'
-                      ? 'Cuando termine, vas a ver el detalle de la propuesta.'
-                      : 'Te llevamos al detalle para seguir ajustando la propuesta.'}
+                    Te llevamos al detalle para seguir ajustando la propuesta.
                   </p>
                 </>
               )}
@@ -698,14 +729,24 @@ export function AdaptBoard({
                       (isNext || state.generateFail) &&
                         'bg-ink text-sidebar-primary-foreground hover:bg-ink/90'
                     )}
-                    disabled={isBusy || state.mode === 'generating'}
+                    disabled={
+                      isOpeningEdit || state.mode === 'generating'
+                    }
                     onClick={() => openBarrier(entry)}
                   >
-                    {state.mode === 'generating'
-                      ? 'Generando…'
-                      : state.generateFail
-                        ? 'Reintentar'
-                        : actionLabel}
+                    {state.mode === 'generating' ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Sparkles
+                          className="size-3.5 animate-pulse"
+                          aria-hidden="true"
+                        />
+                        Generando…
+                      </span>
+                    ) : state.generateFail ? (
+                      'Reintentar'
+                    ) : (
+                      actionLabel
+                    )}
                   </Button>
                 </div>
               </Card>
