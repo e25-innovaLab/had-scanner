@@ -11,9 +11,30 @@ import type {
 } from "@/lib/api/types";
 import { toApiBarrier, toBarriersResponse } from "./mappers/backend-analysis";
 import { isBackendId } from "./ids";
+import * as mockService from "@/lib/api/service";
 
 const DEFAULT_BASE = "";
 const BACKEND_PROPOSAL_STORAGE_KEY = "vera-backend-proposal";
+
+async function fromMockResult<T>(
+  result: T | Response | Promise<T | Response>,
+): Promise<T> {
+  const value = await result;
+  if (value instanceof Response) {
+    const data = (await value.json().catch(() => null)) as unknown;
+    let message = `Error HTTP ${value.status}`;
+    if (
+      data &&
+      typeof data === "object" &&
+      "error" in data &&
+      typeof (data as { error: unknown }).error === "string"
+    ) {
+      message = (data as { error: string }).error;
+    }
+    throw new ApiError(value.status, message, data);
+  }
+  return value;
+}
 
 type BackendProposalResponse = {
   proposal_id: number;
@@ -167,26 +188,34 @@ export const api = {
     fileName: string;
     fileSize: number;
   }): Promise<Analysis> {
-    return request<Analysis>("/api/analyses", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
+    return fromMockResult(mockService.createAnalysis(input));
   },
 
   getStatus(analysisId: string): Promise<AnalysisStatusResponse> {
-    return request<AnalysisStatusResponse>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/status`,
-    );
+    if (isBackendId(analysisId)) {
+      throw new ApiError(
+        400,
+        "getStatus solo aplica al camino Demo (mock).",
+      );
+    }
+    return fromMockResult(mockService.getAnalysisStatus(analysisId));
   },
 
   getAnalysis(analysisId: string): Promise<Analysis> {
-    return request<Analysis>(`/api/analyses/${encodeURIComponent(analysisId)}`);
+    if (isBackendId(analysisId)) {
+      throw new ApiError(
+        400,
+        "getAnalysis solo aplica al camino Demo (mock).",
+      );
+    }
+    return fromMockResult(mockService.getAnalysis(analysisId));
   },
 
   listBarriers(analysisId: string): Promise<BarriersResponse> {
-    return request<BarriersResponse>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers`,
-    );
+    if (isBackendId(analysisId)) {
+      return this.getBarriersForUi(analysisId);
+    }
+    return fromMockResult(mockService.listBarriers(analysisId));
   },
 
   listBarriersFlat(analysisId: string): Promise<{ barriers: ApiBarrier[] }> {
@@ -210,8 +239,8 @@ export const api = {
       );
     }
 
-    return request<{ barriers: ApiBarrier[] }>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers?flat=1`,
+    return fromMockResult(mockService.listBarriersFlat(analysisId)).then(
+      (barriers) => ({ barriers }),
     );
   },
 
@@ -223,9 +252,13 @@ export const api = {
   },
 
   getBarrier(analysisId: string, barrierId: string): Promise<ApiBarrier> {
-    return request<ApiBarrier>(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}`,
-    );
+    if (isBackendId(analysisId)) {
+      throw new ApiError(
+        400,
+        "getBarrier solo aplica al camino Demo (mock).",
+      );
+    }
+    return fromMockResult(mockService.getBarrier(analysisId, barrierId));
   },
 
   createProposal(
@@ -271,12 +304,8 @@ export const api = {
       });
     }
 
-    return request(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/proposals`,
-      {
-        method: "POST",
-        body: JSON.stringify(body ?? {}),
-      },
+    return fromMockResult(
+      mockService.createProposal(analysisId, barrierId, body),
     );
   },
 
@@ -291,13 +320,7 @@ export const api = {
       );
     }
 
-    return request(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/draft`,
-      {
-        method: "PUT",
-        body: JSON.stringify({ draft }),
-      },
-    );
+    return fromMockResult(mockService.saveDraft(analysisId, barrierId, draft));
   },
 
   accept(
@@ -309,12 +332,8 @@ export const api = {
       return this.updateBackendProposalStatus(analysisId, barrierId, "accept");
     }
 
-    return request(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/accept`,
-      {
-        method: "POST",
-        body: JSON.stringify({ draft }),
-      },
+    return fromMockResult(
+      mockService.setBarrierStatus(analysisId, barrierId, "accepted", draft),
     );
   },
 
@@ -323,9 +342,8 @@ export const api = {
       return this.updateBackendProposalStatus(analysisId, barrierId, "reject");
     }
 
-    return request(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/discard`,
-      { method: "POST", body: JSON.stringify({}) },
+    return fromMockResult(
+      mockService.setBarrierStatus(analysisId, barrierId, "discarded"),
     );
   },
 
@@ -336,9 +354,8 @@ export const api = {
       );
     }
 
-    return request(
-      `/api/analyses/${encodeURIComponent(analysisId)}/barriers/${encodeURIComponent(barrierId)}/reopen`,
-      { method: "POST", body: JSON.stringify({}) },
+    return fromMockResult(
+      mockService.setBarrierStatus(analysisId, barrierId, "pending"),
     );
   },
 
@@ -355,10 +372,7 @@ export const api = {
       );
     }
 
-    return request(`/api/analyses/${encodeURIComponent(analysisId)}/export`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
+    return fromMockResult(mockService.startExport(analysisId));
   },
 
   getExports(analysisId: string): Promise<{
@@ -377,7 +391,7 @@ export const api = {
       );
     }
 
-    return request(`/api/analyses/${encodeURIComponent(analysisId)}/exports`);
+    return fromMockResult(mockService.getExports(analysisId));
   },
 
   uploadMaterial(file: File): Promise<Material> {

@@ -1,5 +1,3 @@
-/// <reference types="node" />
-import { randomUUID } from 'node:crypto';
 import {
   initialDimensionProgress,
   seedBarriersForAnalysis,
@@ -17,6 +15,10 @@ import type {
 import { BARRIERS } from '@/lib/aula';
 
 const ANALYZE_STEP_MS = 700;
+
+function randomUUID(): string {
+  return crypto.randomUUID();
+}
 
 function notFound(message: string) {
   return Response.json({ error: message }, { status: 404 });
