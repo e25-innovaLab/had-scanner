@@ -1,4 +1,4 @@
-# had-scanner
+# had-scanner - VERA
 
 Herramienta de accesibilidad para documentos docentes (VERA).
 
