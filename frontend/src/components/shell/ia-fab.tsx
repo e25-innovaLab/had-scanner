@@ -48,13 +48,21 @@ export function IaFab() {
               }
               aria-busy={isGenerating}
               className={cn(
-                'relative size-12 rounded-full bg-ink text-xs font-semibold text-sidebar-primary-foreground shadow-md hover:bg-ink/90',
-                isGenerating && 'ia-fab-busy ring-2 ring-primary/70'
+                'relative size-12 rounded-full text-xs font-semibold shadow-md transition-[background-color,color,box-shadow] duration-200',
+                isGenerating
+                  ? 'ia-fab-busy bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90'
               )}
             />
           }
         >
-          IA
+          {isGenerating ? '…' : 'IA'}
+          {isGenerating ? (
+            <span
+              className="ia-fab-ring pointer-events-none absolute -inset-1 rounded-full"
+              aria-hidden="true"
+            />
+          ) : null}
           <span
             className={cn(
               'ia-fab-orbit pointer-events-none absolute inset-0',
@@ -64,8 +72,10 @@ export function IaFab() {
           >
             <span
               className={cn(
-                'ia-fab-dot absolute top-1 right-1 size-2 rounded-full bg-primary',
-                isGenerating && 'ia-fab-dot-busy'
+                'ia-fab-dot absolute rounded-full bg-primary',
+                isGenerating
+                  ? 'ia-fab-dot-busy top-0.5 right-0.5 size-3 bg-primary-foreground shadow-[0_0_0_2px_color-mix(in_oklab,var(--primary)_35%,transparent)]'
+                  : 'top-1 right-1 size-2'
               )}
             />
           </span>

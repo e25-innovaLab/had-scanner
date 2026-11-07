@@ -207,12 +207,32 @@
   }
 }
 
+@keyframes ia-fab-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ia-fab-busy-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 color-mix(in oklab, var(--primary) 45%, transparent),
+      0 4px 14px color-mix(in oklab, var(--primary) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px color-mix(in oklab, var(--primary) 0%, transparent),
+      0 4px 18px color-mix(in oklab, var(--primary) 45%, transparent);
+  }
+}
+
 .ia-fab-orbit {
   animation: ia-fab-orbit 3s linear infinite;
 }
 
 .ia-fab-orbit-busy {
-  animation: ia-fab-orbit 1.1s linear infinite;
+  animation: ia-fab-orbit 0.75s linear infinite;
 }
 
 .ia-fab-dot {
@@ -220,14 +240,35 @@
 }
 
 .ia-fab-dot-busy {
-  animation: ia-fab-beat 1.1s ease-in-out infinite;
+  animation: ia-fab-beat 0.75s ease-in-out infinite;
+}
+
+.ia-fab-busy {
+  animation: ia-fab-busy-pulse 1.4s ease-in-out infinite;
+}
+
+.ia-fab-ring {
+  border: 2px dashed color-mix(in oklab, var(--primary) 85%, white);
+  animation: ia-fab-ring-spin 1.2s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ia-fab-orbit,
   .ia-fab-orbit-busy,
   .ia-fab-dot,
-  .ia-fab-dot-busy {
+  .ia-fab-dot-busy,
+  .ia-fab-busy,
+  .ia-fab-ring {
     animation: none;
+  }
+
+  .ia-fab-busy {
+    box-shadow:
+      0 0 0 3px color-mix(in oklab, var(--primary) 55%, transparent),
+      0 4px 14px color-mix(in oklab, var(--primary) 35%, transparent);
+  }
+
+  .ia-fab-ring {
+    border-style: solid;
   }
 }
