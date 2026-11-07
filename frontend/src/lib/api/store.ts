@@ -9,7 +9,7 @@ type StoreApi = {
 let activeStore: StoreApi = browserStore;
 
 /** Used by the Node mock server to persist to vera-db.json instead of localStorage. */
-export function useMockStore(store: StoreApi) {
+export function configureMockStore(store: StoreApi) {
   activeStore = store;
 }
 
