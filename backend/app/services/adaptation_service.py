@@ -6,6 +6,7 @@ from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.material import Material
 from app.utils.pdf_parser import extract_document
+from app.utils.object_storage import resolve_material_path
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -166,7 +167,8 @@ def create_adaptation_proposal(
         )
 
     try:
-        document = extract_document(material.file_path)
+        local_path = str(resolve_material_path(material.file_path))
+        document = extract_document(local_path)
 
         original_content = _extract_original_content(
             document,
