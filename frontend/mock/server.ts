@@ -14,11 +14,11 @@ import {
   setBarrierStatus,
   startExport,
 } from "../src/lib/api/service"
-import { useMockStore } from "../src/lib/api/store"
+import { configureMockStore } from "../src/lib/api/store"
 import * as nodeStore from "../src/lib/api/store-node"
 import type { ApiBarrier } from "../src/lib/api/types"
 
-useMockStore(nodeStore)
+configureMockStore(nodeStore)
 
 const PORT = Number(process.env.MOCK_PORT ?? 3001)
 
