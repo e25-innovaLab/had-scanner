@@ -16,10 +16,13 @@ import * as mockService from "@/lib/api/service";
 const DEFAULT_BASE = "";
 const BACKEND_PROPOSAL_STORAGE_KEY = "vera-backend-proposal";
 
-async function fromMockResult<T>(result: T | Response): Promise<T> {
-  if (result instanceof Response) {
-    const data = (await result.json().catch(() => null)) as unknown;
-    let message = `Error HTTP ${result.status}`;
+async function fromMockResult<T>(
+  result: T | Response | Promise<T | Response>,
+): Promise<T> {
+  const value = await result;
+  if (value instanceof Response) {
+    const data = (await value.json().catch(() => null)) as unknown;
+    let message = `Error HTTP ${value.status}`;
     if (
       data &&
       typeof data === "object" &&
@@ -28,9 +31,9 @@ async function fromMockResult<T>(result: T | Response): Promise<T> {
     ) {
       message = (data as { error: string }).error;
     }
-    throw new ApiError(result.status, message, data);
+    throw new ApiError(value.status, message, data);
   }
-  return result;
+  return value;
 }
 
 type BackendProposalResponse = {
