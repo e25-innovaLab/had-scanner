@@ -1,6 +1,7 @@
 'use client';
 
 import { Link, useLocation } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -56,7 +57,11 @@ export function IaFab() {
             />
           }
         >
-          {isGenerating ? '…' : 'IA'}
+          {isGenerating ? (
+            <Sparkles className="size-5 animate-pulse" aria-hidden="true" />
+          ) : (
+            'IA'
+          )}
           {isGenerating ? (
             <span
               className="ia-fab-ring pointer-events-none absolute -inset-1 rounded-full"

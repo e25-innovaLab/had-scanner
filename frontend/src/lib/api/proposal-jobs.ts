@@ -1,7 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { api } from '@/lib/api/client';
+import { isBackendId } from '@/lib/api/ids';
 import { proposalGenerationMessage } from '@/lib/api/proposal-errors';
 import type { ApiBarrier } from '@/lib/api/types';
+
+const DEMO_PROPOSAL_JOB_DELAY_MS = 4000;
 
 export const PROPOSAL_JOB_STATUS = {
   PENDING: 'pending',
@@ -103,9 +106,18 @@ export function startProposal(
 
   const body = options.variant ? { variant: options.variant } : undefined;
 
-  void api
-    .createProposal(analysisId, barrierId, body)
-    .then(({ barrier }) => {
+  void (async () => {
+    try {
+      if (!isBackendId(analysisId) && DEMO_PROPOSAL_JOB_DELAY_MS > 0) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, DEMO_PROPOSAL_JOB_DELAY_MS);
+        });
+      }
+      const { barrier } = await api.createProposal(
+        analysisId,
+        barrierId,
+        body
+      );
       const current = jobs.get(key);
       if (!current || current.status !== PROPOSAL_JOB_STATUS.PENDING) {
         return;
@@ -117,8 +129,7 @@ export function startProposal(
         error: null,
       });
       emit();
-    })
-    .catch((err) => {
+    } catch (err) {
       const current = jobs.get(key);
       if (!current || current.status !== PROPOSAL_JOB_STATUS.PENDING) {
         return;
@@ -130,7 +141,8 @@ export function startProposal(
         error: proposalGenerationMessage(err),
       });
       emit();
-    });
+    }
+  })();
 }
 
 function getServerSnapshot() {
