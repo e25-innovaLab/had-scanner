@@ -1,26 +1,26 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Check, Pencil, Sparkles } from 'lucide-react';
-import { IntentMeter } from '@/components/aula/intent-meter';
-import { MissingAnalysis } from '@/components/aula/missing-analysis';
-import { Pill } from '@/components/aula/pill';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { api } from '@/lib/api/client';
-import { isBackendId } from '@/lib/api/ids';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { AlertCircle, Check, Pencil, Sparkles } from "lucide-react";
+import { IntentMeter } from "@/components/aula/intent-meter";
+import { MissingAnalysis } from "@/components/aula/missing-analysis";
+import { Pill } from "@/components/aula/pill";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api/client";
+import { isBackendId } from "@/lib/api/ids";
 import {
   PROPOSAL_JOB_STATUS,
   clearProposalJob,
   startProposal,
   useProposalJobs,
-} from '@/lib/api/proposal-jobs';
-import type { ApiBarrier, BarrierDecision } from '@/lib/api/types';
-import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
-import { AI_ATTEMPTS_PER_BARRIER, RESUME_EDIT_TIMEOUT_MS } from '@/lib/aula';
-import { cn } from '@/lib/utils';
+} from "@/lib/api/proposal-jobs";
+import type { ApiBarrier, BarrierDecision } from "@/lib/api/types";
+import { resolveAnalysisId, withAnalysisId } from "@/lib/api/url";
+import { AI_ATTEMPTS_PER_BARRIER, RESUME_EDIT_TIMEOUT_MS } from "@/lib/aula";
+import { cn } from "@/lib/utils";
 
 export type AdaptCounts = {
   accepted: number;
@@ -34,7 +34,7 @@ export type AdaptCounts = {
   } | null;
 };
 
-type Mode = 'empty' | 'generating' | 'ready';
+type Mode = "empty" | "generating" | "ready";
 
 type BarrierState = {
   mode: Mode;
@@ -46,13 +46,13 @@ type BarrierState = {
 
 type OverlayState = {
   entryId: string;
-  kind: 'edit' | 'generate-error';
+  kind: "edit" | "generate-error";
   message?: string;
 };
 
 function toState(barrier: ApiBarrier): BarrierState {
   return {
-    mode: barrier.hasProposal || barrier.currentProposal ? 'ready' : 'empty',
+    mode: barrier.hasProposal || barrier.currentProposal ? "ready" : "empty",
     proposal: barrier.currentProposal ?? barrier.draft,
     decision: barrier.status,
     remaining: barrier.remainingAttempts,
@@ -61,15 +61,15 @@ function toState(barrier: ApiBarrier): BarrierState {
 }
 
 const priorityTone = {
-  alta: 'alta',
-  media: 'media',
-  baja: 'baja',
+  alta: "alta",
+  media: "media",
+  baja: "baja",
 } as const;
 
 const priorityLabel = {
-  alta: 'Prioridad alta',
-  media: 'Prioridad media',
-  baja: 'Prioridad baja',
+  alta: "Prioridad alta",
+  media: "Prioridad media",
+  baja: "Prioridad baja",
 } as const;
 
 export function AdaptBoard({
@@ -80,13 +80,13 @@ export function AdaptBoard({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
-  const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const analysisId = resolveAnalysisId(searchParams.get("analysisId"));
   const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
-  const dimensionFromQuery = searchParams.get('dimension');
+  const dimensionFromQuery = searchParams.get("dimension");
 
   const [barriers, setBarriers] = useState<ApiBarrier[]>([]);
   const [stateById, setStateById] = useState<Record<string, BarrierState>>({});
-  const [selectedDimensionId, setSelectedDimensionId] = useState<string>('');
+  const [selectedDimensionId, setSelectedDimensionId] = useState<string>("");
   const [overlay, setOverlay] = useState<OverlayState | null>(null);
   const [loading, setLoading] = useState(() => Boolean(analysisId));
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +103,7 @@ export function AdaptBoard({
     const { barriers: list } = await api.getBarriersFlatForUi(analysisId);
     setBarriers(list);
     setStateById(
-      Object.fromEntries(list.map((item) => [item.id, toState(item)]))
+      Object.fromEntries(list.map((item) => [item.id, toState(item)])),
     );
     // Si venís del detalle, respetá esa dimensión aunque ya esté completa.
     setSelectedDimensionId((current) => {
@@ -113,8 +113,9 @@ export function AdaptBoard({
       ) {
         return dimensionFromQuery;
       }
-      if (current && list.some((b) => b.dimensionId === current)) return current;
-      return list[0]?.dimensionId ?? '';
+      if (current && list.some((b) => b.dimensionId === current))
+        return current;
+      return list[0]?.dimensionId ?? "";
     });
   }, [analysisId, dimensionFromQuery]);
 
@@ -127,7 +128,7 @@ export function AdaptBoard({
         if (!cancelled) setError(null);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Error al cargar');
+          setError(err instanceof Error ? err.message : "Error al cargar");
         }
       } finally {
         if (!cancelled) {
@@ -163,10 +164,10 @@ export function AdaptBoard({
 
   const selectedGroup = useMemo(
     () => dimensions.find((group) => group.id === selectedDimensionId) ?? null,
-    [dimensions, selectedDimensionId]
+    [dimensions, selectedDimensionId],
   );
 
-  const isOpeningEdit = overlay?.kind === 'edit';
+  const isOpeningEdit = overlay?.kind === "edit";
 
   const displayStateById = useMemo(() => {
     if (!analysisId) return stateById;
@@ -179,10 +180,10 @@ export function AdaptBoard({
         (job.barrier ? toState(job.barrier) : null);
 
       if (job.status === PROPOSAL_JOB_STATUS.PENDING) {
-        if (!previous || previous.mode === 'generating') continue;
+        if (!previous || previous.mode === "generating") continue;
         patches[job.barrierId] = {
           ...previous,
-          mode: 'generating',
+          mode: "generating",
           generateFail: null,
         };
         continue;
@@ -191,27 +192,25 @@ export function AdaptBoard({
       if (job.status === PROPOSAL_JOB_STATUS.SUCCESS && job.barrier) {
         patches[job.barrierId] = {
           ...(previous ?? toState(job.barrier)),
-          mode: 'ready',
+          mode: "ready",
           remaining: job.barrier.remainingAttempts,
-          proposal:
-            job.barrier.draft ?? job.barrier.currentProposal ?? null,
+          proposal: job.barrier.draft ?? job.barrier.currentProposal ?? null,
           generateFail: null,
         };
         continue;
       }
 
       if (job.status === PROPOSAL_JOB_STATUS.ERROR) {
-        const message =
-          job.error ?? 'La IA no pudo completar la solicitud.';
+        const message = job.error ?? "La IA no pudo completar la solicitud.";
         patches[job.barrierId] = {
           ...(previous ?? {
-            mode: 'empty',
+            mode: "empty",
             proposal: null,
-            decision: 'pending',
+            decision: "pending",
             remaining: AI_ATTEMPTS_PER_BARRIER,
             generateFail: null,
           }),
-          mode: 'empty',
+          mode: "empty",
           generateFail: message,
         };
       }
@@ -226,7 +225,7 @@ export function AdaptBoard({
       proposalJobs.find(
         (job) =>
           job.analysisId === analysisId &&
-          job.status === PROPOSAL_JOB_STATUS.ERROR
+          job.status === PROPOSAL_JOB_STATUS.ERROR,
       ) ?? null
     );
   }, [analysisId, proposalJobs]);
@@ -236,19 +235,18 @@ export function AdaptBoard({
     (jobError
       ? {
           entryId: jobError.barrierId,
-          kind: 'generate-error',
-          message:
-            jobError.error ?? 'La IA no pudo completar la solicitud.',
+          kind: "generate-error",
+          message: jobError.error ?? "La IA no pudo completar la solicitud.",
         }
       : null);
 
   const overlayEntry = barriers.find(
-    (entry) => entry.id === activeOverlay?.entryId
+    (entry) => entry.id === activeOverlay?.entryId,
   );
   const displayError =
     error ??
     (jobError
-      ? (jobError.error ?? 'La IA no pudo completar la solicitud.')
+      ? (jobError.error ?? "La IA no pudo completar la solicitud.")
       : null);
 
   useEffect(() => {
@@ -267,17 +265,16 @@ export function AdaptBoard({
       navigate(
         withAnalysisId(
           `/analisis/detalle?origen=ia&desde=generar&barrera=${encodeURIComponent(barrier.id)}&dimension=${encodeURIComponent(barrier.dimensionId)}&intentos=${barrier.remainingAttempts}&i=${i > 0 ? i : 1}&n=${n > 0 ? n : 1}`,
-          analysisId
-        )
+          analysisId,
+        ),
       );
     }
   }, [analysisId, proposalJobs, navigate, loading, barriers]);
 
   const nextPendingIndex = useMemo(() => {
     return barriers.findIndex((barrier) => {
-      const decision =
-        displayStateById[barrier.id]?.decision ?? barrier.status;
-      return decision === 'pending';
+      const decision = displayStateById[barrier.id]?.decision ?? barrier.status;
+      return decision === "pending";
     });
   }, [barriers, displayStateById]);
 
@@ -288,8 +285,8 @@ export function AdaptBoard({
     for (const barrier of barriers) {
       const state = displayStateById[barrier.id];
       const decision = state?.decision ?? barrier.status;
-      if (decision === 'accepted') accepted += 1;
-      else if (decision === 'discarded') discarded += 1;
+      if (decision === "accepted") accepted += 1;
+      else if (decision === "discarded") discarded += 1;
       else pending += 1;
     }
     const next = nextPendingIndex >= 0 ? barriers[nextPendingIndex] : undefined;
@@ -316,7 +313,7 @@ export function AdaptBoard({
     if (items.length === 0) return AI_ATTEMPTS_PER_BARRIER;
     const pending = items.find((item) => {
       const decision = displayStateById[item.id]?.decision ?? item.status;
-      return decision === 'pending';
+      return decision === "pending";
     });
     const focus = pending ?? items[0];
     return (
@@ -328,29 +325,29 @@ export function AdaptBoard({
 
   function detalleHref(
     entry: ApiBarrier,
-    opts: { origen: string; desde: string; intentos: number }
+    opts: { origen: string; desde: string; intentos: number },
   ) {
     const i = barriers.findIndex((item) => item.id === entry.id) + 1;
     const n = barriers.length;
     return withAnalysisId(
       `/analisis/detalle?origen=${opts.origen}&desde=${opts.desde}&barrera=${encodeURIComponent(entry.id)}&dimension=${encodeURIComponent(entry.dimensionId)}&intentos=${opts.intentos}&i=${i}&n=${n}`,
-      analysisId
+      analysisId,
     );
   }
 
   function resumeEdit(entry: ApiBarrier) {
     if (isOpeningEdit || !analysisId) return;
-    if (displayStateById[entry.id]?.mode === 'generating') return;
+    if (displayStateById[entry.id]?.mode === "generating") return;
     const left =
       displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
-    setOverlay({ entryId: entry.id, kind: 'edit' });
+    setOverlay({ entryId: entry.id, kind: "edit" });
     if (usesBackendApi) {
       navigate(
         detalleHref(entry, {
-          origen: 'ia',
-          desde: 'editar',
+          origen: "ia",
+          desde: "editar",
           intentos: left,
-        })
+        }),
       );
       return;
     }
@@ -358,10 +355,10 @@ export function AdaptBoard({
       void api.reopen(analysisId, entry.id).finally(() => {
         navigate(
           detalleHref(entry, {
-            origen: 'ia',
-            desde: 'editar',
+            origen: "ia",
+            desde: "editar",
             intentos: left,
-          })
+          }),
         );
       });
     }, RESUME_EDIT_TIMEOUT_MS);
@@ -371,7 +368,7 @@ export function AdaptBoard({
     const left =
       displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
     if (left <= 0 || isOpeningEdit || !analysisId) return;
-    if (displayStateById[entry.id]?.mode === 'generating') return;
+    if (displayStateById[entry.id]?.mode === "generating") return;
 
     setError(null);
     setOverlay(null);
@@ -379,7 +376,7 @@ export function AdaptBoard({
       ...current,
       [entry.id]: {
         ...current[entry.id],
-        mode: 'generating',
+        mode: "generating",
         generateFail: null,
       },
     }));
@@ -399,13 +396,27 @@ export function AdaptBoard({
 
   function openBarrier(entry: ApiBarrier) {
     const state = displayStateById[entry.id] ?? toState(entry);
-    if (state.decision === 'accepted' || state.mode === 'ready') {
+    if (state.decision === "accepted" || state.mode === "ready") {
       resumeEdit(entry);
       return;
     }
-    if (state.mode === 'empty') {
-      generate(entry);
+    if (state.mode === "empty") {
+      openReview(entry);
     }
+  }
+
+  function openReview(entry: ApiBarrier) {
+    if (isOpeningEdit || !analysisId) return;
+    if (displayStateById[entry.id]?.mode === "generating") return;
+    const left =
+      displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
+    navigate(
+      detalleHref(entry, {
+        origen: "ia",
+        desde: "revisar",
+        intentos: left,
+      }),
+    );
   }
 
   if (!analysisId) {
@@ -431,10 +442,10 @@ export function AdaptBoard({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4"
           role={
-            activeOverlay.kind === 'generate-error' ? 'alertdialog' : 'status'
+            activeOverlay.kind === "generate-error" ? "alertdialog" : "status"
           }
           aria-live="assertive"
-          aria-busy={activeOverlay.kind === 'edit'}
+          aria-busy={activeOverlay.kind === "edit"}
           aria-labelledby="adapt-overlay-title"
           aria-describedby="adapt-overlay-desc"
         >
@@ -442,13 +453,13 @@ export function AdaptBoard({
             <CardContent className="space-y-4 py-8 text-center">
               <div
                 className={cn(
-                  'mx-auto flex size-12 items-center justify-center rounded-full',
-                  activeOverlay.kind === 'generate-error'
-                    ? 'bg-danger-soft'
-                    : 'bg-primary/10'
+                  "mx-auto flex size-12 items-center justify-center rounded-full",
+                  activeOverlay.kind === "generate-error"
+                    ? "bg-danger-soft"
+                    : "bg-primary/10",
                 )}
               >
-                {activeOverlay.kind === 'generate-error' ? (
+                {activeOverlay.kind === "generate-error" ? (
                   <AlertCircle
                     className="size-6 text-danger-foreground"
                     aria-hidden="true"
@@ -458,25 +469,22 @@ export function AdaptBoard({
                 )}
               </div>
               <div className="space-y-1.5">
-                <p
-                  id="adapt-overlay-title"
-                  className="text-base font-semibold"
-                >
-                  {activeOverlay.kind === 'generate-error'
-                    ? 'No se pudo generar la propuesta'
-                    : 'Abriendo edición'}
+                <p id="adapt-overlay-title" className="text-base font-semibold">
+                  {activeOverlay.kind === "generate-error"
+                    ? "No se pudo generar la propuesta"
+                    : "Abriendo edición"}
                 </p>
                 <p
                   id="adapt-overlay-desc"
                   className="text-sm leading-6 text-muted-foreground"
                 >
-                  {activeOverlay.kind === 'generate-error'
+                  {activeOverlay.kind === "generate-error"
                     ? (activeOverlay.message ??
-                      'La IA no pudo completar la solicitud.')
+                      "La IA no pudo completar la solicitud.")
                     : overlayEntry.title}
                 </p>
               </div>
-              {activeOverlay.kind === 'generate-error' ? (
+              {activeOverlay.kind === "generate-error" ? (
                 <div className="flex flex-wrap justify-center gap-2">
                   <Button
                     type="button"
@@ -517,17 +525,17 @@ export function AdaptBoard({
       {counts.total > 0 ? (
         <p className="text-sm leading-6 text-muted-foreground">
           {reviewed === 0
-            ? `Se detectaron ${counts.total} barreras. Revisalas una a una: pedí una propuesta a la IA, escribí la tuya o descartala.`
+            ? `Se detectaron ${counts.total} barreras. Revisalas una a una en el detalle: generá con IA, escribí la tuya o descartala.`
             : `Llevás ${reviewed} de ${counts.total} barreras revisadas. Podés seguir donde lo dejaste o abrir cualquier barrera desde la lista.`}
         </p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          ['Pendientes', counts.pending],
-          ['Aceptadas', counts.accepted],
-          ['Editadas', 0],
-          ['Descartadas', counts.discarded],
+          ["Pendientes", counts.pending],
+          ["Aceptadas", counts.accepted],
+          ["Editadas", 0],
+          ["Descartadas", counts.discarded],
         ].map(([label, value]) => (
           <Card
             key={String(label)}
@@ -560,7 +568,7 @@ export function AdaptBoard({
               className="h-10 px-4 sm:shrink-0"
               nativeButton={false}
               render={
-                <Link to={withAnalysisId('/analisis/resultado', analysisId)} />
+                <Link to={withAnalysisId("/analisis/resultado", analysisId)} />
               }
             >
               Obtener resultado
@@ -584,7 +592,7 @@ export function AdaptBoard({
             const resolved = group.items.every((item) => {
               const decision =
                 displayStateById[item.id]?.decision ?? item.status;
-              return decision === 'accepted' || decision === 'discarded';
+              return decision === "accepted" || decision === "discarded";
             });
             return (
               <button
@@ -592,35 +600,33 @@ export function AdaptBoard({
                 type="button"
                 aria-pressed={active}
                 aria-label={
-                  resolved
-                    ? `${group.name}, dimensión revisada`
-                    : group.name
+                  resolved ? `${group.name}, dimensión revisada` : group.name
                 }
                 onClick={() => {
                   setSelectedDimensionId(group.id);
                   const params = new URLSearchParams(searchParams);
-                  params.set('dimension', group.id);
+                  params.set("dimension", group.id);
                   navigate(
                     { pathname, search: params.toString() },
-                    { replace: true }
+                    { replace: true },
                   );
                 }}
                 className={cn(
-                  'relative min-w-0 space-y-2 rounded-xl px-3 py-3 text-left ring-1 transition-[transform,box-shadow,background-color,ring-color]',
+                  "relative min-w-0 space-y-2 rounded-xl px-3 py-3 text-left ring-1 transition-[transform,box-shadow,background-color,ring-color]",
                   active
-                    ? 'scale-[1.02] bg-card py-4 text-foreground shadow-sm ring-2 ring-ink'
+                    ? "scale-[1.02] bg-card py-4 text-foreground shadow-sm ring-2 ring-ink"
                     : resolved
-                      ? 'bg-success-soft/50 ring-success-foreground/25 hover:bg-success-soft/70 active:bg-success-soft'
-                      : 'bg-card ring-border hover:bg-secondary/60 hover:ring-primary/30 active:bg-secondary'
+                      ? "bg-success-soft/50 ring-success-foreground/25 hover:bg-success-soft/70 active:bg-success-soft"
+                      : "bg-card ring-border hover:bg-secondary/60 hover:ring-primary/30 active:bg-secondary",
                 )}
               >
                 {resolved ? (
                   <span
                     className={cn(
-                      'absolute top-2 right-2 flex size-5 items-center justify-center rounded-full',
+                      "absolute top-2 right-2 flex size-5 items-center justify-center rounded-full",
                       active
-                        ? 'bg-primary/30 text-success-foreground'
-                        : 'bg-success-soft text-success-foreground'
+                        ? "bg-primary/30 text-success-foreground"
+                        : "bg-success-soft text-success-foreground",
                     )}
                     title="Dimensión revisada"
                   >
@@ -641,15 +647,15 @@ export function AdaptBoard({
                 </div>
                 <p
                   className={cn(
-                    'text-[11px]',
+                    "text-[11px]",
                     resolved
-                      ? 'text-success-foreground'
-                      : 'text-muted-foreground'
+                      ? "text-success-foreground"
+                      : "text-muted-foreground",
                   )}
                 >
                   {resolved
-                    ? 'Revisada'
-                    : `${group.items.length} ${group.items.length === 1 ? 'barrera' : 'barreras'}`}
+                    ? "Revisada"
+                    : `${group.items.length} ${group.items.length === 1 ? "barrera" : "barreras"}`}
                 </p>
               </button>
             );
@@ -664,9 +670,9 @@ export function AdaptBoard({
               {selectedGroup.name}
             </h2>
             <p className="text-xs text-muted-foreground">
-              {selectedGroup.items.length}{' '}
-              {selectedGroup.items.length === 1 ? 'barrera' : 'barreras'} en esta
-              dimensión
+              {selectedGroup.items.length}{" "}
+              {selectedGroup.items.length === 1 ? "barrera" : "barreras"} en
+              esta dimensión
             </p>
           </div>
 
@@ -677,32 +683,32 @@ export function AdaptBoard({
             const isNext = globalIndex === nextPendingIndex;
             const decision = state.decision;
             const statusLabel =
-              decision === 'accepted'
-                ? 'Aceptada'
-                : decision === 'discarded'
-                  ? 'Descartada'
+              decision === "accepted"
+                ? "Aceptada"
+                : decision === "discarded"
+                  ? "Descartada"
                   : isNext
-                    ? 'Próxima'
-                    : 'Pendiente';
+                    ? "Próxima"
+                    : "Pendiente";
             const actionLabel =
-              decision === 'accepted' || state.mode === 'ready'
-                ? 'Ver o cambiar'
-                : 'Revisar';
+              decision === "accepted" || state.mode === "ready"
+                ? "Ver o cambiar"
+                : "Revisar";
 
             return (
               <Card
                 key={entry.id}
                 className={cn(
-                  'flex-row flex-wrap items-center gap-3 px-(--card-spacing) py-3 sm:flex-nowrap',
-                  isNext && 'ring-2 ring-ink'
+                  "flex-row flex-wrap items-center gap-3 px-(--card-spacing) py-3 sm:flex-nowrap",
+                  isNext && "ring-2 ring-ink",
                 )}
               >
                 <span
                   className={cn(
-                    'grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold',
+                    "grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold",
                     isNext
-                      ? 'bg-ink text-sidebar-primary-foreground'
-                      : 'bg-secondary text-muted-foreground'
+                      ? "bg-ink text-sidebar-primary-foreground"
+                      : "bg-secondary text-muted-foreground",
                   )}
                   aria-hidden="true"
                 >
@@ -723,7 +729,7 @@ export function AdaptBoard({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {usesBackendApi
-                      ? 'Si la generación falla, no se descuenta un intento.'
+                      ? "Si la generación falla, no se descuenta un intento."
                       : `Intentos IA: ${left} de ${AI_ATTEMPTS_PER_BARRIER}`}
                   </p>
                   {state.generateFail ? (
@@ -738,40 +744,38 @@ export function AdaptBoard({
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end">
                   <span
                     className={cn(
-                      'text-xs font-medium',
-                      decision === 'accepted' && 'text-success-foreground',
-                      decision === 'discarded' && 'text-muted-foreground',
-                      decision === 'pending' &&
-                        isNext &&
-                        'text-primary',
-                      decision === 'pending' &&
+                      "text-xs font-medium",
+                      decision === "accepted" && "text-success-foreground",
+                      decision === "discarded" && "text-muted-foreground",
+                      decision === "pending" && isNext && "text-primary",
+                      decision === "pending" &&
                         !isNext &&
-                        'text-muted-foreground'
+                        "text-muted-foreground",
                     )}
                   >
-                    {decision === 'accepted'
-                      ? '✓ '
-                      : decision === 'discarded'
-                        ? '– '
+                    {decision === "accepted"
+                      ? "✓ "
+                      : decision === "discarded"
+                        ? "– "
                         : isNext
-                          ? '→ '
-                          : '○ '}
+                          ? "→ "
+                          : "○ "}
                     {statusLabel}
                   </span>
                   <Button
                     type="button"
-                    variant={isNext || state.generateFail ? 'default' : 'outline'}
-                    className={cn(
-                      'h-9 rounded-xl px-3',
-                      (isNext || state.generateFail) &&
-                        'bg-ink text-sidebar-primary-foreground hover:bg-ink/90'
-                    )}
-                    disabled={
-                      isOpeningEdit || state.mode === 'generating'
+                    variant={
+                      isNext || state.generateFail ? "default" : "outline"
                     }
+                    className={cn(
+                      "h-9 rounded-xl px-3",
+                      (isNext || state.generateFail) &&
+                        "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
+                    )}
+                    disabled={isOpeningEdit || state.mode === "generating"}
                     onClick={() => openBarrier(entry)}
                   >
-                    {state.mode === 'generating' ? (
+                    {state.mode === "generating" ? (
                       <span className="inline-flex items-center gap-1.5">
                         <Sparkles
                           className="size-3.5 animate-pulse"
@@ -780,7 +784,7 @@ export function AdaptBoard({
                         Generando…
                       </span>
                     ) : state.generateFail ? (
-                      'Reintentar'
+                      "Reintentar"
                     ) : (
                       actionLabel
                     )}
@@ -791,9 +795,9 @@ export function AdaptBoard({
           })}
 
           <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Revisar</span> genera
-            una propuesta con IA (1 intento) y abre el detalle.{' '}
-            <span className="font-medium text-foreground">Ver o cambiar</span>{' '}
+            <span className="font-medium text-foreground">Revisar</span> abre el
+            detalle. Ahí podés generar una propuesta con IA.{" "}
+            <span className="font-medium text-foreground">Ver o cambiar</span>{" "}
             retoma una propuesta ya aceptada o generada.
           </p>
         </div>
