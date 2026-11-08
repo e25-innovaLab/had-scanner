@@ -407,7 +407,7 @@ export function AnalysisChecklist({
           {(incomplete || status === "ready") && totalCount > 0 ? (
             <div className="space-y-2 border-t border-border pt-3">
               <p className="text-sm text-muted-foreground">
-                {doneCount} de {totalCount} dimensiones analizadas
+                {doneCount} de {totalCount} pasos del análisis
               </p>
               <div
                 className="h-1.5 overflow-hidden rounded-full bg-secondary"
