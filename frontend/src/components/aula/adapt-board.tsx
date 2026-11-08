@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, Check, Pencil, Sparkles } from "lucide-react";
-import { IntentMeter } from "@/components/aula/intent-meter";
 import { MissingAnalysis } from "@/components/aula/missing-analysis";
 import { Pill } from "@/components/aula/pill";
 import { Button } from "@/components/ui/button";
@@ -309,18 +308,11 @@ export function AdaptBoard({
     onCountsChange?.(counts);
   }, [counts, onCountsChange]);
 
-  function remainingForGroup(items: ApiBarrier[]) {
-    if (items.length === 0) return AI_ATTEMPTS_PER_BARRIER;
-    const pending = items.find((item) => {
+  function reviewedInGroup(items: ApiBarrier[]) {
+    return items.filter((item) => {
       const decision = displayStateById[item.id]?.decision ?? item.status;
-      return decision === "pending";
-    });
-    const focus = pending ?? items[0];
-    return (
-      displayStateById[focus.id]?.remaining ??
-      focus.remainingAttempts ??
-      AI_ATTEMPTS_PER_BARRIER
-    );
+      return decision === "accepted" || decision === "discarded";
+    }).length;
   }
 
   function detalleHref(
@@ -579,28 +571,33 @@ export function AdaptBoard({
 
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Intentos de IA por dimensión</CardTitle>
+          <CardTitle>Progreso por dimensión</CardTitle>
           <p className="text-xs text-muted-foreground sm:text-right">
-            Cada barrera tiene {AI_ATTEMPTS_PER_BARRIER} intentos propios ·
+            Cada barrera tiene {AI_ATTEMPTS_PER_BARRIER} intentos de IA propios ·
             elegí una dimensión para ver su lista
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-3">
           {dimensions.map((group) => {
             const active = group.id === selectedDimensionId;
-            const value = remainingForGroup(group.items);
-            const resolved = group.items.every((item) => {
-              const decision =
-                displayStateById[item.id]?.decision ?? item.status;
-              return decision === "accepted" || decision === "discarded";
-            });
+            const total = group.items.length;
+            const reviewedCount = reviewedInGroup(group.items);
+            const resolved = total > 0 && reviewedCount === total;
+            const progressLabel =
+              total === 0
+                ? "Sin barreras"
+                : resolved
+                  ? "Revisada"
+                  : `${reviewedCount} de ${total} revisadas`;
             return (
               <button
                 key={group.id}
                 type="button"
                 aria-pressed={active}
                 aria-label={
-                  resolved ? `${group.name}, dimensión revisada` : group.name
+                  total === 0
+                    ? `${group.name}, sin barreras`
+                    : `${group.name}, ${reviewedCount} de ${total} barreras revisadas`
                 }
                 onClick={() => {
                   setSelectedDimensionId(group.id);
@@ -636,15 +633,22 @@ export function AdaptBoard({
                 <p className="pr-6 text-xs leading-4 font-medium wrap-break-word">
                   {group.name}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <IntentMeter
-                    remaining={value}
-                    total={AI_ATTEMPTS_PER_BARRIER}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {value} de {AI_ATTEMPTS_PER_BARRIER}
-                  </span>
-                </div>
+                {total > 0 ? (
+                  <div
+                    className="h-1.5 overflow-hidden rounded-full bg-secondary"
+                    aria-hidden="true"
+                  >
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-[width]",
+                        resolved ? "bg-success-foreground" : "bg-primary",
+                      )}
+                      style={{
+                        width: `${Math.round((reviewedCount / total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                ) : null}
                 <p
                   className={cn(
                     "text-[11px]",
@@ -653,9 +657,7 @@ export function AdaptBoard({
                       : "text-muted-foreground",
                   )}
                 >
-                  {resolved
-                    ? "Revisada"
-                    : `${group.items.length} ${group.items.length === 1 ? "barrera" : "barreras"}`}
+                  {progressLabel}
                 </p>
               </button>
             );
