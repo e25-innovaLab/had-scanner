@@ -166,99 +166,127 @@ export function AdaptBoard({
     [dimensions, selectedDimensionId]
   );
 
-  const overlayEntry = barriers.find((entry) => entry.id === overlay?.entryId);
   const isOpeningEdit = overlay?.kind === 'edit';
 
-  useEffect(() => {
-    if (!analysisId || loading) return;
-
+  const displayStateById = useMemo(() => {
+    if (!analysisId) return stateById;
+    const patches: Record<string, BarrierState> = {};
     for (const job of proposalJobs) {
       if (job.analysisId !== analysisId) continue;
+      const previous =
+        patches[job.barrierId] ??
+        stateById[job.barrierId] ??
+        (job.barrier ? toState(job.barrier) : null);
 
       if (job.status === PROPOSAL_JOB_STATUS.PENDING) {
-        setStateById((current) => {
-          const previous = current[job.barrierId];
-          if (!previous || previous.mode === 'generating') return current;
-          return {
-            ...current,
-            [job.barrierId]: {
-              ...previous,
-              mode: 'generating',
-              generateFail: null,
-            },
-          };
-        });
+        if (!previous || previous.mode === 'generating') continue;
+        patches[job.barrierId] = {
+          ...previous,
+          mode: 'generating',
+          generateFail: null,
+        };
         continue;
       }
 
       if (job.status === PROPOSAL_JOB_STATUS.SUCCESS && job.barrier) {
-        const barrier = job.barrier;
-        const i = barriers.findIndex((item) => item.id === barrier.id) + 1;
-        const n = barriers.length;
-        setStateById((current) => ({
-          ...current,
-          [job.barrierId]: {
-            ...(current[job.barrierId] ?? toState(barrier)),
-            mode: 'ready',
-            remaining: barrier.remainingAttempts,
-            proposal: barrier.draft ?? barrier.currentProposal ?? null,
-            generateFail: null,
-          },
-        }));
-        setBarriers((current) =>
-          current.map((item) => (item.id === barrier.id ? barrier : item))
-        );
-        clearProposalJob(job.analysisId, job.barrierId);
-        navigate(
-          withAnalysisId(
-            `/analisis/detalle?origen=ia&desde=generar&barrera=${encodeURIComponent(barrier.id)}&dimension=${encodeURIComponent(barrier.dimensionId)}&intentos=${barrier.remainingAttempts}&i=${i > 0 ? i : 1}&n=${n > 0 ? n : 1}`,
-            analysisId
-          )
-        );
+        patches[job.barrierId] = {
+          ...(previous ?? toState(job.barrier)),
+          mode: 'ready',
+          remaining: job.barrier.remainingAttempts,
+          proposal:
+            job.barrier.draft ?? job.barrier.currentProposal ?? null,
+          generateFail: null,
+        };
         continue;
       }
 
       if (job.status === PROPOSAL_JOB_STATUS.ERROR) {
         const message =
           job.error ?? 'La IA no pudo completar la solicitud.';
-        setOverlay({
-          entryId: job.barrierId,
-          kind: 'generate-error',
-          message,
-        });
-        setStateById((current) => ({
-          ...current,
-          [job.barrierId]: {
-            ...(current[job.barrierId] ?? {
-              mode: 'empty',
-              proposal: null,
-              decision: 'pending',
-              remaining: AI_ATTEMPTS_PER_BARRIER,
-              generateFail: null,
-            }),
+        patches[job.barrierId] = {
+          ...(previous ?? {
             mode: 'empty',
-            generateFail: message,
-          },
-        }));
-        setError(message);
-        clearProposalJob(job.analysisId, job.barrierId);
+            proposal: null,
+            decision: 'pending',
+            remaining: AI_ATTEMPTS_PER_BARRIER,
+            generateFail: null,
+          }),
+          mode: 'empty',
+          generateFail: message,
+        };
       }
+    }
+    if (Object.keys(patches).length === 0) return stateById;
+    return { ...stateById, ...patches };
+  }, [analysisId, proposalJobs, stateById]);
+
+  const jobError = useMemo(() => {
+    if (!analysisId) return null;
+    return (
+      proposalJobs.find(
+        (job) =>
+          job.analysisId === analysisId &&
+          job.status === PROPOSAL_JOB_STATUS.ERROR
+      ) ?? null
+    );
+  }, [analysisId, proposalJobs]);
+
+  const activeOverlay: OverlayState | null =
+    overlay ??
+    (jobError
+      ? {
+          entryId: jobError.barrierId,
+          kind: 'generate-error',
+          message:
+            jobError.error ?? 'La IA no pudo completar la solicitud.',
+        }
+      : null);
+
+  const overlayEntry = barriers.find(
+    (entry) => entry.id === activeOverlay?.entryId
+  );
+  const displayError =
+    error ??
+    (jobError
+      ? (jobError.error ?? 'La IA no pudo completar la solicitud.')
+      : null);
+
+  useEffect(() => {
+    if (!analysisId || loading) return;
+
+    for (const job of proposalJobs) {
+      if (job.analysisId !== analysisId) continue;
+      if (job.status !== PROPOSAL_JOB_STATUS.SUCCESS || !job.barrier) {
+        continue;
+      }
+
+      const barrier = job.barrier;
+      const i = barriers.findIndex((item) => item.id === barrier.id) + 1;
+      const n = barriers.length;
+      clearProposalJob(job.analysisId, job.barrierId);
+      navigate(
+        withAnalysisId(
+          `/analisis/detalle?origen=ia&desde=generar&barrera=${encodeURIComponent(barrier.id)}&dimension=${encodeURIComponent(barrier.dimensionId)}&intentos=${barrier.remainingAttempts}&i=${i > 0 ? i : 1}&n=${n > 0 ? n : 1}`,
+          analysisId
+        )
+      );
     }
   }, [analysisId, proposalJobs, navigate, loading, barriers]);
 
   const nextPendingIndex = useMemo(() => {
     return barriers.findIndex((barrier) => {
-      const decision = stateById[barrier.id]?.decision ?? barrier.status;
+      const decision =
+        displayStateById[barrier.id]?.decision ?? barrier.status;
       return decision === 'pending';
     });
-  }, [barriers, stateById]);
+  }, [barriers, displayStateById]);
 
   const counts = useMemo(() => {
     let accepted = 0;
     let discarded = 0;
     let pending = 0;
     for (const barrier of barriers) {
-      const state = stateById[barrier.id];
+      const state = displayStateById[barrier.id];
       const decision = state?.decision ?? barrier.status;
       if (decision === 'accepted') accepted += 1;
       else if (decision === 'discarded') discarded += 1;
@@ -278,7 +306,7 @@ export function AdaptBoard({
           }
         : null,
     };
-  }, [barriers, stateById, nextPendingIndex]);
+  }, [barriers, displayStateById, nextPendingIndex]);
 
   useEffect(() => {
     onCountsChange?.(counts);
@@ -287,12 +315,12 @@ export function AdaptBoard({
   function remainingForGroup(items: ApiBarrier[]) {
     if (items.length === 0) return AI_ATTEMPTS_PER_BARRIER;
     const pending = items.find((item) => {
-      const decision = stateById[item.id]?.decision ?? item.status;
+      const decision = displayStateById[item.id]?.decision ?? item.status;
       return decision === 'pending';
     });
     const focus = pending ?? items[0];
     return (
-      stateById[focus.id]?.remaining ??
+      displayStateById[focus.id]?.remaining ??
       focus.remainingAttempts ??
       AI_ATTEMPTS_PER_BARRIER
     );
@@ -312,8 +340,9 @@ export function AdaptBoard({
 
   function resumeEdit(entry: ApiBarrier) {
     if (isOpeningEdit || !analysisId) return;
-    if (stateById[entry.id]?.mode === 'generating') return;
-    const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
+    if (displayStateById[entry.id]?.mode === 'generating') return;
+    const left =
+      displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
     setOverlay({ entryId: entry.id, kind: 'edit' });
     if (usesBackendApi) {
       navigate(
@@ -339,9 +368,10 @@ export function AdaptBoard({
   }
 
   function generate(entry: ApiBarrier) {
-    const left = stateById[entry.id]?.remaining ?? entry.remainingAttempts;
+    const left =
+      displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
     if (left <= 0 || isOpeningEdit || !analysisId) return;
-    if (stateById[entry.id]?.mode === 'generating') return;
+    if (displayStateById[entry.id]?.mode === 'generating') return;
 
     setError(null);
     setOverlay(null);
@@ -360,11 +390,15 @@ export function AdaptBoard({
   }
 
   function dismissGenerateError() {
+    if (jobError) {
+      clearProposalJob(jobError.analysisId, jobError.barrierId);
+    }
     setOverlay(null);
+    setError(null);
   }
 
   function openBarrier(entry: ApiBarrier) {
-    const state = stateById[entry.id] ?? toState(entry);
+    const state = displayStateById[entry.id] ?? toState(entry);
     if (state.decision === 'accepted' || state.mode === 'ready') {
       resumeEdit(entry);
       return;
@@ -388,17 +422,19 @@ export function AdaptBoard({
 
   return (
     <div className="relative space-y-4">
-      {error ? (
+      {displayError ? (
         <p className="text-sm text-danger-foreground" role="alert">
-          {error}
+          {displayError}
         </p>
       ) : null}
-      {overlay && overlayEntry ? (
+      {activeOverlay && overlayEntry ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4"
-          role={overlay.kind === 'generate-error' ? 'alertdialog' : 'status'}
+          role={
+            activeOverlay.kind === 'generate-error' ? 'alertdialog' : 'status'
+          }
           aria-live="assertive"
-          aria-busy={overlay.kind === 'edit'}
+          aria-busy={activeOverlay.kind === 'edit'}
           aria-labelledby="adapt-overlay-title"
           aria-describedby="adapt-overlay-desc"
         >
@@ -407,12 +443,12 @@ export function AdaptBoard({
               <div
                 className={cn(
                   'mx-auto flex size-12 items-center justify-center rounded-full',
-                  overlay.kind === 'generate-error'
+                  activeOverlay.kind === 'generate-error'
                     ? 'bg-danger-soft'
                     : 'bg-primary/10'
                 )}
               >
-                {overlay.kind === 'generate-error' ? (
+                {activeOverlay.kind === 'generate-error' ? (
                   <AlertCircle
                     className="size-6 text-danger-foreground"
                     aria-hidden="true"
@@ -426,7 +462,7 @@ export function AdaptBoard({
                   id="adapt-overlay-title"
                   className="text-base font-semibold"
                 >
-                  {overlay.kind === 'generate-error'
+                  {activeOverlay.kind === 'generate-error'
                     ? 'No se pudo generar la propuesta'
                     : 'Abriendo edición'}
                 </p>
@@ -434,13 +470,13 @@ export function AdaptBoard({
                   id="adapt-overlay-desc"
                   className="text-sm leading-6 text-muted-foreground"
                 >
-                  {overlay.kind === 'generate-error'
-                    ? (overlay.message ??
+                  {activeOverlay.kind === 'generate-error'
+                    ? (activeOverlay.message ??
                       'La IA no pudo completar la solicitud.')
                     : overlayEntry.title}
                 </p>
               </div>
-              {overlay.kind === 'generate-error' ? (
+              {activeOverlay.kind === 'generate-error' ? (
                 <div className="flex flex-wrap justify-center gap-2">
                   <Button
                     type="button"
@@ -546,7 +582,8 @@ export function AdaptBoard({
             const active = group.id === selectedDimensionId;
             const value = remainingForGroup(group.items);
             const resolved = group.items.every((item) => {
-              const decision = stateById[item.id]?.decision ?? item.status;
+              const decision =
+                displayStateById[item.id]?.decision ?? item.status;
               return decision === 'accepted' || decision === 'discarded';
             });
             return (
@@ -635,7 +672,7 @@ export function AdaptBoard({
 
           {selectedGroup.items.map((entry) => {
             const globalIndex = barriers.findIndex((b) => b.id === entry.id);
-            const state = stateById[entry.id] ?? toState(entry);
+            const state = displayStateById[entry.id] ?? toState(entry);
             const left = state.remaining;
             const isNext = globalIndex === nextPendingIndex;
             const decision = state.decision;
