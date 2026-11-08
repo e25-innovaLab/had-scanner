@@ -52,8 +52,8 @@ export function BarrierList({
         if (cancelled) return;
         setGroups(data.groups);
         onStats?.(data.stats);
-        const firstWithItems = data.groups.find((g) => g.items.length > 0);
-        setOpenId(firstWithItems?.id ?? data.groups[0]?.id ?? '');
+        // const firstWithItems = data.groups.find((g) => g.items.length > 0);
+        // setOpenId(firstWithItems?.id ?? data.groups[0]?.id ?? '');
         setError(null);
       } catch (err) {
         if (!cancelled) {
