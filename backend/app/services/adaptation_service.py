@@ -12,6 +12,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.ai.adaptation_generator import generate_adaptation
+from app.ai.gemini_errors import proposal_http_error
 from app.repositories import proposal_repository
 
 import logging
@@ -195,10 +196,6 @@ def create_adaptation_proposal(
     except HTTPException:
         raise
 
-    
-    except HTTPException:
-        raise
-
     except Exception as exc:
         db.rollback()
 
@@ -206,10 +203,10 @@ def create_adaptation_proposal(
             "Failed to generate adaptation proposal for barrier_id=%s",
             barrier_id,
         )
-
+        status_code, detail = proposal_http_error(exc)
         raise HTTPException(
-            status_code=502,
-            detail="Unable to generate the adaptation proposal.",
+            status_code=status_code,
+            detail=detail,
         ) from exc
 
 def update_adaptation_proposal_status(
