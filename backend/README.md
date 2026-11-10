@@ -54,6 +54,23 @@ GEMINI_MODEL=gemini-flash-latest
 
 Replace the API key placeholder with your own Gemini API key. Make sure the model name matches the model configured for the application.
 
+### 2b. Configure Supabase Storage (recommended on Render free)
+
+Render’s free disk is ephemeral, so PDFs disappear after redeploy. With Storage configured, materials survive and “Analizar de nuevo” works.
+
+1. In the Supabase dashboard → Storage, create a **private** bucket named `vera-materials` (or set `SUPABASE_STORAGE_BUCKET`).
+2. Add to `.env` / Render env:
+
+```dotenv
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_STORAGE_BUCKET=vera-materials
+```
+
+Use the **service role** key only on the backend (never in the frontend). If these vars are empty, the API keeps the previous local `/app/data` behaviour.
+
+Materials uploaded before Storage was enabled still need a one-time re-upload of the same file (409 rehydrates them into the bucket); then historial re-analysis works.
+
 ### 3. Run the backend
 
 Follow the installation and execution instructions below.
