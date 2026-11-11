@@ -109,7 +109,7 @@ export function HomeStart() {
           </CardTitle>
           <CardDescription className="text-sm leading-6">
             {source === VERA_SOURCE.api
-              ? 'Subí un PDF para analizarlo con el backend local.'
+              ? 'Subí un PDF para analizarlo con la API real.'
               : 'Subí un PDF, Word, PowerPoint o pegá texto directamente para empezar.'}
           </CardDescription>
         </CardHeader>
@@ -146,7 +146,7 @@ export function HomeStart() {
               ? 'Demo: flujo completo con la API simulada (texto o archivo).'
               : backendUp === false
                 ? 'Backend no disponible ahora (`/health`).'
-                : 'API real: PDF vía FastAPI. Requiere backend local.'}
+                : 'API real: solo PDF vía el backend desplegado.'}
           </p>
           <Button
             type="button"

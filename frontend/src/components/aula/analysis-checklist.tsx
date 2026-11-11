@@ -23,6 +23,11 @@ import {
   withAnalysisId,
   writeFlowResume,
 } from "@/lib/api/url";
+import {
+  analysisFailureTitle,
+  analysisIncompleteHint,
+  isAiAvailabilityMessage,
+} from "@/lib/api/ai-availability";
 import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
 
@@ -201,7 +206,8 @@ export function AnalysisChecklist({
               applyStatus(resolveUiStatus(nextRows, base), nextRows);
               setError(
                 a.status === "failed"
-                  ? (a.error_message ?? "No se pudo completar el análisis")
+                  ? (a.error_message?.trim() ||
+                      "No se pudo completar el análisis")
                   : null,
               );
             },
@@ -318,15 +324,21 @@ export function AnalysisChecklist({
         <Card className="border-warning-foreground/20 bg-warning-soft text-warning-foreground shadow-none">
           <CardContent className="space-y-2 py-4">
             <p className="text-sm font-semibold">
-              No pudimos analizar {errorRows.length} de las {totalCount}{" "}
-              dimensiones
+              {isAiAvailabilityMessage(error)
+                ? analysisFailureTitle(error)
+                : `No pudimos completar ${errorRows.length} de ${totalCount} pasos`}
             </p>
+            {analysisIncompleteHint(error) ? (
+              <p className="text-sm leading-6">
+                {analysisIncompleteHint(error)}
+              </p>
+            ) : null}
             <p className="text-sm leading-6">
-              Podés reintentar {failedLabels || "las dimensiones fallidas"} o
-              continuar con las {doneCount} dimensiones analizadas. Si
+              Podés reintentar {failedLabels || "los pasos fallidos"} o
+              continuar con los {doneCount} pasos completados. Si
               continuás, el diagnóstico y el informe van a indicar que{" "}
-              {failedLabels || "esas dimensiones"}{" "}
-              {errorRows.length === 1 ? "quedó" : "quedaron"} sin analizar.
+              {failedLabels || "esos pasos"}{" "}
+              {errorRows.length === 1 ? "quedó" : "quedaron"} sin completar.
             </p>
           </CardContent>
         </Card>
@@ -336,7 +348,7 @@ export function AnalysisChecklist({
         <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
           <CardContent className="space-y-2 py-4">
             <p className="text-sm font-semibold">
-              No se pudo completar el análisis
+              {analysisFailureTitle(error)}
             </p>
             <p className="text-sm leading-6">{error}</p>
           </CardContent>
@@ -386,7 +398,10 @@ export function AnalysisChecklist({
               {row.status === "error" ? (
                 <>
                   <span className="text-danger-foreground">
-                    No se pudo analizar
+                    {row.id === "accessibility_analysis" &&
+                    isAiAvailabilityMessage(error)
+                      ? "IA no disponible"
+                      : "No se pudo analizar"}
                   </span>
                   {materialId != null ? (
                     <Button
