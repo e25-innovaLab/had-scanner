@@ -6,9 +6,9 @@ Backend API for analyzing teaching materials and providing accessibility diagnos
 
 The backend is deployed and available for testing.
 
-- **API Base URL:** https://had-scanner.onrender.com
-- **Swagger UI:** https://had-scanner.onrender.com/docs#/
-- **Health Check:** https://had-scanner.onrender.com/health
+- **API Base URL:** https://had-scanner-rk7u.onrender.com
+- **Swagger UI:** https://had-scanner-rk7u.onrender.com/docs#/
+- **Health Check:** https://had-scanner-rk7u.onrender.com/health
 
 Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
 
