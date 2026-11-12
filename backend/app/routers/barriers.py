@@ -1,17 +1,15 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.repositories import barrier_repository
 from app.schemas.barrier import BarrierDetailResponse
-
+from app.services.barrier_service import reject_barrier
 
 router = APIRouter(
     prefix="/barriers",
     tags=["Barriers"],
 )
-
 
 @router.get(
     "/{barrier_id}",
@@ -34,3 +32,19 @@ def get_barrier_by_id_endpoint(
         )
 
     return barrier
+
+@router.patch(
+    "/{barrier_id}/reject",
+    response_model=BarrierDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reject barrier",
+    description="Descarta una barrera pendiente sin generar una propuesta con IA.",
+)
+def reject_barrier_endpoint(
+    barrier_id: int,
+    db: Session = Depends(get_db),
+):
+    return reject_barrier(
+        db=db,
+        barrier_id=barrier_id,
+    )
