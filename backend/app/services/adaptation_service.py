@@ -136,6 +136,7 @@ def _extract_original_content(
 
     return original_content
 
+  
 def create_adaptation_proposal(
     db: Session,
     barrier_id: int,
@@ -178,6 +179,7 @@ def create_adaptation_proposal(
             status_code=status_code,
             detail=detail,
         ) from exc
+
 
 def update_adaptation_proposal_status(
     db: Session,

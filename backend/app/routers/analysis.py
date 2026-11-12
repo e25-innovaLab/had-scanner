@@ -15,7 +15,6 @@ from app.services.analysis_service import (
 from app.utils.pdf_parser import extract_document
 from app.utils.object_storage import resolve_material_path
 
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
@@ -108,7 +107,7 @@ def get_analysis_by_id_endpoint(
 
     return analysis
 
-#Endpoint para pruebas
+# Endpoint para pruebas
 """
 @router.get(
     "/{material_id}/parsed-document",
