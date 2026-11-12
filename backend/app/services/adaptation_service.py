@@ -6,11 +6,13 @@ from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.material import Material
 from app.utils.pdf_parser import extract_document
+from app.utils.object_storage import resolve_material_path
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.ai.adaptation_generator import generate_adaptation
+from app.ai.gemini_errors import proposal_http_error
 from app.repositories import proposal_repository
 
 import logging
@@ -134,6 +136,7 @@ def _extract_original_content(
 
     return original_content
 
+
 def create_adaptation_proposal(
     db: Session,
     barrier_id: int,
@@ -169,7 +172,8 @@ def create_adaptation_proposal(
         )
 
     try:
-        document = extract_document(material.file_path)
+        local_path = str(resolve_material_path(material.file_path))
+        document = extract_document(local_path)
 
         original_content = _extract_original_content(
             document,
@@ -203,11 +207,12 @@ def create_adaptation_proposal(
             "Failed to generate adaptation proposal for barrier_id=%s",
             barrier_id,
         )
-
+        status_code, detail = proposal_http_error(exc)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to generate the adaptation proposal.",
+            status_code=status_code,
+            detail=detail,
         ) from exc
+
 
 def update_adaptation_proposal_status(
     db: Session,

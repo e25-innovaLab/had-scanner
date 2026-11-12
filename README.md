@@ -1,4 +1,4 @@
-# had-scanner
+# had-scanner - VERA
 
 Herramienta de accesibilidad para documentos docentes (VERA).
 
@@ -6,62 +6,50 @@ Herramienta de accesibilidad para documentos docentes (VERA).
 
 ```
 had-scanner/
-├── frontend/          # Vite + React + TypeScript + Tailwind (migración en curso)
+├── frontend/          # Vite + React + TypeScript + Tailwind
 ├── backend/           # FastAPI + Docker
-├── docs/              # Documentación y evidencia de investigación
+├── docs/              # architecture, deploy; archive/kickoff histórico
 └── .github/           # Configuración de la org
 ```
 
+Docs: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./docs/deploy.md)
+
 ## Stack
 
-- **Frontend:** Vite, React, TypeScript, React Router, Tailwind CSS, pnpm  
-  El código en `main` aún puede incluir el Next.js legacy. La implementación vigente está en la rama `feat/frontend-flujo-vera` hasta el merge.
+- **Frontend:** Vite, React, TypeScript, React Router, Tailwind CSS
 - **Backend:** Docker, FastAPI (Python)
-- **IA:** Gemini API (planificado; el front usa mock local por ahora)
+- **IA:** Gemini API (vía backend FastAPI)
 
 ## Getting Started (Frontend)
 
 Requisitos: [Node.js](https://nodejs.org/) 20+ y pnpm vía Corepack (viene con Node). No uses npm/yarn.
 
-Mientras no se mergee el Vite a `main`, usá la rama del flujo VERA:
-
 ```bash
-git fetch origin
-git checkout feat/frontend-flujo-vera
-cd frontend
 corepack enable
+cd frontend
 pnpm install
-pnpm dev
+pnpm dev:vite
 ```
 
 - UI: [http://localhost:5173](http://localhost:5173)
-- Mock API: [http://localhost:3001](http://localhost:3001) (proxied como `/api` desde Vite)
+- **Demo (mock):** corre en el browser (localStorage). No hace falta el Express en `:3001`.
+- **API real (local o Render):** creá `frontend/.env` con, por ejemplo:
+  `VITE_API_BASE_URL=https://had-scanner-rk7u.onrender.com`
+  (o `http://localhost:8000` si levantás el backend local).
 
-No uses el frontend Next de `main` (`npm run dev` / puerto 3000).
+`pnpm dev` también arranca un mock Express opcional en `:3001` (proxy Vite `/api`); el camino Demo del SPA ya no depende de él.
+
+Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/readme/`](./frontend/readme/). Nix/direnv es opcional y solo para quien lo use.
 
 ## Getting Started (Backend)
 
-## Deployed Demo
-
-The backend is deployed and available for testing.
-
-- **API Base URL:** https://had-scanner.onrender.com
-- **Swagger UI:** https://had-scanner.onrender.com/docs#/
-- **Health Check:** https://had-scanner.onrender.com/health
-
-Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
-
-**Note:** The service is hosted on Render and may take a few moments to respond to the first request if it has been inactive.
-
----
-
-### Requerimientos para ejecutar en local
+### Requerimientos
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose incluido)
 
 > **Importante:** Docker Desktop debe estar abierto antes de usar los comandos de Docker.
 
-### Ejecutando el proyecto (en local)
+### Ejecutando el proyecto
 
 ```bash
 cd backend
@@ -70,7 +58,19 @@ docker compose up --build
 
 Documentación de la API: [http://localhost:8000/docs](http://localhost:8000/docs).
 
-Hoy el backend cubre upload/listado de materiales; el flujo completo de análisis en el front corre contra el mock hasta integrar FastAPI.
+El camino **API real** (PDF) usa FastAPI async; el camino **Demo** del front usa el mock in-browser (texto/archivo).
+
+## Deployed Demo
+
+The backend is deployed and available for testing.
+
+- **API Base URL:** https://had-scanner-rk7u.onrender.com
+- **Swagger UI:** https://had-scanner-rk7u.onrender.com/docs#/
+- **Health Check:** https://had-scanner-rk7u.onrender.com/health
+
+Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
+
+**Note:** The service is hosted on Render and may take a few moments to respond to the first request if it has been inactive.
 
 ## Licencia
 

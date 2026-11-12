@@ -1,6 +1,5 @@
 
 import logging
-import os
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -14,7 +13,7 @@ from app.services.analysis_service import (
     process_analysis_task,
 )
 from app.utils.pdf_parser import extract_document
-
+from app.utils.object_storage import resolve_material_path
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +49,17 @@ def analyze_material_endpoint(
             detail="Material not found",
         )
 
-    if not os.path.isfile(material.file_path):
+    try:
+        resolve_material_path(material.file_path)
+    except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Material file not found",
-        )
+            detail=(
+                "Material file not found. "
+                "Re-upload the same file to restore it, or check "
+                "Supabase Storage configuration."
+            ),
+        ) from None
 
     try:
         analysis = create_material_analysis(
