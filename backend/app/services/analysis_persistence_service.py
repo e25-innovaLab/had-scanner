@@ -27,6 +27,11 @@ def persist_analysis(
         for barrier_data in barriers_data:
             evidence_data = barrier_data.get("evidence", [])
 
+            if len(evidence_data) != 1:
+                raise ValueError(
+                    "Each barrier must contain exactly one evidence."
+                )
+
             pages = sorted({
                 evidence["page"]
                 for evidence in evidence_data
