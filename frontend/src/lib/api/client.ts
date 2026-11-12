@@ -379,35 +379,56 @@ export const api = {
     return fromMockResult(mockService.saveDraft(analysisId, barrierId, draft));
   },
 
-  accept(
+  async accept(
     analysisId: string,
     barrierId: string,
     draft?: string,
   ): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
+      const content = draft?.trim() ?? "";
       const proposalId = storedBackendProposalId(analysisId, barrierId);
+
       if (proposalId !== null) {
+        if (!content) {
+          return this.updateBackendProposalStatus(
+            analysisId,
+            barrierId,
+            "accept",
+          );
+        }
+        const existing = await request<BackendProposalResponse>(
+          `/proposals/${proposalId}`,
+        );
+        if (existing.proposed_content.trim() === content) {
+          return this.updateBackendProposalStatus(
+            analysisId,
+            barrierId,
+            "accept",
+          );
+        }
+        // Texto editado respecto a la propuesta guardada → nueva manual
+        await this.createManualProposal(analysisId, barrierId, {
+          proposed_content: content,
+          explanation: "Adaptación editada por el docente.",
+        });
         return this.updateBackendProposalStatus(
           analysisId,
           barrierId,
           "accept",
         );
       }
-      const content = draft?.trim() ?? "";
+
       if (!content) {
-        return Promise.reject(
-          new ApiError(
-            400,
-            "Generá una propuesta con IA o escribí una adaptación para aceptar.",
-          ),
+        throw new ApiError(
+          400,
+          "Generá una propuesta con IA o escribí una adaptación para aceptar.",
         );
       }
-      return this.createManualProposal(analysisId, barrierId, {
+      await this.createManualProposal(analysisId, barrierId, {
         proposed_content: content,
         explanation: "Adaptación propuesta por el docente.",
-      }).then(() =>
-        this.updateBackendProposalStatus(analysisId, barrierId, "accept"),
-      );
+      });
+      return this.updateBackendProposalStatus(analysisId, barrierId, "accept");
     }
 
     return fromMockResult(
