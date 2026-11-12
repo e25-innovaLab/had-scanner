@@ -75,6 +75,22 @@ def _extract_original_content(
     document: dict,
     barrier: Barrier,
 ) -> str:
+    """
+    Recover the original content associated with exactly one
+    evidence of a barrier.
+    """
+
+    if len(barrier.evidences) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "The barrier must contain exactly one evidence "
+                "to generate an adaptation proposal."
+            ),
+        )
+
+    evidence = barrier.evidences[0]
+
     elements_by_id = {}
     elements_by_page = {}
 
@@ -90,46 +106,33 @@ def _extract_original_content(
             if element_id:
                 elements_by_id[element_id] = element
 
-    recovered = []
-    seen = set()
-
-    for evidence in barrier.evidences:
-        element = _find_evidence_element(
-            evidence,
-            elements_by_id,
-            elements_by_page,
-        )
-
-        if element is None:
-            continue
-
-        text = _get_element_text(element)
-
-        if not text:
-            continue
-
-        normalized = _normalize_text(text)
-
-        if normalized in seen:
-            continue
-
-        recovered.append({
-            "element_id": element.get("element_id"),
-            "page": element.get("page"),
-            "type": element.get("type"),
-            "text": text,
-        })
-        seen.add(normalized)
-
-    if not recovered:
-        raise ValueError(
-            "No original content could be recovered for this barrier."
-        )
-
-    return "\n".join(
-        item["text"]
-        for item in recovered
+    element = _find_evidence_element(
+        evidence,
+        elements_by_id,
+        elements_by_page,
     )
+
+    if element is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "The evidence could not be associated "
+                "with an original document element."
+            ),
+        )
+
+    original_content = _get_element_text(element)
+
+    if not original_content:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "The original content associated with "
+                "the evidence is empty."
+            ),
+        )
+
+    return original_content
 
 def create_adaptation_proposal(
     db: Session,
@@ -141,7 +144,7 @@ def create_adaptation_proposal(
 
     if barrier is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Barrier not found.",
         )
 
@@ -151,7 +154,7 @@ def create_adaptation_proposal(
 
     if analysis is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Analysis not found.",
         )
 
@@ -161,7 +164,7 @@ def create_adaptation_proposal(
 
     if material is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Material not found.",
         )
 
@@ -193,10 +196,6 @@ def create_adaptation_proposal(
     except HTTPException:
         raise
 
-    
-    except HTTPException:
-        raise
-
     except Exception as exc:
         db.rollback()
 
@@ -206,7 +205,7 @@ def create_adaptation_proposal(
         )
 
         raise HTTPException(
-            status_code=502,
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Unable to generate the adaptation proposal.",
         ) from exc
 

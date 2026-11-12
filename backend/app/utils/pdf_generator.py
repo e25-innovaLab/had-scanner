@@ -215,23 +215,40 @@ def _add_markdown_content(
             )
         )
 
+def extract_document_title(document: dict) -> str:
+    """
+    Returns the first non-empty text extracted by the parser.
+    """
+    for page in document.get("pages", []):
+        for element in page.get("elements", []):
+            text = element.get("text", "")
+
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+
+    return "Material educativo"
 
 def generate_pdf(
     document: dict,
     output_path: str,
+    title: str | None = None,
 ):
     styles = _create_styles()
 
     story = []
 
+    document_title = title or extract_document_title(document)
+
     story.append(
         Paragraph(
-            escape(document.get("filename") or "Material educativo"),
+            escape(document_title),
             styles["DocumentTitle"],
         )
     )
 
     pages = document.get("pages", [])
+
+    title_skipped = False
 
     for page_index, page in enumerate(pages):
 
@@ -243,6 +260,11 @@ def generate_pdf(
             text = element.get("text", "")
 
             if not text:
+                continue
+
+            # Skip the first non-empty text used as document title.
+            if not title_skipped:
+                title_skipped = True
                 continue
 
             # Adapted content is interpreted as Markdown.
@@ -283,7 +305,7 @@ def generate_pdf(
         leftMargin=2 * cm,
         topMargin=2 * cm,
         bottomMargin=2 * cm,
-        title=document.get("filename", "Material educativo"),
+        title=document_title,
     )
 
     pdf.build(story)

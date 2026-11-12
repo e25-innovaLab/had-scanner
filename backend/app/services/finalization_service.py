@@ -10,7 +10,7 @@ from app.repositories import (
 )
 from app.repositories import material_repository
 from app.utils.pdf_parser import extract_document
-from app.utils.pdf_generator import generate_pdf
+from app.utils.pdf_generator import generate_pdf, extract_document_title
 
 
 class NoCompletedAnalysisError(Exception):
@@ -191,6 +191,7 @@ def finalize_material(
 
     # 4. Parse the original document.
     document = extract_document(material.file_path)
+    document_title = extract_document_title(document)
 
     # 5. Apply the adaptations.
     adapted_document = _apply_adaptations(
@@ -218,10 +219,10 @@ def finalize_material(
         filename,
     )
 
-    # 8. Generate the PDF.
     generate_pdf(
         document=adapted_document,
         output_path=output_path,
+        title=document_title,
     )
 
     return output_path, filename
