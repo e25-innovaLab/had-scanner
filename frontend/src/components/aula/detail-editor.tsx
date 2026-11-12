@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Info, RotateCcw, Sparkles } from 'lucide-react';
-import { IntentMeter } from '@/components/aula/intent-meter';
-import { MissingAnalysis } from '@/components/aula/missing-analysis';
-import { Pill } from '@/components/aula/pill';
-import { Button } from '@/components/ui/button';
-import { buttonVariants } from '@/components/ui/button-variants';
-import { Card } from '@/components/ui/card';
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Info, RotateCcw, Sparkles } from "lucide-react";
+import { IntentMeter } from "@/components/aula/intent-meter";
+import { MissingAnalysis } from "@/components/aula/missing-analysis";
+import { Pill } from "@/components/aula/pill";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -17,31 +17,31 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { api } from '@/lib/api/client';
-import { isBackendId } from '@/lib/api/ids';
+} from "@/components/ui/dialog";
+import { api } from "@/lib/api/client";
+import { isBackendId } from "@/lib/api/ids";
 import {
   PROPOSAL_JOB_STATUS,
   clearProposalJob,
   startProposal,
   useProposalJob,
-} from '@/lib/api/proposal-jobs';
-import type { ApiBarrier } from '@/lib/api/types';
-import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
+} from "@/lib/api/proposal-jobs";
+import type { ApiBarrier } from "@/lib/api/types";
+import { resolveAnalysisId, withAnalysisId } from "@/lib/api/url";
 import {
   AI_ATTEMPTS_PER_BARRIER,
   countSentences,
   countWords,
   readingLabel,
   type Severity,
-} from '@/lib/aula';
-import { cn } from '@/lib/utils';
+} from "@/lib/aula";
+import { cn } from "@/lib/utils";
 
 const VERSION_ACTIONS = [
-  { id: 'simple', label: 'Más simple' },
-  { id: 'breve', label: 'Más breve' },
-  { id: 'pasos', label: 'Dividir en pasos' },
-  { id: 'ejemplo', label: 'Agregar un ejemplo' },
+  { id: "simple", label: "Más simple" },
+  { id: "breve", label: "Más breve" },
+  { id: "pasos", label: "Dividir en pasos" },
+  { id: "ejemplo", label: "Agregar un ejemplo" },
 ] as const;
 
 const TEXT_FADE_MS = 180;
@@ -52,7 +52,7 @@ function sleep(ms: number) {
   });
 }
 
-type VariantId = keyof ApiBarrier['variants'];
+type VariantId = keyof ApiBarrier["variants"];
 
 export function DetailEditor({
   initialRemaining: _initialRemaining,
@@ -61,13 +61,13 @@ export function DetailEditor({
 }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const analysisId = resolveAnalysisId(searchParams.get("analysisId"));
   const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
-  const startsWithoutProposal = searchParams.get('origen') === 'manual';
-  const desde = searchParams.get('desde');
-  const fromGenerate = desde === 'generar';
-  const withEntrance = desde === 'generar' || desde === 'editar';
-  const barrierFromQuery = searchParams.get('barrera');
+  const startsWithoutProposal = searchParams.get("origen") === "manual";
+  const desde = searchParams.get("desde");
+  const fromGenerate = desde === "generar";
+  const withEntrance = desde === "generar" || desde === "editar";
+  const barrierFromQuery = searchParams.get("barrera");
 
   const [barriers, setBarriers] = useState<ApiBarrier[]>([]);
   const [index, setIndex] = useState(0);
@@ -77,12 +77,12 @@ export function DetailEditor({
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [actionPending, setActionPending] = useState<
-    'save' | 'discard' | 'resume' | null
+    "save" | "discard" | "resume" | null
   >(null);
   const [noteOpen, setNoteOpen] = useState(false);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [textOpaque, setTextOpaque] = useState(true);
-  const [aiBaseline, setAiBaseline] = useState('');
+  const [aiBaseline, setAiBaseline] = useState("");
   const [hasProposal, setHasProposal] = useState(false);
   const [saved, setSaved] = useState(false);
   const [left, setLeft] = useState(AI_ATTEMPTS_PER_BARRIER);
@@ -90,11 +90,11 @@ export function DetailEditor({
 
   function applyBarrier(
     barrier: ApiBarrier | undefined,
-    opts: { startsWithoutProposal: boolean; fromGenerate: boolean }
+    opts: { startsWithoutProposal: boolean; fromGenerate: boolean },
   ) {
     if (!barrier) return;
     const forceProposal = opts.fromGenerate || !opts.startsWithoutProposal;
-    const proposal = barrier.currentProposal ?? barrier.draft ?? '';
+    const proposal = barrier.currentProposal ?? barrier.draft ?? "";
     const showProposal =
       opts.fromGenerate ||
       barrier.hasProposal ||
@@ -102,13 +102,13 @@ export function DetailEditor({
       (forceProposal && Boolean(proposal) && !opts.startsWithoutProposal);
 
     setLeft(barrier.remainingAttempts);
-    setSaved(barrier.status === 'accepted');
+    setSaved(barrier.status === "accepted");
     setHasProposal(showProposal || Boolean(barrier.hasProposal && proposal));
     setAiBaseline(barrier.currentProposal ?? proposal);
     setText(
       opts.startsWithoutProposal && !barrier.hasProposal && !proposal
-        ? (barrier.draft ?? '')
-        : (barrier.draft ?? proposal)
+        ? (barrier.draft ?? "")
+        : (barrier.draft ?? proposal),
     );
     setPendingVariant(null);
     setGenerateError(null);
@@ -130,7 +130,7 @@ export function DetailEditor({
           ? list.findIndex((item) => item.id === barrierFromQuery)
           : -1;
         const firstPending = list.findIndex(
-          (item) => item.status === 'pending'
+          (item) => item.status === "pending",
         );
         const idx =
           fromQuery >= 0 ? fromQuery : firstPending >= 0 ? firstPending : 0;
@@ -142,14 +142,14 @@ export function DetailEditor({
         const current = list[idx];
         if (current) {
           const nextUrl = withAnalysisId(
-            `/analisis/detalle?origen=${startsWithoutProposal ? 'manual' : 'ia'}${fromGenerate ? '&desde=generar' : ''}&barrera=${encodeURIComponent(current.id)}&dimension=${encodeURIComponent(current.dimensionId)}&i=${idx + 1}&n=${list.length}`,
-            analysisId
+            `/analisis/detalle?origen=${startsWithoutProposal ? "manual" : "ia"}${fromGenerate ? "&desde=generar" : ""}&barrera=${encodeURIComponent(current.id)}&dimension=${encodeURIComponent(current.dimensionId)}&i=${idx + 1}&n=${list.length}`,
+            analysisId,
           );
           if (
-            searchParams.get('barrera') !== current.id ||
-            searchParams.get('i') !== String(idx + 1) ||
-            searchParams.get('n') !== String(list.length) ||
-            searchParams.get('dimension') !== current.dimensionId
+            searchParams.get("barrera") !== current.id ||
+            searchParams.get("i") !== String(idx + 1) ||
+            searchParams.get("n") !== String(list.length) ||
+            searchParams.get("dimension") !== current.dimensionId
           ) {
             navigate(nextUrl, { replace: true });
           }
@@ -157,7 +157,7 @@ export function DetailEditor({
         setError(null);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Error al cargar');
+          setError(err instanceof Error ? err.message : "Error al cargar");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -198,22 +198,21 @@ export function DetailEditor({
     ) {
       const barrier = proposalJob.barrier;
       setAppliedJobKey(jobKey);
-      setAiBaseline(barrier.currentProposal ?? '');
+      setAiBaseline(barrier.currentProposal ?? "");
       setHasProposal(true);
       setLeft(barrier.remainingAttempts);
       setBarriers((current) =>
-        current.map((item) => (item.id === barrier.id ? barrier : item))
+        current.map((item) => (item.id === barrier.id ? barrier : item)),
       );
       setSaved(false);
       setGenerateError(null);
       clearProposalJob(analysisId, suggestion.id);
-      void swapProposalText(barrier.draft ?? barrier.currentProposal ?? '');
+      void swapProposalText(barrier.draft ?? barrier.currentProposal ?? "");
       return;
     }
 
     if (proposalJob.status === PROPOSAL_JOB_STATUS.ERROR) {
-      const message =
-        proposalJob.error ?? 'No se pudo generar la propuesta.';
+      const message = proposalJob.error ?? "No se pudo generar la propuesta.";
       setAppliedJobKey(jobKey);
       if (proposalJob.variant) {
         setError(message);
@@ -229,75 +228,75 @@ export function DetailEditor({
   }, [analysisId, suggestion, proposalJob, appliedJobKey]);
 
   const pendingCount = useMemo(
-    () => barriers.filter((item) => item.status === 'pending').length,
-    [barriers]
+    () => barriers.filter((item) => item.status === "pending").length,
+    [barriers],
   );
   const allResolved = barriers.length > 0 && pendingCount === 0;
 
   const words = countWords(text);
   const sentences = countSentences(text);
   const reading = readingLabel(text);
-  const originalWords = countWords(suggestion?.original ?? '');
-  const originalSentences = countSentences(suggestion?.original ?? '');
+  const originalWords = countWords(suggestion?.original ?? "");
+  const originalSentences = countSentences(suggestion?.original ?? "");
   const edited =
     hasProposal && text.trim() !== aiBaseline.trim() && text.trim().length > 0;
 
   const nextPendingIndex = useMemo(() => {
     const after = barriers.findIndex(
-      (item, i) => i > index && item.status === 'pending'
+      (item, i) => i > index && item.status === "pending",
     );
     if (after >= 0) return after;
     return barriers.findIndex(
-      (item, i) => i < index && item.status === 'pending'
+      (item, i) => i < index && item.status === "pending",
     );
   }, [barriers, index]);
 
   const nextLabel =
     nextPendingIndex >= 0
       ? `la barrera ${nextPendingIndex + 1} de ${barriers.length}`
-      : 'el resultado';
+      : "el resultado";
 
   const nextBarrierLabel =
     nextPendingIndex >= 0
       ? `barrera ${nextPendingIndex + 1} de ${barriers.length}`
-      : 'el resultado';
+      : "el resultado";
 
   const meta = useMemo(
     () =>
       text.length === 0
-        ? 'Sin texto todavía'
-        : `${words} palabras · ${sentences} ${sentences === 1 ? 'oración' : 'oraciones'} · Lectura: ${reading}`,
-    [text.length, words, sentences, reading]
+        ? "Sin texto todavía"
+        : `${words} palabras · ${sentences} ${sentences === 1 ? "oración" : "oraciones"} · Lectura: ${reading}`,
+    [text.length, words, sentences, reading],
   );
 
   function setBarrierStatusLocal(
     barrierId: string,
-    status: ApiBarrier['status']
+    status: ApiBarrier["status"],
   ) {
     setBarriers((current) =>
       current.map((item) =>
-        item.id === barrierId ? { ...item, status } : item
-      )
+        item.id === barrierId ? { ...item, status } : item,
+      ),
     );
   }
 
   function goToResultado() {
-    navigate(withAnalysisId('/analisis/resultado', analysisId));
+    navigate(withAnalysisId("/analisis/resultado", analysisId));
   }
 
   function detalleSearch(nextIndex: number, list: ApiBarrier[] = barriers) {
     const next = list[nextIndex];
-    if (!next) return '';
+    if (!next) return "";
     return withAnalysisId(
       `/analisis/detalle?origen=ia&barrera=${encodeURIComponent(next.id)}&dimension=${encodeURIComponent(next.dimensionId)}&i=${nextIndex + 1}&n=${list.length}`,
-      analysisId
+      analysisId,
     );
   }
 
   function resumenHref(dimensionId: string) {
     return withAnalysisId(
       `/analisis/adaptar?dimension=${encodeURIComponent(dimensionId)}`,
-      analysisId
+      analysisId,
     );
   }
 
@@ -308,7 +307,7 @@ export function DetailEditor({
       await api.saveDraft(analysisId, suggestion.id, value);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'No se pudo guardar el borrador'
+        err instanceof Error ? err.message : "No se pudo guardar el borrador",
       );
     }
   }
@@ -383,7 +382,7 @@ export function DetailEditor({
     const current = list[at];
     if (!current) return false;
     return !list.some(
-      (item, i) => i > at && item.dimensionId === current.dimensionId
+      (item, i) => i > at && item.dimensionId === current.dimensionId,
     );
   }
 
@@ -393,16 +392,16 @@ export function DetailEditor({
       navigate(resumenHref(suggestion.dimensionId));
       return;
     }
-    const stillPending = list.filter((item) => item.status === 'pending');
+    const stillPending = list.filter((item) => item.status === "pending");
     if (stillPending.length === 0) {
       goToResultado();
       return;
     }
     const after = list.findIndex(
-      (item, i) => i > index && item.status === 'pending'
+      (item, i) => i > index && item.status === "pending",
     );
     const target =
-      after >= 0 ? after : list.findIndex((item) => item.status === 'pending');
+      after >= 0 ? after : list.findIndex((item) => item.status === "pending");
     if (target >= 0) {
       goTo(target, list);
       return;
@@ -412,20 +411,20 @@ export function DetailEditor({
 
   async function saveAndAccept() {
     if (!analysisId || !suggestion || actionPending || generating) return;
-    setActionPending('save');
+    setActionPending("save");
     try {
       await api.accept(analysisId, suggestion.id, text);
       setSaved(true);
       setHasProposal(true);
       const nextList = barriers.map((item) =>
         item.id === suggestion.id
-          ? { ...item, status: 'accepted' as const }
-          : item
+          ? { ...item, status: "accepted" as const }
+          : item,
       );
       setBarriers(nextList);
       advance(nextList);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo aceptar');
+      setError(err instanceof Error ? err.message : "No se pudo aceptar");
     } finally {
       setActionPending(null);
     }
@@ -433,19 +432,19 @@ export function DetailEditor({
 
   async function discardSuggestion() {
     if (!analysisId || !suggestion || actionPending || generating) return;
-    setActionPending('discard');
+    setActionPending("discard");
     try {
       await api.discard(analysisId, suggestion.id);
       setSaved(false);
       const nextList = barriers.map((item) =>
         item.id === suggestion.id
-          ? { ...item, status: 'discarded' as const }
-          : item
+          ? { ...item, status: "discarded" as const }
+          : item,
       );
       setBarriers(nextList);
       advance(nextList);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo descartar');
+      setError(err instanceof Error ? err.message : "No se pudo descartar");
     } finally {
       setActionPending(null);
     }
@@ -453,14 +452,14 @@ export function DetailEditor({
 
   async function resumeEditing() {
     if (!analysisId || !suggestion || actionPending || generating) return;
-    setActionPending('resume');
+    setActionPending("resume");
     try {
       await api.reopen(analysisId, suggestion.id);
       setSaved(false);
       setHasProposal(false);
-      setBarrierStatusLocal(suggestion.id, 'pending');
+      setBarrierStatusLocal(suggestion.id, "pending");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo reabrir');
+      setError(err instanceof Error ? err.message : "No se pudo reabrir");
     } finally {
       setActionPending(null);
     }
@@ -490,13 +489,13 @@ export function DetailEditor({
   const lastInDimension = isLastBarrierInDimension(barriers, index);
 
   const footerHint = generating
-    ? 'La propuesta aparece en unos segundos. Podés descartar la barrera si no querés esperar.'
+    ? "La propuesta aparece en unos segundos. Podés descartar la barrera si no querés esperar."
     : saved
       ? lastInDimension
         ? `Propuesta guardada. Es la última barrera de ${suggestion.dimension}.`
         : `Propuesta guardada. Usá Continuar o seguí a ${nextLabel}.`
       : usesBackendApi
-        ? 'Aceptá o rechazá la propuesta para continuar.'
+        ? "Aceptá o rechazá la propuesta para continuar."
         : lastInDimension
           ? `Es la última barrera de ${suggestion.dimension}. Al guardar o descartar, la dimensión queda revisada y volvés a Adaptar.`
           : left === 0
@@ -506,8 +505,9 @@ export function DetailEditor({
   return (
     <div
       className={cn(
-        'mx-auto w-full max-w-6xl space-y-5 pb-20',
-        withEntrance && 'animate-in fade-in slide-in-from-bottom-1 duration-500'
+        "mx-auto w-full max-w-6xl space-y-5 pb-20",
+        withEntrance &&
+          "animate-in fade-in slide-in-from-bottom-1 duration-500",
       )}
     >
       {error ? (
@@ -542,8 +542,8 @@ export function DetailEditor({
         <Link
           to={resumenHref(suggestion.dimensionId)}
           className={cn(
-            buttonVariants({ variant: 'outline' }),
-            'h-9 rounded-xl px-3'
+            buttonVariants({ variant: "outline" }),
+            "h-9 rounded-xl px-3",
           )}
         >
           ← Volver a Adaptar
@@ -571,14 +571,14 @@ export function DetailEditor({
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
             {saved
-              ? 'Propuesta guardada. Podés continuar con la siguiente barrera o volver a editar para generar otra o ajustarla a mano.'
+              ? "Propuesta guardada. Podés continuar con la siguiente barrera o volver a editar para generar otra o ajustarla a mano."
               : hasProposal
                 ? usesBackendApi
-                  ? 'Revisá la observación y la propuesta. Aceptá o rechazá: la API actual no guarda ediciones manuales.'
-                  : 'Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente.'
+                  ? "Revisá la observación y la propuesta. Aceptá o rechazá: la API actual no guarda ediciones manuales."
+                  : "Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente."
                 : usesBackendApi
-                  ? 'El original está a la izquierda. Generá una propuesta con IA.'
-                  : 'El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano.'}
+                  ? "El original está a la izquierda. Generá una propuesta con IA o descartá la barrera."
+                  : "El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano."}
           </p>
         </div>
       </header>
@@ -595,8 +595,8 @@ export function DetailEditor({
             {suggestion.original}
           </p>
           <p className="px-(--card-spacing) text-xs text-muted-foreground">
-            {originalWords} palabras · {originalSentences}{' '}
-            {originalSentences === 1 ? 'oración' : 'oraciones'} · Lectura:{' '}
+            {originalWords} palabras · {originalSentences}{" "}
+            {originalSentences === 1 ? "oración" : "oraciones"} · Lectura:{" "}
             {readingLabel(suggestion.original)}
           </p>
         </Card>
@@ -608,7 +608,7 @@ export function DetailEditor({
                 <Pill tone="step">IA Propuesta</Pill>
               ) : null}
               <span className="text-sm font-medium">
-                {hasProposal || generating ? 'Propuesta' : 'Tu adaptación'}
+                {hasProposal || generating ? "Propuesta" : "Tu adaptación"}
               </span>
               {edited ? <Pill tone="role">Editado por vos</Pill> : null}
               {saved ? <Pill tone="ok">Guardada</Pill> : null}
@@ -625,9 +625,9 @@ export function DetailEditor({
                 <RotateCcw
                   data-icon="inline-start"
                   aria-hidden="true"
-                  className={cn(restoring && 'animate-spin')}
+                  className={cn(restoring && "animate-spin")}
                 />
-                {restoring ? 'Restaurando…' : 'Restaurar propuesta IA'}
+                {restoring ? "Restaurando…" : "Restaurar propuesta IA"}
               </Button>
             ) : null}
           </div>
@@ -643,7 +643,7 @@ export function DetailEditor({
                     <p className="text-sm leading-6">{generateError}</p>
                     {!usesBackendApi ? (
                       <p className="text-sm leading-6">
-                        Seguís teniendo {left} de {AI_ATTEMPTS_PER_BARRIER}{' '}
+                        Seguís teniendo {left} de {AI_ATTEMPTS_PER_BARRIER}{" "}
                         intentos para esta barrera.
                       </p>
                     ) : null}
@@ -690,9 +690,9 @@ export function DetailEditor({
                           ? `Generando versión «${
                               VERSION_ACTIONS.find(
                                 (a) => a.id === pendingVariant,
-                              )?.label ?? 'Otra versión'
+                              )?.label ?? "Otra versión"
                             }»…`
-                          : 'Generando propuesta con IA…'}
+                          : "Generando propuesta con IA…"}
                       </p>
                       <p className="text-muted-foreground">
                         El texto actual se mantiene visible. Si falla, el
@@ -716,8 +716,8 @@ export function DetailEditor({
                     hasProposal
                       ? undefined
                       : usesBackendApi
-                        ? 'Generá una propuesta con IA.'
-                        : 'Escribí tu adaptación o generá una propuesta con IA.'
+                        ? "Generá una propuesta con IA."
+                        : "Escribí tu adaptación o generá una propuesta con IA."
                   }
                   onChange={(event) => setText(event.target.value)}
                   onBlur={() => {
@@ -726,11 +726,11 @@ export function DetailEditor({
                     }
                   }}
                   className={cn(
-                    'w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground transition-opacity duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                    "w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground transition-opacity duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                     (saved || usesBackendApi) &&
-                      'cursor-default bg-muted text-foreground/90',
-                    generating && 'cursor-wait',
-                    !textOpaque || generating ? 'opacity-40' : 'opacity-100',
+                      "cursor-default bg-muted text-foreground/90",
+                    generating && "cursor-wait",
+                    !textOpaque || generating ? "opacity-40" : "opacity-100",
                   )}
                 />
               </div>
@@ -757,15 +757,15 @@ export function DetailEditor({
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="font-medium">
                   {hasProposal || generating
-                    ? 'Pedir otra versión a la IA'
-                    : 'Generar propuesta con IA'}
+                    ? "Pedir otra versión a la IA"
+                    : "Generar propuesta con IA"}
                 </span>
                 <span
                   className={cn(
-                    'flex items-center gap-2 text-xs',
+                    "flex items-center gap-2 text-xs",
                     left === 0
-                      ? 'font-medium text-danger-foreground'
-                      : 'text-muted-foreground'
+                      ? "font-medium text-danger-foreground"
+                      : "text-muted-foreground",
                   )}
                 >
                   <IntentMeter
@@ -802,16 +802,16 @@ export function DetailEditor({
                         type="button"
                         variant="outline"
                         className={cn(
-                          'h-8 rounded-full bg-white px-3',
+                          "h-8 rounded-full bg-white px-3",
                           pendingVariant === action.id &&
-                            'border-primary bg-primary/15 text-foreground ring-2 ring-primary/40',
+                            "border-primary bg-primary/15 text-foreground ring-2 ring-primary/40",
                         )}
                         disabled={left === 0 || generating}
                         aria-busy={pendingVariant === action.id}
                         onClick={() => void consume(action.id)}
                       >
                         {pendingVariant === action.id
-                          ? 'Generando…'
+                          ? "Generando…"
                           : action.label}
                       </Button>
                     ))}
@@ -819,24 +819,24 @@ export function DetailEditor({
                       type="button"
                       variant="outline"
                       className={cn(
-                        'h-8 rounded-full bg-white px-3',
-                        pendingVariant === 'otra' &&
-                          'border-primary bg-primary/15 text-foreground ring-2 ring-primary/40',
+                        "h-8 rounded-full bg-white px-3",
+                        pendingVariant === "otra" &&
+                          "border-primary bg-primary/15 text-foreground ring-2 ring-primary/40",
                       )}
                       disabled={left === 0 || generating}
-                      aria-busy={pendingVariant === 'otra'}
-                      onClick={() => void consume('otra')}
+                      aria-busy={pendingVariant === "otra"}
+                      onClick={() => void consume("otra")}
                     >
                       <RotateCcw
                         data-icon="inline-start"
                         aria-hidden="true"
                         className={cn(
-                          pendingVariant === 'otra' && 'animate-spin',
+                          pendingVariant === "otra" && "animate-spin",
                         )}
                       />
-                      {pendingVariant === 'otra'
-                        ? 'Generando…'
-                        : 'Otra versión'}
+                      {pendingVariant === "otra"
+                        ? "Generando…"
+                        : "Otra versión"}
                     </Button>
                   </div>
                   {left === 0 ? (
@@ -861,7 +861,7 @@ export function DetailEditor({
                     </Card>
                   ) : generating ? null : (
                     <p className="text-xs leading-5 text-muted-foreground">
-                      Cada nueva versión usa 1 intento. Son{' '}
+                      Cada nueva versión usa 1 intento. Son{" "}
                       {AI_ATTEMPTS_PER_BARRIER} por barrera. Editar a mano o
                       restaurar no consume intentos.
                     </p>
@@ -906,10 +906,10 @@ export function DetailEditor({
               disabled={actionPending != null}
               onClick={() => void resumeEditing()}
             >
-              {actionPending === 'resume' ? 'Reabriendo…' : 'Volver a editar'}
+              {actionPending === "resume" ? "Reabriendo…" : "Volver a editar"}
             </Button>
           )
-        ) : usesBackendApi && !suggestion.hasProposal && !hasProposal ? null : (
+        ) : (
           <Button
             type="button"
             variant="outline"
@@ -917,13 +917,13 @@ export function DetailEditor({
             disabled={generating || actionPending != null}
             onClick={() => void discardSuggestion()}
           >
-            {actionPending === 'discard'
-              ? usesBackendApi
-                ? 'Rechazando…'
-                : 'Descartando…'
-              : usesBackendApi
-                ? 'Rechazar propuesta'
-                : 'Descartar barrera'}
+            {actionPending === "discard"
+              ? hasProposal || suggestion.hasProposal
+                ? "Rechazando…"
+                : "Descartando…"
+              : hasProposal || suggestion.hasProposal
+                ? "Rechazar propuesta"
+                : "Descartar barrera"}
           </Button>
         )}
         <p className="text-sm text-muted-foreground lg:flex-1 lg:px-4 lg:text-center">
@@ -937,10 +937,10 @@ export function DetailEditor({
             onClick={() => advance()}
           >
             {allResolved || nextPendingIndex < 0
-              ? 'Obtener resultado'
+              ? "Obtener resultado"
               : lastInDimension
-                ? 'Volver a Adaptar'
-                : 'Continuar'}
+                ? "Volver a Adaptar"
+                : "Continuar"}
           </Button>
         ) : (
           <Button
@@ -953,24 +953,22 @@ export function DetailEditor({
                 ? !hasProposal
                 : (!hasProposal && text.trim().length === 0) ||
                   Boolean(
-                    generateError &&
-                      !hasProposal &&
-                      text.trim().length === 0
+                    generateError && !hasProposal && text.trim().length === 0,
                   ))
             }
             onClick={() => void saveAndAccept()}
           >
-            {actionPending === 'save'
+            {actionPending === "save"
               ? usesBackendApi
-                ? 'Aceptando…'
-                : 'Guardando…'
+                ? "Aceptando…"
+                : "Guardando…"
               : usesBackendApi
                 ? lastInDimension
-                  ? 'Aceptar y volver a Adaptar'
-                  : 'Aceptar propuesta'
+                  ? "Aceptar y volver a Adaptar"
+                  : "Aceptar propuesta"
                 : lastInDimension
-                  ? 'Guardar y volver a Adaptar'
-                  : 'Guardar y aceptar'}
+                  ? "Guardar y volver a Adaptar"
+                  : "Guardar y aceptar"}
           </Button>
         )}
       </div>
@@ -1034,7 +1032,7 @@ function Observation({ barrier }: { barrier: ApiBarrier }) {
         <ObservationColumn title="Qué propone" body={barrier.proposes} />
       </div>
       <p className="px-(--card-spacing) text-sm text-muted-foreground">
-        Ubicación: {barrier.location}{' '}
+        Ubicación: {barrier.location}{" "}
         <Dialog>
           <DialogTrigger
             render={
@@ -1070,7 +1068,7 @@ function ObservationColumn({ title, body }: { title: string; body: string }) {
 }
 
 function priorityName(severity: Severity) {
-  if (severity === 'alta') return 'Prioridad alta';
-  if (severity === 'media') return 'Prioridad media';
-  return 'Prioridad baja';
+  if (severity === "alta") return "Prioridad alta";
+  if (severity === "media") return "Prioridad media";
+  return "Prioridad baja";
 }
