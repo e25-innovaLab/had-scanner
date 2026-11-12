@@ -268,7 +268,7 @@ export const api = {
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
     if (isBackendId(analysisId)) {
       return request<BackendProposalResponse>(
-        `/barriers/${encodeURIComponent(barrierId)}/proposals`,
+        `/barriers/${encodeURIComponent(barrierId)}/proposals/generate`,
         { method: "POST" },
       ).then(async (backendProposal) => {
         rememberBackendProposal(
