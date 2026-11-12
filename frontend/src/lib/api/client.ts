@@ -45,6 +45,19 @@ type BackendProposalResponse = {
   explanation: string;
 };
 
+type BackendBarrierDetail = {
+  id: number;
+  type: string;
+  title: string;
+  severity: string;
+  location: { pages?: number[] } & Record<string, unknown>;
+  description: string;
+  justification: string;
+  recommendation: string;
+  detected_by: string;
+  status: string;
+};
+
 function baseUrl() {
   const env = import.meta.env.VITE_API_BASE_URL;
   if (typeof env === "string" && env.length > 0) {
@@ -193,20 +206,14 @@ export const api = {
 
   getStatus(analysisId: string): Promise<AnalysisStatusResponse> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(
-        400,
-        "getStatus solo aplica al camino Demo (mock).",
-      );
+      throw new ApiError(400, "getStatus solo aplica al camino Demo (mock).");
     }
     return fromMockResult(mockService.getAnalysisStatus(analysisId));
   },
 
   getAnalysis(analysisId: string): Promise<Analysis> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(
-        400,
-        "getAnalysis solo aplica al camino Demo (mock).",
-      );
+      throw new ApiError(400, "getAnalysis solo aplica al camino Demo (mock).");
     }
     return fromMockResult(mockService.getAnalysis(analysisId));
   },
@@ -253,10 +260,7 @@ export const api = {
 
   getBarrier(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(
-        400,
-        "getBarrier solo aplica al camino Demo (mock).",
-      );
+      throw new ApiError(400, "getBarrier solo aplica al camino Demo (mock).");
     }
     return fromMockResult(mockService.getBarrier(analysisId, barrierId));
   },
@@ -281,9 +285,7 @@ export const api = {
           (barrier) => String(barrier.id) === barrierId,
         );
         if (!backendBarrier) {
-          throw new Error(
-            "No se encontró la barrera asociada a la propuesta.",
-          );
+          throw new Error("No se encontró la barrera asociada a la propuesta.");
         }
         const barrier = withBackendProposal(
           toApiBarrier(backendBarrier, analysisId),
@@ -339,9 +341,29 @@ export const api = {
 
   discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      return this.updateBackendProposalStatus(analysisId, barrierId, "reject");
+      const proposalId = storedBackendProposalId(analysisId, barrierId);
+      if (proposalId !== null) {
+        return this.updateBackendProposalStatus(
+          analysisId,
+          barrierId,
+          "reject",
+        );
+      }
+  
+      return request<BackendBarrierDetail>(
+        `/barriers/${encodeURIComponent(barrierId)}/reject`,
+        { method: "PATCH" },
+      ).then((detail) =>
+        toApiBarrier(
+          {
+            ...detail,
+            evidences: [],
+          },
+          analysisId,
+        ),
+      );
     }
-
+  
     return fromMockResult(
       mockService.setBarrierStatus(analysisId, barrierId, "discarded"),
     );
