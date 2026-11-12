@@ -198,6 +198,19 @@ async function mapBackendBarriers(
   );
 }
 
+function barrierFromDetail(
+  detail: BackendBarrierDetail,
+  analysisId: string,
+): ApiBarrier {
+  return toApiBarrier(
+    {
+      ...detail,
+      evidences: [],
+    },
+    analysisId,
+  );
+}
+
 export const api = {
   createAnalysis(input: {
     fileName: string;
@@ -262,7 +275,22 @@ export const api = {
 
   getBarrier(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(400, "getBarrier solo aplica al camino Demo (mock).");
+      return request<BackendBarrierDetail>(
+        `/barriers/${encodeURIComponent(barrierId)}`,
+      ).then(async (detail) => {
+        let barrier = barrierFromDetail(detail, analysisId);
+        const proposalId = storedBackendProposalId(analysisId, barrierId);
+        if (proposalId === null) return barrier;
+        try {
+          const proposal = await request<BackendProposalResponse>(
+            `/proposals/${proposalId}`,
+          );
+          barrier = withBackendProposal(barrier, proposal);
+        } catch {
+          // propuesta guardada inválida / borrada: devolvemos la barrera igual
+        }
+        return barrier;
+      });
     }
     return fromMockResult(mockService.getBarrier(analysisId, barrierId));
   },
@@ -282,15 +310,11 @@ export const api = {
           barrierId,
           backendProposal.proposal_id,
         );
-        const analysis = await this.getBackendAnalysis(Number(analysisId));
-        const backendBarrier = analysis.barriers.find(
-          (barrier) => String(barrier.id) === barrierId,
+        const detail = await request<BackendBarrierDetail>(
+          `/barriers/${encodeURIComponent(barrierId)}`,
         );
-        if (!backendBarrier) {
-          throw new Error("No se encontró la barrera asociada a la propuesta.");
-        }
         const barrier = withBackendProposal(
-          toApiBarrier(backendBarrier, analysisId),
+          barrierFromDetail(detail, analysisId),
           backendProposal,
         );
         return {
@@ -339,15 +363,11 @@ export const api = {
         barrierId,
         backendProposal.proposal_id,
       );
-      const analysis = await this.getBackendAnalysis(Number(analysisId));
-      const backendBarrier = analysis.barriers.find(
-        (barrier) => String(barrier.id) === barrierId,
+      const detail = await request<BackendBarrierDetail>(
+        `/barriers/${encodeURIComponent(barrierId)}`,
       );
-      if (!backendBarrier) {
-        throw new Error("No se encontró la barrera asociada a la propuesta.");
-      }
       const barrier = withBackendProposal(
-        toApiBarrier(backendBarrier, analysisId),
+        barrierFromDetail(detail, analysisId),
         backendProposal,
       );
       return {
@@ -578,15 +598,11 @@ export const api = {
       `/adaptations/${proposalId}/${action}`,
       { method: "POST" },
     );
-    const analysis = await this.getBackendAnalysis(Number(analysisId));
-    const backendBarrier = analysis.barriers.find(
-      (item) => String(item.id) === barrierId,
+    const detail = await request<BackendBarrierDetail>(
+      `/barriers/${encodeURIComponent(barrierId)}`,
     );
-    if (!backendBarrier) {
-      throw new Error("No se encontró la barrera actualizada.");
-    }
     return withBackendProposal(
-      toApiBarrier(backendBarrier, analysisId),
+      barrierFromDetail(detail, analysisId),
       proposal,
     );
   },
