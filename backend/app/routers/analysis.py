@@ -102,6 +102,8 @@ def get_analysis_by_id_endpoint(
 
     return analysis
 
+#Endpoint para pruebas
+"""
 @router.get(
     "/{material_id}/parsed-document",
 )
@@ -138,3 +140,4 @@ def get_parsed_document_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo procesar el documento.",
         )
+"""
