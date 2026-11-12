@@ -8,6 +8,8 @@ import type {
   MaterialListResponse,
   Material,
   BackendAnalysis,
+  FinalizeResponse,
+  FinalizedDocument,
 } from "@/lib/api/types";
 import { toApiBarrier, toBarriersResponse } from "./mappers/backend-analysis";
 import { isBackendId } from "./ids";
@@ -349,7 +351,7 @@ export const api = {
           "reject",
         );
       }
-  
+
       return request<BackendBarrierDetail>(
         `/barriers/${encodeURIComponent(barrierId)}/reject`,
         { method: "PATCH" },
@@ -363,7 +365,7 @@ export const api = {
         ),
       );
     }
-  
+
     return fromMockResult(
       mockService.setBarrierStatus(analysisId, barrierId, "discarded"),
     );
@@ -449,6 +451,23 @@ export const api = {
 
   getBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
     return request<BackendAnalysis>(`/analysis/${analysisId}`);
+  },
+
+  finalizeMaterial(materialId: number): Promise<FinalizeResponse> {
+    return request<FinalizeResponse>(`/materials/${materialId}/finalize`, {
+      method: "POST",
+    });
+  },
+
+  listFinalizedDocuments(materialId: number): Promise<FinalizedDocument[]> {
+    return request<FinalizedDocument[]>(
+      `/materials/${materialId}/finalized-documents`,
+    );
+  },
+
+  finalizedDownloadHref(downloadPath: string): string {
+    // download_url del backend es relativo, ej. /materials/1/finalized-documents/2/download
+    return `${baseUrl()}${downloadPath}`;
   },
 
   async updateBackendProposalStatus(
