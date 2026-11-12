@@ -313,6 +313,58 @@ export const api = {
     );
   },
 
+  createManualProposal(
+    analysisId: string,
+    barrierId: string,
+    input: { proposed_content: string; explanation: string },
+  ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
+    if (!isBackendId(analysisId)) {
+      return Promise.reject(
+        new ApiError(400, "createManualProposal solo aplica a API real."),
+      );
+    }
+
+    return request<BackendProposalResponse>(
+      `/barriers/${encodeURIComponent(barrierId)}/proposals`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          proposed_content: input.proposed_content,
+          explanation: input.explanation,
+        }),
+      },
+    ).then(async (backendProposal) => {
+      rememberBackendProposal(
+        analysisId,
+        barrierId,
+        backendProposal.proposal_id,
+      );
+      const analysis = await this.getBackendAnalysis(Number(analysisId));
+      const backendBarrier = analysis.barriers.find(
+        (barrier) => String(barrier.id) === barrierId,
+      );
+      if (!backendBarrier) {
+        throw new Error("No se encontró la barrera asociada a la propuesta.");
+      }
+      const barrier = withBackendProposal(
+        toApiBarrier(backendBarrier, analysisId),
+        backendProposal,
+      );
+      return {
+        barrier,
+        proposal: {
+          id: String(backendProposal.proposal_id),
+          analysisId,
+          barrierId,
+          kind: "regenerated",
+          text: backendProposal.proposed_content,
+          isCurrent: true,
+          createdAt: new Date().toISOString(),
+        },
+      };
+    });
+  },
+
   saveDraft(
     analysisId: string,
     barrierId: string,
@@ -333,7 +385,29 @@ export const api = {
     draft?: string,
   ): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      return this.updateBackendProposalStatus(analysisId, barrierId, "accept");
+      const proposalId = storedBackendProposalId(analysisId, barrierId);
+      if (proposalId !== null) {
+        return this.updateBackendProposalStatus(
+          analysisId,
+          barrierId,
+          "accept",
+        );
+      }
+      const content = draft?.trim() ?? "";
+      if (!content) {
+        return Promise.reject(
+          new ApiError(
+            400,
+            "Generá una propuesta con IA o escribí una adaptación para aceptar.",
+          ),
+        );
+      }
+      return this.createManualProposal(analysisId, barrierId, {
+        proposed_content: content,
+        explanation: "Adaptación propuesta por el docente.",
+      }).then(() =>
+        this.updateBackendProposalStatus(analysisId, barrierId, "accept"),
+      );
     }
 
     return fromMockResult(
