@@ -11,6 +11,7 @@ from app.repositories import (
 from app.repositories import material_repository
 from app.utils.pdf_parser import extract_document
 from app.utils.pdf_generator import generate_pdf, extract_document_title
+from app.models.finalized_document import FinalizedDocument
 
 
 class NoCompletedAnalysisError(Exception):
@@ -141,11 +142,10 @@ def _apply_adaptations(
         "pages": adapted_pages,
     }
 
-
 def finalize_material(
     db: Session,
     material_id: int,
-) -> tuple[str, str]:
+) -> FinalizedDocument:
 
     material = material_repository.get_by_id(
         db=db,
@@ -191,6 +191,7 @@ def finalize_material(
 
     # 4. Parse the original document.
     document = extract_document(material.file_path)
+
     document_title = extract_document_title(document)
 
     # 5. Apply the adaptations.
@@ -219,10 +220,34 @@ def finalize_material(
         filename,
     )
 
+    # 8. Generate the PDF.
     generate_pdf(
         document=adapted_document,
         output_path=output_path,
         title=document_title,
     )
 
-    return output_path, filename
+    try:
+        # 9. Register the generated document.
+        finalized_document = (
+            finalization_repository.create_finalized_document(
+                db=db,
+                material_id=material_id,
+                filename=filename,
+                file_path=output_path,
+            )
+        )
+
+        db.commit()
+        db.refresh(finalized_document)
+
+        return finalized_document
+
+    except Exception:
+        db.rollback()
+
+        # Remove the generated file if persistence fails.
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+
+        raise

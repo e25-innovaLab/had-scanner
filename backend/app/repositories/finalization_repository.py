@@ -4,7 +4,58 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.adaptation_proposal import AdaptationProposal
+from app.models.finalized_document import FinalizedDocument
 
+def create_finalized_document(
+    db: Session,
+    material_id: int,
+    filename: str,
+    file_path: str,
+) -> FinalizedDocument:
+
+    finalized_document = FinalizedDocument(
+        material_id=material_id,
+        filename=filename,
+        file_path=file_path,
+    )
+
+    db.add(finalized_document)
+    db.flush()
+
+    return finalized_document
+
+
+def get_finalized_document_by_id(
+    db: Session,
+    material_id: int,
+    document_id: int,
+) -> FinalizedDocument | None:
+
+    statement = select(FinalizedDocument).where(
+        FinalizedDocument.id == document_id,
+        FinalizedDocument.material_id == material_id,
+    )
+
+    return db.scalar(statement)
+
+
+def get_finalized_documents_by_material(
+    db: Session,
+    material_id: int,
+) -> list[FinalizedDocument]:
+
+    statement = (
+        select(FinalizedDocument)
+        .where(
+            FinalizedDocument.material_id == material_id
+        )
+        .order_by(
+            FinalizedDocument.created_at.desc(),
+            FinalizedDocument.id.desc(),
+        )
+    )
+
+    return list(db.scalars(statement).all())
 
 def get_latest_completed_analysis(
     db: Session,
@@ -25,6 +76,24 @@ def get_latest_completed_analysis(
 
     return db.scalar(statement)
 
+def get_latest_finalized_document(
+    db: Session,
+    material_id: int,
+) -> FinalizedDocument | None:
+
+    statement = (
+        select(FinalizedDocument)
+        .where(
+            FinalizedDocument.material_id == material_id
+        )
+        .order_by(
+            FinalizedDocument.created_at.desc(),
+            FinalizedDocument.id.desc(),
+        )
+        .limit(1)
+    )
+
+    return db.scalar(statement)
 
 def get_barriers_by_analysis(
     db: Session,
