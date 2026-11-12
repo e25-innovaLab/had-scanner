@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.materials import router as materials_router
-from app.routers import analysis, proposals, adaptations
+from app.routers import analysis, proposals, adaptations, barriers
 
 app = FastAPI(
     title="API de Accesibilidad Docente",
@@ -35,3 +35,4 @@ app.include_router(analysis.router)
 app.include_router(analysis.analysis_by_id_router)
 app.include_router(proposals.router)
 app.include_router(adaptations.router)
+app.include_router(barriers.router)
