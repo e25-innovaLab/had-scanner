@@ -136,48 +136,15 @@ def _extract_original_content(
 
     return original_content
 
-
+  
 def create_adaptation_proposal(
     db: Session,
     barrier_id: int,
 ):
-    barrier = db.query(Barrier).filter(
-        Barrier.id == barrier_id
-    ).first()
-
-    if barrier is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Barrier not found.",
-        )
-
-    analysis = db.query(Analysis).filter(
-        Analysis.id == barrier.analysis_id
-    ).first()
-
-    if analysis is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Analysis not found.",
-        )
-
-    material = db.query(Material).filter(
-        Material.id == analysis.material_id
-    ).first()
-
-    if material is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Material not found.",
-        )
-
     try:
-        local_path = str(resolve_material_path(material.file_path))
-        document = extract_document(local_path)
-
-        original_content = _extract_original_content(
-            document,
-            barrier,
+        barrier, original_content = _get_barrier_original_content(
+            db=db,
+            barrier_id=barrier_id,
         )
 
         adaptation = generate_adaptation(
@@ -192,7 +159,7 @@ def create_adaptation_proposal(
         return proposal_repository.create(
             db,
             barrier_id=barrier.id,
-            original_content=adaptation["original_content"],
+            original_content=original_content,
             proposed_content=adaptation["proposed_content"],
             explanation=adaptation["explanation"],
         )
@@ -236,7 +203,6 @@ def update_adaptation_proposal_status(
         new_status=new_status,
     )
 
-
 def get_adaptation_proposal(
     db: Session,
     proposal_id: int,
@@ -245,3 +211,86 @@ def get_adaptation_proposal(
         db=db,
         proposal_id=proposal_id,
     )
+
+def _get_barrier_original_content(
+    db: Session,
+    barrier_id: int,
+) -> tuple[Barrier, str]:
+
+    barrier = db.query(Barrier).filter(
+        Barrier.id == barrier_id
+    ).first()
+
+    if barrier is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Barrier not found.",
+        )
+
+    analysis = db.query(Analysis).filter(
+        Analysis.id == barrier.analysis_id
+    ).first()
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis not found.",
+        )
+
+    material = db.query(Material).filter(
+        Material.id == analysis.material_id
+    ).first()
+
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material not found.",
+        )
+
+    document = extract_document(material.file_path)
+
+    original_content = _extract_original_content(
+        document,
+        barrier,
+    )
+
+    return barrier, original_content
+
+def create_manual_adaptation_proposal(
+    db: Session,
+    barrier_id: int,
+    proposed_content: str,
+    explanation: str,
+):
+    try:
+        barrier, original_content = (
+            _get_barrier_original_content(
+                db=db,
+                barrier_id=barrier_id,
+            )
+        )
+
+        return proposal_repository.create(
+            db,
+            barrier_id=barrier.id,
+            original_content=original_content,
+            proposed_content=proposed_content,
+            explanation=explanation,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        db.rollback()
+
+        logger.exception(
+            "Failed to create manual adaptation proposal "
+            "for barrier_id=%s",
+            barrier_id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create the manual adaptation proposal.",
+        ) from exc
