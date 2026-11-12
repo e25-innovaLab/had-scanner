@@ -31,11 +31,14 @@ class AccessibilityBarrierCandidate(BaseModel):
     description: str
     justification: str
     recommendation: str
+
     evidence: list[AccessibilityEvidence] = Field(
         min_length=1,
+        max_length=1,
         description=(
-            "Todos los fragmentos necesarios para fundamentar "
-            "la barrera, incluso si pertenecen a páginas distintas."
+            "Exactly one evidence identifying a single document "
+            "element. Different paragraphs or document elements "
+            "must never be grouped in the same barrier."
         ),
     )
 

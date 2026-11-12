@@ -12,8 +12,8 @@ from app.services.analysis_service import (
     get_analysis_by_id,
     process_analysis_task,
 )
+from app.utils.pdf_parser import extract_document
 from app.utils.object_storage import resolve_material_path
-
 
 logger = logging.getLogger(__name__)
 
@@ -106,3 +106,43 @@ def get_analysis_by_id_endpoint(
         )
 
     return analysis
+
+# Endpoint para pruebas
+"""
+@router.get(
+    "/{material_id}/parsed-document",
+)
+def get_parsed_document_endpoint(
+    material_id: int,
+    db: Session = Depends(get_db),
+):
+    material = material_repository.get_by_id(
+        db=db,
+        material_id=material_id,
+    )
+
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material not found",
+        )
+
+    if not os.path.isfile(material.file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material file not found",
+        )
+
+    try:
+        return extract_document(material.file_path)
+
+    except Exception:
+        logger.exception(
+            "Failed to parse material %s",
+            material_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo procesar el documento.",
+        )
+"""

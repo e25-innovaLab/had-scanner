@@ -1,7 +1,8 @@
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
@@ -39,4 +40,9 @@ class Material(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+    finalized_documents: Mapped[list["FinalizedDocument"]] = relationship(
+        back_populates="material",
+        cascade="all, delete-orphan",
     )
