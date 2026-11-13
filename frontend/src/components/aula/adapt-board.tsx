@@ -333,27 +333,13 @@ export function AdaptBoard({
     const left =
       displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
     setOverlay({ entryId: entry.id, kind: "edit" });
-    if (usesBackendApi) {
-      navigate(
-        detalleHref(entry, {
-          origen: "ia",
-          desde: "editar",
-          intentos: left,
-        }),
-      );
-      return;
-    }
-    window.setTimeout(() => {
-      void api.reopen(analysisId, entry.id).finally(() => {
-        navigate(
-          detalleHref(entry, {
-            origen: "ia",
-            desde: "editar",
-            intentos: left,
-          }),
-        );
-      });
-    }, RESUME_EDIT_TIMEOUT_MS);
+    navigate(
+      detalleHref(entry, {
+        origen: "ia",
+        desde: "editar",
+        intentos: left,
+      }),
+    );
   }
 
   function generate(entry: ApiBarrier) {
@@ -388,6 +374,7 @@ export function AdaptBoard({
 
   function openBarrier(entry: ApiBarrier) {
     const state = displayStateById[entry.id] ?? toState(entry);
+    if (state.decision === "discarded") return;
     if (state.decision === "accepted" || state.mode === "ready") {
       resumeEdit(entry);
       return;
@@ -692,17 +679,21 @@ export function AdaptBoard({
                   : isNext
                     ? "Próxima"
                     : "Pendiente";
+            const isDiscarded = decision === "discarded";
             const actionLabel =
-              decision === "accepted" || state.mode === "ready"
-                ? "Ver o cambiar"
-                : "Revisar";
+              decision === "accepted"
+                ? "Ver"
+                : state.mode === "ready"
+                  ? "Ver o cambiar"
+                  : "Revisar";
 
             return (
               <Card
                 key={entry.id}
                 className={cn(
                   "flex-row flex-wrap items-center gap-3 px-(--card-spacing) py-3 sm:flex-nowrap",
-                  isNext && "ring-2 ring-ink",
+                  isNext && !isDiscarded && "ring-2 ring-ink",
+                  isDiscarded && "opacity-80",
                 )}
               >
                 <span
@@ -764,33 +755,39 @@ export function AdaptBoard({
                           : "○ "}
                     {statusLabel}
                   </span>
-                  <Button
-                    type="button"
-                    variant={
-                      isNext || state.generateFail ? "default" : "outline"
-                    }
-                    className={cn(
-                      "h-9 rounded-xl px-3",
-                      (isNext || state.generateFail) &&
-                        "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
-                    )}
-                    disabled={isOpeningEdit || state.mode === "generating"}
-                    onClick={() => openBarrier(entry)}
-                  >
-                    {state.mode === "generating" ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Sparkles
-                          className="size-3.5 animate-pulse"
-                          aria-hidden="true"
-                        />
-                        Generando…
-                      </span>
-                    ) : state.generateFail ? (
-                      "Reintentar"
-                    ) : (
-                      actionLabel
-                    )}
-                  </Button>
+                  {isDiscarded ? (
+                    <span className="text-xs text-muted-foreground">
+                      Cerrada · no se puede revisar
+                    </span>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant={
+                        isNext || state.generateFail ? "default" : "outline"
+                      }
+                      className={cn(
+                        "h-9 rounded-xl px-3",
+                        (isNext || state.generateFail) &&
+                          "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
+                      )}
+                      disabled={isOpeningEdit || state.mode === "generating"}
+                      onClick={() => openBarrier(entry)}
+                    >
+                      {state.mode === "generating" ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Sparkles
+                            className="size-3.5 animate-pulse"
+                            aria-hidden="true"
+                          />
+                          Generando…
+                        </span>
+                      ) : state.generateFail ? (
+                        "Reintentar"
+                      ) : (
+                        actionLabel
+                      )}
+                    </Button>
+                  )}
                 </div>
               </Card>
             );
@@ -799,8 +796,9 @@ export function AdaptBoard({
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Revisar</span> abre el
             detalle. Ahí podés generar una propuesta con IA.{" "}
-            <span className="font-medium text-foreground">Ver o cambiar</span>{" "}
-            retoma una propuesta ya aceptada o generada.
+            <span className="font-medium text-foreground">Ver</span> muestra una
+            propuesta ya aceptada (solo lectura). Las aceptadas y descartadas
+            quedan cerradas.
           </p>
         </div>
       ) : (

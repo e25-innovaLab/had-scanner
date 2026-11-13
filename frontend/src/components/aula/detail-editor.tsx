@@ -14,6 +14,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -76,9 +77,10 @@ export function DetailEditor({
   const [pendingVariant, setPendingVariant] = useState<VariantId | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
-  const [actionPending, setActionPending] = useState<
-    "save" | "discard" | "resume" | null
-  >(null);
+  const [actionPending, setActionPending] = useState<"save" | "discard" | null>(
+    null,
+  );
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [text, setText] = useState("");
   const [textOpaque, setTextOpaque] = useState(true);
@@ -171,6 +173,10 @@ export function DetailEditor({
   }, [analysisId, barrierFromQuery, startsWithoutProposal, fromGenerate]);
 
   const suggestion = barriers[index];
+  const isDiscarded = suggestion?.status === "discarded";
+  const isClosed = Boolean(
+    suggestion && (suggestion.status === "accepted" || isDiscarded),
+  );
   const proposalJob = useProposalJob(analysisId, suggestion?.id);
   const generating = proposalJob?.status === PROPOSAL_JOB_STATUS.PENDING;
 
@@ -269,17 +275,6 @@ export function DetailEditor({
     [text.length, words, sentences, reading],
   );
 
-  function setBarrierStatusLocal(
-    barrierId: string,
-    status: ApiBarrier["status"],
-  ) {
-    setBarriers((current) =>
-      current.map((item) =>
-        item.id === barrierId ? { ...item, status } : item,
-      ),
-    );
-  }
-
   function goToResultado() {
     navigate(withAnalysisId("/analisis/resultado", analysisId));
   }
@@ -326,6 +321,7 @@ export function DetailEditor({
       !analysisId ||
       !suggestion ||
       saved ||
+      isDiscarded ||
       left <= 0 ||
       generating ||
       hasProposal
@@ -341,7 +337,16 @@ export function DetailEditor({
   }
 
   function consume(variant: VariantId) {
-    if (!analysisId || !suggestion || saved || left <= 0 || generating) return;
+    if (
+      !analysisId ||
+      !suggestion ||
+      saved ||
+      isDiscarded ||
+      left <= 0 ||
+      generating
+    ) {
+      return;
+    }
     setPendingVariant(variant);
     setGenerateError(null);
     setError(null);
@@ -410,7 +415,16 @@ export function DetailEditor({
   }
 
   async function saveAndAccept() {
-    if (!analysisId || !suggestion || actionPending || generating) return;
+    if (
+      !analysisId ||
+      !suggestion ||
+      actionPending ||
+      generating ||
+      suggestion.status === "discarded" ||
+      suggestion.status === "accepted"
+    ) {
+      return;
+    }
     setActionPending("save");
     try {
       await api.accept(analysisId, suggestion.id, text);
@@ -431,7 +445,17 @@ export function DetailEditor({
   }
 
   async function discardSuggestion() {
-    if (!analysisId || !suggestion || actionPending || generating) return;
+    if (
+      !analysisId ||
+      !suggestion ||
+      actionPending ||
+      generating ||
+      suggestion.status === "discarded" ||
+      suggestion.status === "accepted"
+    ) {
+      return;
+    }
+    setConfirmDiscardOpen(false);
     setActionPending("discard");
     try {
       await api.discard(analysisId, suggestion.id);
@@ -445,21 +469,6 @@ export function DetailEditor({
       advance(nextList);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo descartar");
-    } finally {
-      setActionPending(null);
-    }
-  }
-
-  async function resumeEditing() {
-    if (!analysisId || !suggestion || actionPending || generating) return;
-    setActionPending("resume");
-    try {
-      await api.reopen(analysisId, suggestion.id);
-      setSaved(false);
-      setHasProposal(false);
-      setBarrierStatusLocal(suggestion.id, "pending");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo reabrir");
     } finally {
       setActionPending(null);
     }
@@ -487,20 +496,25 @@ export function DetailEditor({
       : `quedan ${left} de ${AI_ATTEMPTS_PER_BARRIER} intentos`;
 
   const lastInDimension = isLastBarrierInDimension(barriers, index);
+  const discardingProposal = hasProposal || suggestion.hasProposal;
 
   const footerHint = generating
     ? "La propuesta aparece en unos segundos. Podés descartar la barrera si no querés esperar."
-    : saved
+    : isDiscarded
       ? lastInDimension
-        ? `Propuesta guardada. Es la última barrera de ${suggestion.dimension}.`
-        : `Propuesta guardada. Usá Continuar o seguí a ${nextLabel}.`
-      : usesBackendApi
-        ? "Aceptá o rechazá la propuesta para continuar."
-        : lastInDimension
-          ? `Es la última barrera de ${suggestion.dimension}. Al guardar o descartar, la dimensión queda revisada y volvés a Adaptar.`
-          : left === 0
-            ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
-            : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
+        ? `Barrera descartada. Es la última de ${suggestion.dimension}.`
+        : `Barrera descartada. Usá Continuar o seguí a ${nextLabel}.`
+      : saved
+        ? lastInDimension
+          ? `Propuesta guardada. Es la última barrera de ${suggestion.dimension}.`
+          : `Propuesta guardada. Usá Continuar o seguí a ${nextLabel}.`
+        : usesBackendApi
+          ? "Aceptá o rechazá la propuesta para continuar."
+          : lastInDimension
+            ? `Es la última barrera de ${suggestion.dimension}. Al guardar o descartar, la dimensión queda revisada y volvés a Adaptar.`
+            : left === 0
+              ? `Sin intentos de IA en esta barrera: guardá tu edición o descartá para pasar a ${nextBarrierLabel}.`
+              : `Al guardar o descartar, pasás a ${nextBarrierLabel}.`;
 
   return (
     <div
@@ -570,15 +584,17 @@ export function DetailEditor({
             {suggestion.title}
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-            {saved
-              ? "Propuesta guardada. Podés continuar con la siguiente barrera o volver a editar para generar otra o ajustarla a mano."
-              : hasProposal
-                ? usesBackendApi
-                  ? "Revisá la observación y la propuesta. Aceptá o rechazá: la API actual no guarda ediciones manuales."
-                  : "Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente."
-                : usesBackendApi
-                  ? "El original está a la izquierda. Generá una propuesta con IA o descartá la barrera."
-                  : "El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano."}
+            {isDiscarded
+              ? "Esta barrera quedó descartada. No se puede generar ni aceptar una propuesta."
+              : saved
+                ? "Propuesta aceptada. Podés continuar con la siguiente barrera; ya no se puede volver a editar."
+                : hasProposal
+                  ? usesBackendApi
+                    ? "Revisá la observación y la propuesta. Aceptá o rechazá: la API actual no guarda ediciones manuales."
+                    : "Revisá la observación, ajustá la propuesta si lo necesitás y decidí. Ningún cambio se aplica automáticamente."
+                  : usesBackendApi
+                    ? "El original está a la izquierda. Generá una propuesta con IA o descartá la barrera."
+                    : "El original está a la izquierda. Generá una propuesta con IA o escribí tu adaptación a mano."}
           </p>
         </div>
       </header>
@@ -612,8 +628,13 @@ export function DetailEditor({
               </span>
               {edited ? <Pill tone="role">Editado por vos</Pill> : null}
               {saved ? <Pill tone="ok">Guardada</Pill> : null}
+              {isDiscarded ? <Pill tone="muted">Descartada</Pill> : null}
             </div>
-            {hasProposal && !saved && !generating && !usesBackendApi ? (
+            {hasProposal &&
+            !saved &&
+            !isDiscarded &&
+            !generating &&
+            !usesBackendApi ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -632,7 +653,7 @@ export function DetailEditor({
             ) : null}
           </div>
 
-          {generateError && !hasProposal ? (
+          {generateError && !hasProposal && !isDiscarded ? (
             <div className="px-(--card-spacing)">
               <Card className="border-danger-foreground/20 bg-danger-soft text-danger-foreground shadow-none">
                 <div className="space-y-3 px-(--card-spacing) py-4">
@@ -710,31 +731,38 @@ export function DetailEditor({
                   id="propuesta"
                   value={text}
                   rows={6}
-                  readOnly={saved || usesBackendApi || generating}
+                  readOnly={isClosed || usesBackendApi || generating}
                   aria-busy={generating}
                   placeholder={
-                    hasProposal
-                      ? undefined
-                      : usesBackendApi
-                        ? "Generá una propuesta con IA."
-                        : "Escribí tu adaptación o generá una propuesta con IA."
+                    isDiscarded
+                      ? "Barrera descartada."
+                      : hasProposal
+                        ? undefined
+                        : usesBackendApi
+                          ? "Generá una propuesta con IA."
+                          : "Escribí tu adaptación o generá una propuesta con IA."
                   }
                   onChange={(event) => setText(event.target.value)}
                   onBlur={() => {
-                    if (!saved && !usesBackendApi && !generating) {
+                    if (
+                      !saved &&
+                      !isDiscarded &&
+                      !usesBackendApi &&
+                      !generating
+                    ) {
                       void persistDraft(text);
                     }
                   }}
                   className={cn(
                     "w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground transition-opacity duration-200 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-                    (saved || usesBackendApi) &&
+                    (isClosed || usesBackendApi) &&
                       "cursor-default bg-muted text-foreground/90",
                     generating && "cursor-wait",
                     !textOpaque || generating ? "opacity-40" : "opacity-100",
                   )}
                 />
               </div>
-              {usesBackendApi ? (
+              {usesBackendApi && !isDiscarded ? (
                 <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
                   La API actual no permite guardar cambios manuales en la
                   propuesta.
@@ -742,17 +770,18 @@ export function DetailEditor({
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2 px-(--card-spacing) text-xs text-muted-foreground">
                 <span>{meta}</span>
-                {edited && !saved && !usesBackendApi ? (
+                {edited && !isClosed && !usesBackendApi ? (
                   <span className="font-medium text-info-foreground">
                     Cambios sin guardar
                   </span>
                 ) : null}
                 {saved ? <span>Propuesta aceptada</span> : null}
+                {isDiscarded ? <span>Barrera descartada</span> : null}
               </div>
             </>
           )}
 
-          {!saved && !generateError ? (
+          {!isClosed && !generateError ? (
             <div className="space-y-3 px-(--card-spacing)">
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="font-medium">
@@ -869,53 +898,48 @@ export function DetailEditor({
                 </>
               )}
             </div>
-          ) : saved ? (
+          ) : isClosed ? (
             <p className="px-(--card-spacing) text-xs leading-5 text-muted-foreground">
-              Para cambiar esta propuesta, usá Volver a editar.
+              Esta barrera está cerrada. Volvé a Adaptar o continuá con las
+              pendientes.
             </p>
           ) : null}
         </Card>
       </div>
 
-      <div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-9 px-2"
-          aria-expanded={noteOpen}
-          onClick={() => setNoteOpen((open) => !open)}
-        >
-          + Agregar una nota para el informe (opcional)
-        </Button>
-        {noteOpen ? (
-          <textarea
-            rows={3}
-            placeholder="Esta nota queda en el informe, no en el material adaptado."
-            className="mt-2 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
-        ) : null}
-      </div>
+      {!isClosed ? (
+        <div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-9 px-2"
+            aria-expanded={noteOpen}
+            onClick={() => setNoteOpen((open) => !open)}
+          >
+            + Agregar una nota para el informe (opcional)
+          </Button>
+          {noteOpen ? (
+            <textarea
+              rows={3}
+              placeholder="Esta nota queda en el informe, no en el material adaptado."
+              className="mt-2 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 lg:flex-row lg:items-center lg:justify-between">
-        {saved ? (
-          usesBackendApi ? null : (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 rounded-xl px-4"
-              disabled={actionPending != null}
-              onClick={() => void resumeEditing()}
-            >
-              {actionPending === "resume" ? "Reabriendo…" : "Volver a editar"}
-            </Button>
-          )
+        {isDiscarded ? (
+          <span className="text-sm text-muted-foreground">Descartada</span>
+        ) : saved ? (
+          <span className="text-sm text-muted-foreground">Aceptada</span>
         ) : (
           <Button
             type="button"
             variant="outline"
             className="h-10 rounded-xl px-4"
             disabled={generating || actionPending != null}
-            onClick={() => void discardSuggestion()}
+            onClick={() => setConfirmDiscardOpen(true)}
           >
             {actionPending === "discard"
               ? hasProposal || suggestion.hasProposal
@@ -929,7 +953,7 @@ export function DetailEditor({
         <p className="text-sm text-muted-foreground lg:flex-1 lg:px-4 lg:text-center">
           {footerHint}
         </p>
-        {saved ? (
+        {isClosed ? (
           <Button
             type="button"
             className="h-10 rounded-xl px-4 font-semibold"
@@ -972,6 +996,50 @@ export function DetailEditor({
           </Button>
         )}
       </div>
+
+      <Dialog open={confirmDiscardOpen} onOpenChange={setConfirmDiscardOpen}>
+        <DialogContent
+          className="gap-5 rounded-2xl sm:max-w-md"
+          showCloseButton={false}
+        >
+          <DialogHeader className="gap-2">
+            <DialogTitle className="text-xl">
+              {discardingProposal
+                ? "¿Rechazar esta propuesta?"
+                : "¿Descartar esta barrera?"}
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-6 text-muted-foreground">
+              Esta acción es definitiva: no vas a poder retomarla ni generar
+              otra propuesta.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-xl px-4"
+              disabled={actionPending === "discard"}
+              onClick={() => setConfirmDiscardOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="h-11 rounded-xl px-4 font-semibold"
+              disabled={actionPending === "discard"}
+              onClick={() => void discardSuggestion()}
+            >
+              {actionPending === "discard"
+                ? discardingProposal
+                  ? "Rechazando…"
+                  : "Descartando…"
+                : discardingProposal
+                  ? "Rechazar"
+                  : "Descartar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
