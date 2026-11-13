@@ -29,6 +29,7 @@ import {
   isAiAvailabilityMessage,
   toUserFacingErrorMessage,
 } from "@/lib/api/ai-availability";
+import { ANALYSIS_PIPELINE } from "@/lib/api/analysis-pipeline";
 import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
 
@@ -52,20 +53,13 @@ function formatElapsed(totalSeconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-const PIPELINE = [
-  { id: "queued", label: "Preparando" },
-  { id: "parsing", label: "Revisando el material" },
-  { id: "accessibility_analysis", label: "Detectando barreras" },
-  { id: "associating_evidence", label: "Ubicando las barreras en el material" },
-  { id: "persisting_results", label: "Guardando el diagnóstico" },
-] as const;
-
 function rowsFromStep(step: string, failed: boolean): Row[] {
-  const idx = PIPELINE.findIndex((p) => p.id === step);
-  const active = idx >= 0 ? idx : step === "completed" ? PIPELINE.length : 0;
+  const idx = ANALYSIS_PIPELINE.findIndex((p) => p.id === step);
+  const active =
+    idx >= 0 ? idx : step === "completed" ? ANALYSIS_PIPELINE.length : 0;
 
   if (failed) {
-    return PIPELINE.map((p, i) => ({
+    return ANALYSIS_PIPELINE.map((p, i) => ({
       id: p.id,
       label: p.label,
       status:
@@ -77,7 +71,7 @@ function rowsFromStep(step: string, failed: boolean): Row[] {
     }));
   }
 
-  return PIPELINE.map((p, i) => ({
+  return ANALYSIS_PIPELINE.map((p, i) => ({
     id: p.id,
     label: p.label,
     status:
