@@ -1,10 +1,10 @@
-export type AnalysisStatus = 'uploaded' | 'analyzing' | 'ready' | 'failed';
+export type AnalysisStatus = "uploaded" | "analyzing" | "ready" | "failed";
 
-export type DimensionProgressStatus = 'pending' | 'running' | 'done' | 'error';
+export type DimensionProgressStatus = "pending" | "running" | "done" | "error";
 
-export type BarrierDecision = 'pending' | 'accepted' | 'discarded';
+export type BarrierDecision = "pending" | "accepted" | "discarded";
 
-export type Severity = 'alta' | 'media' | 'baja' | 'ninguna';
+export type Severity = "alta" | "media" | "baja" | "ninguna";
 
 export type DimensionProgress = {
   id: string;
@@ -20,13 +20,14 @@ export type Analysis = {
   createdAt: string;
   analyzingStartedAt: string | null;
   dimensionProgress: DimensionProgress[];
-  exportStatus: 'idle' | 'queued' | 'generating' | 'ready';
+  exportStatus: "idle" | "queued" | "generating" | "ready";
   exports: ExportFile[];
 };
 
 export type ExportFile = {
   name: string;
   detail: string;
+  url?: string;
 };
 
 export type ApiBarrier = {
@@ -34,7 +35,7 @@ export type ApiBarrier = {
   analysisId: string;
   dimensionId: string;
   dimension: string;
-  severity: Exclude<Severity, 'ninguna'>;
+  severity: Exclude<Severity, "ninguna">;
   title: string;
   why: string;
   where: string;
@@ -63,7 +64,7 @@ export type Proposal = {
   id: string;
   analysisId: string;
   barrierId: string;
-  kind: 'initial_variant' | 'manual' | 'regenerated';
+  kind: "initial_variant" | "manual" | "regenerated";
   text: string;
   isCurrent: boolean;
   createdAt: string;
@@ -81,7 +82,7 @@ export type BarrierGroupDto = {
     where: string;
     recommendation: string;
     status: BarrierDecision;
-    severity: Exclude<Severity, 'ninguna'>;
+    severity: Exclude<Severity, "ninguna">;
   }[];
 };
 
@@ -151,8 +152,8 @@ export type BackendBarrier = {
 export type BackendAnalysis = {
   analysis_id: number;
   material_id: number;
-  status: string;           // processing | completed | failed
-  current_step: string;     // queued | parsing | ... | completed | failed
+  status: string; // processing | completed | failed
+  current_step: string; // queued | parsing | ... | completed | failed
   score: number;
   error_message?: string | null;
   barriers: BackendBarrier[];
@@ -165,4 +166,19 @@ export type BackendProposal = {
   original_content: string;
   proposed_content: string;
   explanation: string;
+};
+
+export type FinalizeResponse = {
+  message: string;
+  document_id: number;
+  filename: string;
+  created_at: string;
+  download_url: string;
+};
+
+export type FinalizedDocument = {
+  id: number;
+  filename: string;
+  created_at: string;
+  download_url: string;
 };

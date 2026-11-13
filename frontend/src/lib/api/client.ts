@@ -8,7 +8,10 @@ import type {
   MaterialListResponse,
   Material,
   BackendAnalysis,
+  FinalizeResponse,
+  FinalizedDocument,
 } from "@/lib/api/types";
+import { toUserFacingErrorMessage } from "@/lib/api/ai-availability";
 import { toApiBarrier, toBarriersResponse } from "./mappers/backend-analysis";
 import { isBackendId } from "./ids";
 import * as mockService from "@/lib/api/service";
@@ -31,7 +34,14 @@ async function fromMockResult<T>(
     ) {
       message = (data as { error: string }).error;
     }
-    throw new ApiError(value.status, message, data);
+    throw new ApiError(
+      value.status,
+      toUserFacingErrorMessage(message, {
+        status: value.status,
+        fallback: "No se pudo completar la operación. Reintentá en unos minutos.",
+      }),
+      data,
+    );
   }
   return value;
 }
@@ -43,6 +53,19 @@ type BackendProposalResponse = {
   original_content: string;
   proposed_content: string;
   explanation: string;
+};
+
+type BackendBarrierDetail = {
+  id: number;
+  type: string;
+  title: string;
+  severity: string;
+  location: { pages?: number[] } & Record<string, unknown>;
+  description: string;
+  justification: string;
+  recommendation: string;
+  detected_by: string;
+  status: string;
 };
 
 function baseUrl() {
@@ -100,7 +123,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         message = (data as { error: string }).error;
       }
     }
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(
+      res.status,
+      toUserFacingErrorMessage(message, {
+        status: res.status,
+        fallback: "No se pudo completar la operación. Reintentá en unos minutos.",
+      }),
+      data,
+    );
   }
 
   return data as T;
@@ -183,6 +213,19 @@ async function mapBackendBarriers(
   );
 }
 
+function barrierFromDetail(
+  detail: BackendBarrierDetail,
+  analysisId: string,
+): ApiBarrier {
+  return toApiBarrier(
+    {
+      ...detail,
+      evidences: [],
+    },
+    analysisId,
+  );
+}
+
 export const api = {
   createAnalysis(input: {
     fileName: string;
@@ -193,20 +236,14 @@ export const api = {
 
   getStatus(analysisId: string): Promise<AnalysisStatusResponse> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(
-        400,
-        "getStatus solo aplica al camino Demo (mock).",
-      );
+      throw new ApiError(400, "getStatus solo aplica al camino Demo (mock).");
     }
     return fromMockResult(mockService.getAnalysisStatus(analysisId));
   },
 
   getAnalysis(analysisId: string): Promise<Analysis> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(
-        400,
-        "getAnalysis solo aplica al camino Demo (mock).",
-      );
+      throw new ApiError(400, "getAnalysis solo aplica al camino Demo (mock).");
     }
     return fromMockResult(mockService.getAnalysis(analysisId));
   },
@@ -229,8 +266,14 @@ export const api = {
           }
           if (analysis.status === "failed") {
             throw new Error(
-              analysis.error_message ??
-                "El análisis falló y no hay barreras para revisar.",
+              toUserFacingErrorMessage(
+                analysis.error_message ??
+                  "El análisis falló y no hay barreras para revisar.",
+                {
+                  fallback:
+                    "El análisis falló y no hay barreras para revisar.",
+                },
+              ),
             );
           }
 
@@ -253,10 +296,22 @@ export const api = {
 
   getBarrier(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      throw new ApiError(
-        400,
-        "getBarrier solo aplica al camino Demo (mock).",
-      );
+      return request<BackendBarrierDetail>(
+        `/barriers/${encodeURIComponent(barrierId)}`,
+      ).then(async (detail) => {
+        let barrier = barrierFromDetail(detail, analysisId);
+        const proposalId = storedBackendProposalId(analysisId, barrierId);
+        if (proposalId === null) return barrier;
+        try {
+          const proposal = await request<BackendProposalResponse>(
+            `/proposals/${proposalId}`,
+          );
+          barrier = withBackendProposal(barrier, proposal);
+        } catch {
+          // propuesta guardada inválida / borrada: devolvemos la barrera igual
+        }
+        return barrier;
+      });
     }
     return fromMockResult(mockService.getBarrier(analysisId, barrierId));
   },
@@ -268,7 +323,7 @@ export const api = {
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
     if (isBackendId(analysisId)) {
       return request<BackendProposalResponse>(
-        `/barriers/${encodeURIComponent(barrierId)}/proposals`,
+        `/barriers/${encodeURIComponent(barrierId)}/proposals/generate`,
         { method: "POST" },
       ).then(async (backendProposal) => {
         rememberBackendProposal(
@@ -276,17 +331,11 @@ export const api = {
           barrierId,
           backendProposal.proposal_id,
         );
-        const analysis = await this.getBackendAnalysis(Number(analysisId));
-        const backendBarrier = analysis.barriers.find(
-          (barrier) => String(barrier.id) === barrierId,
+        const detail = await request<BackendBarrierDetail>(
+          `/barriers/${encodeURIComponent(barrierId)}`,
         );
-        if (!backendBarrier) {
-          throw new Error(
-            "No se encontró la barrera asociada a la propuesta.",
-          );
-        }
         const barrier = withBackendProposal(
-          toApiBarrier(backendBarrier, analysisId),
+          barrierFromDetail(detail, analysisId),
           backendProposal,
         );
         return {
@@ -309,6 +358,54 @@ export const api = {
     );
   },
 
+  createManualProposal(
+    analysisId: string,
+    barrierId: string,
+    input: { proposed_content: string; explanation: string },
+  ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
+    if (!isBackendId(analysisId)) {
+      return Promise.reject(
+        new ApiError(400, "createManualProposal solo aplica a API real."),
+      );
+    }
+
+    return request<BackendProposalResponse>(
+      `/barriers/${encodeURIComponent(barrierId)}/proposals`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          proposed_content: input.proposed_content,
+          explanation: input.explanation,
+        }),
+      },
+    ).then(async (backendProposal) => {
+      rememberBackendProposal(
+        analysisId,
+        barrierId,
+        backendProposal.proposal_id,
+      );
+      const detail = await request<BackendBarrierDetail>(
+        `/barriers/${encodeURIComponent(barrierId)}`,
+      );
+      const barrier = withBackendProposal(
+        barrierFromDetail(detail, analysisId),
+        backendProposal,
+      );
+      return {
+        barrier,
+        proposal: {
+          id: String(backendProposal.proposal_id),
+          analysisId,
+          barrierId,
+          kind: "regenerated",
+          text: backendProposal.proposed_content,
+          isCurrent: true,
+          createdAt: new Date().toISOString(),
+        },
+      };
+    });
+  },
+
   saveDraft(
     analysisId: string,
     barrierId: string,
@@ -323,12 +420,55 @@ export const api = {
     return fromMockResult(mockService.saveDraft(analysisId, barrierId, draft));
   },
 
-  accept(
+  async accept(
     analysisId: string,
     barrierId: string,
     draft?: string,
   ): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
+      const content = draft?.trim() ?? "";
+      const proposalId = storedBackendProposalId(analysisId, barrierId);
+
+      if (proposalId !== null) {
+        if (!content) {
+          return this.updateBackendProposalStatus(
+            analysisId,
+            barrierId,
+            "accept",
+          );
+        }
+        const existing = await request<BackendProposalResponse>(
+          `/proposals/${proposalId}`,
+        );
+        if (existing.proposed_content.trim() === content) {
+          return this.updateBackendProposalStatus(
+            analysisId,
+            barrierId,
+            "accept",
+          );
+        }
+        // Texto editado respecto a la propuesta guardada → nueva manual
+        await this.createManualProposal(analysisId, barrierId, {
+          proposed_content: content,
+          explanation: "Adaptación editada por el docente.",
+        });
+        return this.updateBackendProposalStatus(
+          analysisId,
+          barrierId,
+          "accept",
+        );
+      }
+
+      if (!content) {
+        throw new ApiError(
+          400,
+          "Generá una propuesta con IA o escribí una adaptación para aceptar.",
+        );
+      }
+      await this.createManualProposal(analysisId, barrierId, {
+        proposed_content: content,
+        explanation: "Adaptación propuesta por el docente.",
+      });
       return this.updateBackendProposalStatus(analysisId, barrierId, "accept");
     }
 
@@ -339,7 +479,27 @@ export const api = {
 
   discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
     if (isBackendId(analysisId)) {
-      return this.updateBackendProposalStatus(analysisId, barrierId, "reject");
+      const proposalId = storedBackendProposalId(analysisId, barrierId);
+      if (proposalId !== null) {
+        return this.updateBackendProposalStatus(
+          analysisId,
+          barrierId,
+          "reject",
+        );
+      }
+
+      return request<BackendBarrierDetail>(
+        `/barriers/${encodeURIComponent(barrierId)}/reject`,
+        { method: "PATCH" },
+      ).then((detail) =>
+        toApiBarrier(
+          {
+            ...detail,
+            evidences: [],
+          },
+          analysisId,
+        ),
+      );
     }
 
     return fromMockResult(
@@ -429,6 +589,23 @@ export const api = {
     return request<BackendAnalysis>(`/analysis/${analysisId}`);
   },
 
+  finalizeMaterial(materialId: number): Promise<FinalizeResponse> {
+    return request<FinalizeResponse>(`/materials/${materialId}/finalize`, {
+      method: "POST",
+    });
+  },
+
+  listFinalizedDocuments(materialId: number): Promise<FinalizedDocument[]> {
+    return request<FinalizedDocument[]>(
+      `/materials/${materialId}/finalized-documents`,
+    );
+  },
+
+  finalizedDownloadHref(downloadPath: string): string {
+    // download_url del backend es relativo, ej. /materials/1/finalized-documents/2/download
+    return `${baseUrl()}${downloadPath}`;
+  },
+
   async updateBackendProposalStatus(
     analysisId: string,
     barrierId: string,
@@ -442,15 +619,11 @@ export const api = {
       `/adaptations/${proposalId}/${action}`,
       { method: "POST" },
     );
-    const analysis = await this.getBackendAnalysis(Number(analysisId));
-    const backendBarrier = analysis.barriers.find(
-      (item) => String(item.id) === barrierId,
+    const detail = await request<BackendBarrierDetail>(
+      `/barriers/${encodeURIComponent(barrierId)}`,
     );
-    if (!backendBarrier) {
-      throw new Error("No se encontró la barrera actualizada.");
-    }
     return withBackendProposal(
-      toApiBarrier(backendBarrier, analysisId),
+      barrierFromDetail(detail, analysisId),
       proposal,
     );
   },
@@ -466,8 +639,13 @@ export const api = {
       }
       if (analysis.status === "failed") {
         throw new Error(
-          analysis.error_message ??
-            "El análisis falló y no hay barreras para revisar.",
+          toUserFacingErrorMessage(
+            analysis.error_message ??
+              "El análisis falló y no hay barreras para revisar.",
+            {
+              fallback: "El análisis falló y no hay barreras para revisar.",
+            },
+          ),
         );
       }
 

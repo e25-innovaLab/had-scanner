@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { DownloadList } from '@/components/aula/download-list';
-import { MissingAnalysis } from '@/components/aula/missing-analysis';
-import { Button } from '@/components/ui/button';
-import { buttonVariants } from '@/components/ui/button-variants';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { DownloadList } from "@/components/aula/download-list";
+import { MissingAnalysis } from "@/components/aula/missing-analysis";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,21 +14,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { api } from '@/lib/api/client';
-import { isBackendId } from '@/lib/api/ids';
-import type { ExportFile } from '@/lib/api/types';
+} from "@/components/ui/dialog";
+import { api } from "@/lib/api/client";
+import { isBackendId } from "@/lib/api/ids";
+import type { ExportFile } from "@/lib/api/types";
 import {
   clearFlowResume,
   resolveAnalysisId,
   withAnalysisId,
-} from '@/lib/api/url';
-import { cn } from '@/lib/utils';
+} from "@/lib/api/url";
+import { cn } from "@/lib/utils";
 
 export function ResultadoStep() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
+  const analysisId = resolveAnalysisId(searchParams.get("analysisId"));
   const usesBackendApi = Boolean(analysisId && isBackendId(analysisId));
   const [files, setFiles] = useState<ExportFile[]>([]);
   const [applied, setApplied] = useState<string[]>([]);
@@ -43,6 +43,8 @@ export function ResultadoStep() {
   const [loading, setLoading] = useState(() => Boolean(analysisId));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [prevAnalysisId, setPrevAnalysisId] = useState(analysisId);
+  const [materialId, setMaterialId] = useState<number | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
 
   if (analysisId !== prevAnalysisId) {
     setPrevAnalysisId(analysisId);
@@ -56,18 +58,23 @@ export function ResultadoStep() {
       setExportUnavailable(false);
       try {
         if (isBackendId(analysisId)) {
+          const analysis = await api.getBackendAnalysis(Number(analysisId));
+          if (cancelled) return;
+          setMaterialId(analysis.material_id);
+
           const { barriers } = await api.listBarriersFlat(analysisId);
           if (cancelled) return;
+
           const accepted = barriers.filter(
-            (barrier) => barrier.status === 'accepted'
+            (barrier) => barrier.status === "accepted",
           );
           const rejected = barriers.filter(
-            (barrier) => barrier.status === 'discarded'
+            (barrier) => barrier.status === "discarded",
           );
           setApplied(
             accepted.map((barrier) =>
-              `${barrier.title}: ${barrier.currentProposal ?? ''}`.trim()
-            )
+              `${barrier.title}: ${barrier.currentProposal ?? ""}`.trim(),
+            ),
           );
           setDiscarded(rejected.map((barrier) => barrier.title));
           setSummary({
@@ -75,8 +82,22 @@ export function ResultadoStep() {
             discarded: rejected.length,
             total: barriers.length,
           });
-          setFiles([]);
-          setExportUnavailable(true);
+
+          try {
+            const docs = await api.listFinalizedDocuments(analysis.material_id);
+            if (cancelled) return;
+            setFiles(
+              docs.map((doc) => ({
+                name: doc.filename,
+                detail: `Generado ${new Date(doc.created_at).toLocaleString()}`,
+                url: api.finalizedDownloadHref(doc.download_url),
+              })),
+            );
+          } catch {
+            if (!cancelled) setFiles([]);
+          }
+
+          setExportUnavailable(false);
           setError(null);
           return;
         }
@@ -91,7 +112,7 @@ export function ResultadoStep() {
         setError(null);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Error al exportar');
+          setError(err instanceof Error ? err.message : "Error al exportar");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -105,7 +126,31 @@ export function ResultadoStep() {
   function finishAndLeave() {
     clearFlowResume();
     setConfirmOpen(false);
-    navigate('/inicio');
+    navigate("/inicio");
+  }
+
+  async function handleFinalizePdf() {
+    if (materialId == null) return;
+    setFinalizing(true);
+    setError(null);
+    try {
+      await api.finalizeMaterial(materialId);
+      const docs = await api.listFinalizedDocuments(materialId);
+      setFiles(
+        docs.map((doc) => ({
+          name: doc.filename,
+          detail: `Generado ${new Date(doc.created_at).toLocaleString()}`,
+          url: api.finalizedDownloadHref(doc.download_url),
+        })),
+      );
+      setExportUnavailable(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No se pudo generar el PDF",
+      );
+    } finally {
+      setFinalizing(false);
+    }
   }
 
   if (!analysisId) {
@@ -135,8 +180,8 @@ export function ResultadoStep() {
             <div className="space-y-1.5">
               <CardTitle className="text-base">
                 {usesBackendApi
-                  ? 'Revisión de propuestas completada'
-                  : 'Proceso completado'}
+                  ? "Revisión de propuestas completada"
+                  : "Proceso completado"}
               </CardTitle>
               <p className="text-sm leading-6 text-foreground/80">
                 {usesBackendApi
@@ -153,10 +198,29 @@ export function ResultadoStep() {
           </CardHeader>
         </Card>
 
-        {exportUnavailable ? (
+        {usesBackendApi ? (
+          <Card className="space-y-3 px-4 py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                {files.length === 0
+                  ? "Todavía no hay PDF generado. Podés crear uno con las propuestas aceptadas."
+                  : "PDFs generados para este material."}
+              </p>
+              <Button
+                type="button"
+                className="h-10 rounded-xl px-4 sm:shrink-0"
+                disabled={finalizing || materialId == null}
+                onClick={() => void handleFinalizePdf()}
+              >
+                {finalizing ? "Generando…" : "Generar PDF adaptado"}
+              </Button>
+            </div>
+            {files.length > 0 ? <DownloadList files={files} /> : null}
+          </Card>
+        ) : exportUnavailable ? (
           <Card className="px-4 py-4 text-sm text-muted-foreground">
-            El backend todavía no ofrece generación ni descarga de archivos.
-            Las decisiones de las propuestas sí quedaron guardadas.
+            El backend todavía no ofrece generación ni descarga de archivos. Las
+            decisiones de las propuestas sí quedaron guardadas.
           </Card>
         ) : (
           <DownloadList files={files} />
@@ -166,16 +230,16 @@ export function ResultadoStep() {
           <CardHeader>
             <CardTitle>
               {usesBackendApi
-                ? 'Registro de decisiones'
-                : 'Registro de cambios aplicados'}
+                ? "Registro de decisiones"
+                : "Registro de cambios aplicados"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {applied.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {usesBackendApi
-                  ? 'Todavía no hay propuestas aceptadas.'
-                  : 'Todavía no hay adaptaciones aceptadas.'}
+                  ? "Todavía no hay propuestas aceptadas."
+                  : "Todavía no hay adaptaciones aceptadas."}
               </p>
             ) : (
               <ul className="list-disc space-y-1 pl-5 text-sm leading-6">
@@ -187,9 +251,9 @@ export function ResultadoStep() {
             {discarded.length > 0 ? (
               <p className="text-sm leading-6 text-muted-foreground">
                 {usesBackendApi
-                  ? 'Rechazadas: '
-                  : 'Descartadas (quedan registradas en el informe): '}
-                {discarded.join(' · ')}
+                  ? "Rechazadas: "
+                  : "Descartadas (quedan registradas en el informe): "}
+                {discarded.join(" · ")}
               </p>
             ) : null}
           </CardContent>
@@ -198,10 +262,10 @@ export function ResultadoStep() {
 
       <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          to={withAnalysisId('/analisis/adaptar', analysisId)}
+          to={withAnalysisId("/analisis/adaptar", analysisId)}
           className={cn(
-            buttonVariants({ variant: 'outline', size: 'lg' }),
-            'h-11 rounded-xl px-4'
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "h-11 rounded-xl px-4",
           )}
         >
           Atrás
@@ -224,13 +288,13 @@ export function ResultadoStep() {
           <DialogHeader className="gap-2">
             <DialogTitle className="text-xl">
               {usesBackendApi
-                ? '¿Finalizar el recorrido?'
-                : '¿Ya descargaste tus archivos?'}
+                ? "¿Finalizar el recorrido?"
+                : "¿Ya descargaste tus archivos?"}
             </DialogTitle>
             <DialogDescription className="text-sm leading-6 text-muted-foreground">
               {usesBackendApi
-                ? 'Vas a volver al inicio. Las propuestas y decisiones permanecen guardadas en el backend.'
-                : 'Estás usando VERA sin cuenta: al finalizar se borran el material adaptado y el informe. Si todavía no los descargaste, volvé y descargalos antes de salir.'}
+                ? "Vas a volver al inicio. Las propuestas y decisiones permanecen guardadas en el backend."
+                : "Estás usando VERA sin cuenta: al finalizar se borran el material adaptado y el informe. Si todavía no los descargaste, volvé y descargalos antes de salir."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-between">
@@ -240,7 +304,7 @@ export function ResultadoStep() {
               className="h-11 rounded-xl px-4"
               onClick={() => setConfirmOpen(false)}
             >
-              {usesBackendApi ? 'Volver al resumen' : 'Volver a descargar'}
+              {usesBackendApi ? "Volver al resumen" : "Volver a descargar"}
             </Button>
             <Button
               type="button"

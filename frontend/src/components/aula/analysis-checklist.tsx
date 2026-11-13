@@ -27,7 +27,9 @@ import {
   analysisFailureTitle,
   analysisIncompleteHint,
   isAiAvailabilityMessage,
+  toUserFacingErrorMessage,
 } from "@/lib/api/ai-availability";
+import { ANALYSIS_PIPELINE } from "@/lib/api/analysis-pipeline";
 import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
 
@@ -51,20 +53,13 @@ function formatElapsed(totalSeconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-const PIPELINE = [
-  { id: "queued", label: "En cola" },
-  { id: "parsing", label: "Leyendo el PDF" },
-  { id: "accessibility_analysis", label: "Analizando accesibilidad (IA)" },
-  { id: "associating_evidence", label: "Asociando evidencias" },
-  { id: "persisting_results", label: "Guardando resultados" },
-] as const;
-
 function rowsFromStep(step: string, failed: boolean): Row[] {
-  const idx = PIPELINE.findIndex((p) => p.id === step);
-  const active = idx >= 0 ? idx : step === "completed" ? PIPELINE.length : 0;
+  const idx = ANALYSIS_PIPELINE.findIndex((p) => p.id === step);
+  const active =
+    idx >= 0 ? idx : step === "completed" ? ANALYSIS_PIPELINE.length : 0;
 
   if (failed) {
-    return PIPELINE.map((p, i) => ({
+    return ANALYSIS_PIPELINE.map((p, i) => ({
       id: p.id,
       label: p.label,
       status:
@@ -76,7 +71,7 @@ function rowsFromStep(step: string, failed: boolean): Row[] {
     }));
   }
 
-  return PIPELINE.map((p, i) => ({
+  return ANALYSIS_PIPELINE.map((p, i) => ({
     id: p.id,
     label: p.label,
     status:
@@ -206,8 +201,13 @@ export function AnalysisChecklist({
               applyStatus(resolveUiStatus(nextRows, base), nextRows);
               setError(
                 a.status === "failed"
-                  ? (a.error_message?.trim() ||
-                      "No se pudo completar el análisis")
+                  ? toUserFacingErrorMessage(
+                      a.error_message?.trim() ||
+                        "No se pudo completar el análisis",
+                      {
+                        fallback: "No se pudo completar el análisis",
+                      },
+                    )
                   : null,
               );
             },
@@ -236,7 +236,10 @@ export function AnalysisChecklist({
       } catch (err) {
         if (cancelled) return;
         setError(
-          err instanceof Error ? err.message : "Error al consultar estado",
+          toUserFacingErrorMessage(
+            err instanceof Error ? err.message : "Error al consultar estado",
+            { fallback: "No se pudo consultar el estado del análisis" },
+          ),
         );
         timer = window.setTimeout(() => void poll(), 1500);
       }
@@ -261,7 +264,12 @@ export function AnalysisChecklist({
       navigate(withAnalysisId("/analisis/analizar", id));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "No se pudo reiniciar el análisis",
+        toUserFacingErrorMessage(
+          err instanceof Error
+            ? err.message
+            : "No se pudo reiniciar el análisis",
+          { fallback: "No se pudo reiniciar el análisis" },
+        ),
       );
       setRetrying(false);
     }
