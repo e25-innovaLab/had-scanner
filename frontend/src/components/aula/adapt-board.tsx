@@ -374,8 +374,11 @@ export function AdaptBoard({
 
   function openBarrier(entry: ApiBarrier) {
     const state = displayStateById[entry.id] ?? toState(entry);
-    if (state.decision === "discarded") return;
-    if (state.decision === "accepted" || state.mode === "ready") {
+    if (
+      state.decision === "discarded" ||
+      state.decision === "accepted" ||
+      state.mode === "ready"
+    ) {
       resumeEdit(entry);
       return;
     }
@@ -680,8 +683,9 @@ export function AdaptBoard({
                     ? "Próxima"
                     : "Pendiente";
             const isDiscarded = decision === "discarded";
+            const isAccepted = decision === "accepted";
             const actionLabel =
-              decision === "accepted"
+              isAccepted || isDiscarded
                 ? "Ver"
                 : state.mode === "ready"
                   ? "Ver o cambiar"
@@ -755,39 +759,33 @@ export function AdaptBoard({
                           : "○ "}
                     {statusLabel}
                   </span>
-                  {isDiscarded ? (
-                    <span className="text-xs text-muted-foreground">
-                      Cerrada · no se puede revisar
-                    </span>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant={
-                        isNext || state.generateFail ? "default" : "outline"
-                      }
-                      className={cn(
-                        "h-9 rounded-xl px-3",
-                        (isNext || state.generateFail) &&
-                          "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
-                      )}
-                      disabled={isOpeningEdit || state.mode === "generating"}
-                      onClick={() => openBarrier(entry)}
-                    >
-                      {state.mode === "generating" ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Sparkles
-                            className="size-3.5 animate-pulse"
-                            aria-hidden="true"
-                          />
-                          Generando…
-                        </span>
-                      ) : state.generateFail ? (
-                        "Reintentar"
-                      ) : (
-                        actionLabel
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant={
+                      isNext || state.generateFail ? "default" : "outline"
+                    }
+                    className={cn(
+                      "h-9 rounded-xl px-3",
+                      (isNext || state.generateFail) &&
+                        "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
+                    )}
+                    disabled={isOpeningEdit || state.mode === "generating"}
+                    onClick={() => openBarrier(entry)}
+                  >
+                    {state.mode === "generating" ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Sparkles
+                          className="size-3.5 animate-pulse"
+                          aria-hidden="true"
+                        />
+                        Generando…
+                      </span>
+                    ) : state.generateFail ? (
+                      "Reintentar"
+                    ) : (
+                      actionLabel
+                    )}
+                  </Button>
                 </div>
               </Card>
             );
@@ -797,8 +795,7 @@ export function AdaptBoard({
             <span className="font-medium text-foreground">Revisar</span> abre el
             detalle. Ahí podés generar una propuesta con IA.{" "}
             <span className="font-medium text-foreground">Ver</span> muestra una
-            propuesta ya aceptada (solo lectura). Las aceptadas y descartadas
-            quedan cerradas.
+            barrera aceptada o descartada en solo lectura.
           </p>
         </div>
       ) : (
