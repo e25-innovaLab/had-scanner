@@ -53,11 +53,11 @@ function formatElapsed(totalSeconds: number) {
 }
 
 const PIPELINE = [
-  { id: "queued", label: "En cola" },
-  { id: "parsing", label: "Leyendo el PDF" },
-  { id: "accessibility_analysis", label: "Analizando accesibilidad (IA)" },
-  { id: "associating_evidence", label: "Asociando evidencias" },
-  { id: "persisting_results", label: "Guardando resultados" },
+  { id: "queued", label: "Preparando" },
+  { id: "parsing", label: "Revisando el material" },
+  { id: "accessibility_analysis", label: "Detectando barreras" },
+  { id: "associating_evidence", label: "Ubicando las barreras en el material" },
+  { id: "persisting_results", label: "Guardando el diagnóstico" },
 ] as const;
 
 function rowsFromStep(step: string, failed: boolean): Row[] {
