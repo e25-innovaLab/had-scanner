@@ -11,6 +11,7 @@ import type {
   FinalizeResponse,
   FinalizedDocument,
 } from "@/lib/api/types";
+import { toUserFacingErrorMessage } from "@/lib/api/ai-availability";
 import { toApiBarrier, toBarriersResponse } from "./mappers/backend-analysis";
 import { isBackendId } from "./ids";
 import * as mockService from "@/lib/api/service";
@@ -33,7 +34,14 @@ async function fromMockResult<T>(
     ) {
       message = (data as { error: string }).error;
     }
-    throw new ApiError(value.status, message, data);
+    throw new ApiError(
+      value.status,
+      toUserFacingErrorMessage(message, {
+        status: value.status,
+        fallback: "No se pudo completar la operación. Reintentá en unos minutos.",
+      }),
+      data,
+    );
   }
   return value;
 }
@@ -115,7 +123,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         message = (data as { error: string }).error;
       }
     }
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(
+      res.status,
+      toUserFacingErrorMessage(message, {
+        status: res.status,
+        fallback: "No se pudo completar la operación. Reintentá en unos minutos.",
+      }),
+      data,
+    );
   }
 
   return data as T;
@@ -251,8 +266,14 @@ export const api = {
           }
           if (analysis.status === "failed") {
             throw new Error(
-              analysis.error_message ??
-                "El análisis falló y no hay barreras para revisar.",
+              toUserFacingErrorMessage(
+                analysis.error_message ??
+                  "El análisis falló y no hay barreras para revisar.",
+                {
+                  fallback:
+                    "El análisis falló y no hay barreras para revisar.",
+                },
+              ),
             );
           }
 
@@ -618,8 +639,13 @@ export const api = {
       }
       if (analysis.status === "failed") {
         throw new Error(
-          analysis.error_message ??
-            "El análisis falló y no hay barreras para revisar.",
+          toUserFacingErrorMessage(
+            analysis.error_message ??
+              "El análisis falló y no hay barreras para revisar.",
+            {
+              fallback: "El análisis falló y no hay barreras para revisar.",
+            },
+          ),
         );
       }
 

@@ -27,6 +27,7 @@ import {
   analysisFailureTitle,
   analysisIncompleteHint,
   isAiAvailabilityMessage,
+  toUserFacingErrorMessage,
 } from "@/lib/api/ai-availability";
 import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
@@ -206,8 +207,13 @@ export function AnalysisChecklist({
               applyStatus(resolveUiStatus(nextRows, base), nextRows);
               setError(
                 a.status === "failed"
-                  ? (a.error_message?.trim() ||
-                      "No se pudo completar el análisis")
+                  ? toUserFacingErrorMessage(
+                      a.error_message?.trim() ||
+                        "No se pudo completar el análisis",
+                      {
+                        fallback: "No se pudo completar el análisis",
+                      },
+                    )
                   : null,
               );
             },
@@ -236,7 +242,10 @@ export function AnalysisChecklist({
       } catch (err) {
         if (cancelled) return;
         setError(
-          err instanceof Error ? err.message : "Error al consultar estado",
+          toUserFacingErrorMessage(
+            err instanceof Error ? err.message : "Error al consultar estado",
+            { fallback: "No se pudo consultar el estado del análisis" },
+          ),
         );
         timer = window.setTimeout(() => void poll(), 1500);
       }
@@ -261,7 +270,12 @@ export function AnalysisChecklist({
       navigate(withAnalysisId("/analisis/analizar", id));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "No se pudo reiniciar el análisis",
+        toUserFacingErrorMessage(
+          err instanceof Error
+            ? err.message
+            : "No se pudo reiniciar el análisis",
+          { fallback: "No se pudo reiniciar el análisis" },
+        ),
       );
       setRetrying(false);
     }
