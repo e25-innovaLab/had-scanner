@@ -38,10 +38,4 @@ app.include_router(analysis.analysis_by_id_router)
 app.include_router(proposals.router)
 app.include_router(finalization.router)
 app.include_router(adaptations.router)
-<<<<<<< HEAD
-app.include_router(finalization.router)
 app.include_router(barriers.router)
-||||||| bdf8f2a
-=======
-app.include_router(barriers.router)
->>>>>>> origin/main
