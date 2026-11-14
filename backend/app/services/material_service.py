@@ -1,8 +1,10 @@
+from io import BytesIO
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.utils.text_to_pdf import text_to_pdf
 from app.models.material import Material
 from app.repositories import material_repository
 from app.utils.file_hash import calculate_sha256
@@ -122,6 +124,37 @@ def create_material(
             saved_file_path.unlink()
 
         raise
+
+
+def create_material_from_text(
+    db: Session,
+    name: str,
+    text: str,
+) -> Material:
+
+    # Convertimos el texto en un PDF en memoria.
+    pdf_bytes = text_to_pdf(
+        text=text,
+        title=name,
+    )
+
+    # Preparamos el nombre del archivo PDF.
+    filename = f"{Path(name).stem}.pdf"
+
+    # Simulamos un archivo recibido por upload.
+    pdf_file = UploadFile(
+        filename=filename,
+        file=BytesIO(pdf_bytes),
+    )
+
+    try:
+        # Reutilizamos el flujo existente.
+        return create_material(
+            db=db,
+            file=pdf_file,
+        )
+    finally:
+        pdf_file.file.close()
 
 
 def get_all_materials(
