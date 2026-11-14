@@ -38,7 +38,8 @@ async function fromMockResult<T>(
       value.status,
       toUserFacingErrorMessage(message, {
         status: value.status,
-        fallback: "No se pudo completar la operación. Reintentá en unos minutos.",
+        fallback:
+          "No se pudo completar la operación. Reintentá en unos minutos.",
       }),
       data,
     );
@@ -127,7 +128,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       res.status,
       toUserFacingErrorMessage(message, {
         status: res.status,
-        fallback: "No se pudo completar la operación. Reintentá en unos minutos.",
+        fallback:
+          "No se pudo completar la operación. Reintentá en unos minutos.",
       }),
       data,
     );
@@ -270,8 +272,7 @@ export const api = {
                 analysis.error_message ??
                   "El análisis falló y no hay barreras para revisar.",
                 {
-                  fallback:
-                    "El análisis falló y no hay barreras para revisar.",
+                  fallback: "El análisis falló y no hay barreras para revisar.",
                 },
               ),
             );
@@ -567,6 +568,13 @@ export const api = {
     return request<MaterialListResponse>("/materials");
   },
 
+  uploadMaterialFromText(name: string, text: string): Promise<Material> {
+    return request<Material>("/materials/text", {
+      method: "POST",
+      body: JSON.stringify({ name, text }),
+    });
+  },
+
   async isBackendHealthy(): Promise<boolean> {
     try {
       const res = await fetch(`${baseUrl()}/health`, {
@@ -622,10 +630,7 @@ export const api = {
     const detail = await request<BackendBarrierDetail>(
       `/barriers/${encodeURIComponent(barrierId)}`,
     );
-    return withBackendProposal(
-      barrierFromDetail(detail, analysisId),
-      proposal,
-    );
+    return withBackendProposal(barrierFromDetail(detail, analysisId), proposal);
   },
 
   async getBarriersForUi(analysisId: string): Promise<BarriersResponse> {
