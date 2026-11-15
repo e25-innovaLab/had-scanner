@@ -35,6 +35,7 @@ class AnalysisResponse(BaseModel):
 
     analysis_id: int = Field(validation_alias="id")
     material_id: int
+    material_name: str
     status: str
     current_step: str
     score: int
