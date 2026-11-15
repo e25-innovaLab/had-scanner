@@ -1,0 +1,168 @@
+export type AnalysisStatus = 'uploaded' | 'analyzing' | 'ready' | 'failed';
+
+export type DimensionProgressStatus = 'pending' | 'running' | 'done' | 'error';
+
+export type BarrierDecision = 'pending' | 'accepted' | 'discarded';
+
+export type Severity = 'alta' | 'media' | 'baja' | 'ninguna';
+
+export type DimensionProgress = {
+  id: string;
+  label: string;
+  status: DimensionProgressStatus;
+};
+
+export type Analysis = {
+  id: string;
+  status: AnalysisStatus;
+  originalFileName: string;
+  originalFileSize: number;
+  createdAt: string;
+  analyzingStartedAt: string | null;
+  dimensionProgress: DimensionProgress[];
+  exportStatus: 'idle' | 'queued' | 'generating' | 'ready';
+  exports: ExportFile[];
+};
+
+export type ExportFile = {
+  name: string;
+  detail: string;
+};
+
+export type ApiBarrier = {
+  id: string;
+  analysisId: string;
+  dimensionId: string;
+  dimension: string;
+  severity: Exclude<Severity, 'ninguna'>;
+  title: string;
+  why: string;
+  where: string;
+  recommendation: string;
+  status: BarrierDecision;
+  remainingAttempts: number;
+  hasProposal: boolean;
+  draft: string | null;
+  currentProposal: string | null;
+  currentProposalId: string | null;
+  criterion: string;
+  detected: string;
+  original: string;
+  location: string;
+  proposes: string;
+  variants: {
+    simple: string;
+    breve: string;
+    pasos: string;
+    ejemplo: string;
+    otra: string;
+  };
+};
+
+export type Proposal = {
+  id: string;
+  analysisId: string;
+  barrierId: string;
+  kind: 'initial_variant' | 'manual' | 'regenerated';
+  text: string;
+  isCurrent: boolean;
+  createdAt: string;
+};
+
+export type BarrierGroupDto = {
+  id: string;
+  name: string;
+  count: number;
+  severity: Severity;
+  items: {
+    id: string;
+    title: string;
+    why: string;
+    where: string;
+    recommendation: string;
+    status: BarrierDecision;
+    severity: Exclude<Severity, 'ninguna'>;
+  }[];
+};
+
+export type BarriersResponse = {
+  groups: BarrierGroupDto[];
+  stats: {
+    total: number;
+    highSeverity: number;
+    dimensionsAffected: number;
+    dimensionsTotal: number;
+    byDimension: { id: string; name: string; count: number }[];
+    highByDimension: { id: string; name: string; count: number }[];
+    clearDimensionNames: string[];
+  };
+};
+
+export type AnalysisStatusResponse = {
+  id: string;
+  status: AnalysisStatus;
+  originalFileName: string;
+  originalFileSize: number;
+  dimensionProgress: DimensionProgress[];
+};
+
+export type DbShape = {
+  analyses: Analysis[];
+  barriers: ApiBarrier[];
+  proposals: Proposal[];
+};
+
+export type Material = {
+  id: number;
+  name: string;
+  status: string;
+  created_at?: string;
+};
+
+export type MaterialListResponse = {
+  materials: Material[];
+  total: number;
+};
+
+export type BackendBarrierEvidence = {
+  id: number;
+  element_id: string | null;
+  page: number | null;
+  element_type: string | null;
+  anchor: string;
+  context_role: string | null;
+  match_status: string;
+};
+
+export type BackendBarrier = {
+  id: number;
+  type: string;
+  title: string;
+  severity: string;
+  location: { pages?: number[] } & Record<string, unknown>;
+  description: string;
+  justification: string;
+  recommendation: string;
+  detected_by: string;
+  status: string;
+  evidences: BackendBarrierEvidence[];
+};
+
+export type BackendAnalysis = {
+  analysis_id: number;
+  material_id: number;
+  status: string;           // processing | completed | failed
+  current_step: string;     // queued | parsing | ... | completed | failed
+  score: number;
+  error_message?: string | null;
+  barriers: BackendBarrier[];
+};
+
+export type BackendProposal = {
+  proposal_id: number;
+  barrier_id: number;
+  status: string;
+  original_content: string;
+  proposed_content: string;
+  explanation: string;
+};

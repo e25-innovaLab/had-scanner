@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
@@ -21,6 +20,12 @@ class Analysis(Base):
         nullable=False,
     )
 
+    material: Mapped["Material"] = relationship("Material")
+
+    @property
+    def material_name(self) -> str:
+        return self.material.name
+    
     status: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
