@@ -185,7 +185,9 @@ export function AnalysisChecklist({
             onStep: (a) => {
               if (cancelled) return;
               setMaterialId(a.material_id);
-              setFileName(`material-${a.material_id}.pdf`);
+              setFileName(
+                a.material_name?.trim() || `material-${a.material_id}.pdf`,
+              );
               setFileSize(0);
               const nextRows = rowsFromStep(
                 a.current_step,
@@ -343,8 +345,8 @@ export function AnalysisChecklist({
             ) : null}
             <p className="text-sm leading-6">
               Podés reintentar {failedLabels || "los pasos fallidos"} o
-              continuar con los {doneCount} pasos completados. Si
-              continuás, el diagnóstico y el informe van a indicar que{" "}
+              continuar con los {doneCount} pasos completados. Si continuás, el
+              diagnóstico y el informe van a indicar que{" "}
               {failedLabels || "esos pasos"}{" "}
               {errorRows.length === 1 ? "quedó" : "quedaron"} sin completar.
             </p>

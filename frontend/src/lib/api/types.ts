@@ -152,6 +152,7 @@ export type BackendBarrier = {
 export type BackendAnalysis = {
   analysis_id: number;
   material_id: number;
+  material_name?: string;
   status: string; // processing | completed | failed
   current_step: string; // queued | parsing | ... | completed | failed
   score: number;

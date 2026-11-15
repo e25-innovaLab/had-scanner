@@ -196,7 +196,10 @@ export function toReadyStatus(analysis: BackendAnalysis, fileName: string) {
   return {
     id: String(analysis.analysis_id),
     status: "ready" as const,
-    originalFileName: fileName || `material-${analysis.material_id}.pdf`,
+    originalFileName:
+      analysis.material_name?.trim() ||
+      fileName.trim() ||
+      `material-${analysis.material_id}.pdf`,
     originalFileSize: 0,
     dimensionProgress: toDimensionProgress(analysis),
   };
