@@ -14,6 +14,7 @@ from app.services.analysis_service import (
     process_analysis_task,
 )
 from app.utils.pdf_parser import extract_document
+from app.repositories import analysis_repository
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,17 @@ def analyze_material_endpoint(
             detail="Material file not found",
         )
 
+    active_analysis = analysis_repository.get_processing_by_material(
+        db=db,
+        material_id=material_id,
+    )
+
+    if active_analysis is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An analysis is already processing for this material.",
+        )
+
     try:
         analysis = create_material_analysis(
             db=db,
@@ -80,7 +92,6 @@ def analyze_material_endpoint(
             detail="No se pudo iniciar el análisis del material.",
         )
 
-
 @analysis_by_id_router.get(
     "/{analysis_id}",
     response_model=AnalysisResponse,
@@ -101,6 +112,45 @@ def get_analysis_by_id_endpoint(
         )
 
     return analysis
+
+@analysis_by_id_router.post("/{analysis_id}/cancel")
+def cancel_analysis_endpoint(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+):
+    analysis = analysis_repository.get_by_id(
+        db=db,
+        analysis_id=analysis_id,
+    )
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis not found.",
+        )
+
+    if analysis.status != "processing":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Analysis cannot be cancelled.",
+        )
+
+    cancelled = analysis_repository.request_cancellation(
+        db=db,
+        analysis_id=analysis_id,
+    )
+
+    if not cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Analysis status changed. Cancellation was not applied.",
+        )
+
+    return {
+        "analysis_id": analysis_id,
+        "status": "cancelling",
+        "message": "Analysis cancellation requested.",
+    }
 
 #Endpoint para pruebas
 """
