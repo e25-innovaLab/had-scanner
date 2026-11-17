@@ -36,35 +36,90 @@ Evalúa:
 CRITERIOS GENERALES
 
 1. Analiza el PDF completo, incluyendo el contexto de cada sección.
+
 2. No inventes problemas. Identifica únicamente barreras respaldadas
    por evidencias observables en el documento.
+
 3. No consideres automáticamente que un párrafo largo, una oración
    compleja o un título constituyen una barrera. Evalúa su función
    y el contexto educativo.
+
 4. No propongas cambios meramente estéticos como barreras de comprensión.
-5. Agrupa observaciones que representen un mismo problema subyacente.
-   Una barrera puede tener varias evidencias en distintas páginas.
-6. Para cada evidencia, devuelve:
-   - El número de página, comenzando desde 1.
-   - El tipo de elemento.
-   - Un ancla textual breve, literal y distintiva, de hasta 12 palabras
-     cuando sea posible.
-   - El título o sección de contexto, si se puede identificar.
-7. No reproduzcas párrafos completos ni el texto completo del documento.
-   El backend recuperará el contenido original mediante su parser.
-8. El ancla debe copiarse literalmente del PDF. No la parafrasees.
-9. Si la barrera se refiere a una organización general y no a un
-   fragmento puntual, utiliza la mejor evidencia localizable disponible.
-10. Las recomendaciones deben ser concretas, viables y orientadas
-    a mejorar la accesibilidad educativa.
-11. No inventes números de página ni fragmentos textuales.
-12. Devuelve las barreras en el JSON solicitado. No incluyas explicaciones
+
+5. Cada barrera debe corresponder a un único elemento de contenido
+   identificable del documento (un párrafo, texto o título).
+
+6. Cada barrera debe contener exactamente una evidencia. No agrupes
+   diferentes párrafos, textos o elementos en una misma barrera,
+   aunque presenten el mismo problema de accesibilidad.
+
+7. Si un mismo elemento de contenido presenta varios problemas
+   de accesibilidad, agrúpalos dentro de una única barrera.
+   La descripción, justificación y recomendación deben contemplar
+   todos los problemas detectados en ese elemento.
+
+8. Nunca generes dos barreras diferentes que hagan referencia
+   al mismo elemento de contenido. Cada elemento debe aparecer
+   como máximo en una barrera.
+
+9. Si dos o más elementos diferentes presentan el mismo problema
+   de accesibilidad, genera una barrera independiente para cada uno.
+
+10. No generes barreras para problemas generales de organización
+    o estructura que no puedan asociarse a un único elemento
+    de contenido modificable.
+
+11. Para la única evidencia de cada barrera, devuelve:
+    - El número de página, comenzando desde 1.
+    - El tipo de elemento.
+    - Un ancla textual breve, literal y distintiva, de hasta 12 palabras
+      cuando sea posible.
+    - El título o sección de contexto, si se puede identificar.
+
+12. No reproduzcas párrafos completos ni el texto completo del documento.
+    El backend recuperará el contenido original mediante su parser.
+
+13. El ancla debe copiarse literalmente del PDF. No la parafrasees.
+
+14. Las recomendaciones deben ser concretas, viables y orientadas
+    a mejorar la accesibilidad educativa del elemento identificado.
+
+15. No inventes números de página ni fragmentos textuales.
+
+16. Devuelve las barreras en el JSON solicitado. No incluyas explicaciones
     fuera del JSON.
-13. Si no encuentras barreras justificables, devuelve una lista vacía.
+
+17. Si no encuentras barreras justificables, devuelve una lista vacía.
 
 No evalúes todavía accesibilidad visual, multimedia, navegación
 ni alternativas de representación. Esas dimensiones se analizarán
 en etapas posteriores.
+
+REGLAS DE GRANULARIDAD DE LAS BARRERAS
+
+1. Cada barrera debe representar un problema detectado en un único
+   elemento de contenido del documento.
+
+2. Cada barrera debe contener exactamente una evidencia.
+
+3. Nunca agrupes diferentes párrafos, títulos o elementos de contenido
+   dentro de una misma barrera, aunque presenten el mismo problema.
+
+4. Si dos párrafos diferentes presentan el mismo problema de
+   accesibilidad, genera dos barreras independientes.
+
+5. Si un mismo párrafo presenta varios problemas relacionados con
+   la accesibilidad, agrúpalos en una única barrera y genera una
+   recomendación que contemple todos esos problemas.
+
+6. Nunca generes dos barreras independientes para el mismo elemento
+   de contenido.
+
+7. La evidencia debe permitir identificar inequívocamente el elemento
+   original que posteriormente será adaptado.
+
+8. Las recomendaciones deben aplicarse exclusivamente al elemento
+   identificado por la evidencia de la barrera.
 """
 
 

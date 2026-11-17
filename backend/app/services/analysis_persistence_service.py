@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.barrier_evidence import BarrierEvidence
+from app.core.exceptions import AnalysisCancelledException
 
 
 def persist_analysis(
@@ -16,16 +17,36 @@ def persist_analysis(
     ]
     barriers_data = accessibility_analysis.get("barriers", [])
 
-    analysis = db.get(Analysis, analysis_id)
-
-    if analysis is None:
-        raise RuntimeError(
-            f"Analysis {analysis_id} not found"
-        )
-
     try:
+        # Bloquea el análisis hasta finalizar la transacción.
+        analysis = db.execute(
+            select(Analysis)
+            .where(Analysis.id == analysis_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+
+        if analysis is None:
+            raise RuntimeError(
+                f"Analysis {analysis_id} not found"
+            )
+
+        # No persistir resultados si se solicitó la cancelación.
+        if analysis.status in ("cancelling", "cancelled"):
+            raise AnalysisCancelledException()
+
+        if analysis.status != "processing":
+            raise RuntimeError(
+                f"Analysis {analysis_id} is not processing"
+            )
+
         for barrier_data in barriers_data:
             evidence_data = barrier_data.get("evidence", [])
+
+            if len(evidence_data) != 1:
+                raise ValueError(
+                    "Each barrier must contain exactly one evidence."
+                )
 
             pages = sorted({
                 evidence["page"]

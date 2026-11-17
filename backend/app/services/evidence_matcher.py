@@ -74,17 +74,9 @@ def associate_evidence_elements(
     when the best candidate is sufficiently reliable and unambiguous.
     """
     result = {
-        **accessibility_analysis,
-        "barriers": [
-            {
-                **barrier,
-                "evidence": None,
-            }
-            for barrier in []
-        ],
+    **accessibility_analysis,
+    "barriers": [],
     }
-
-    result["barriers"] = []
 
     elements_by_page: dict[int, list[dict[str, Any]]] = {}
 
@@ -98,6 +90,8 @@ def associate_evidence_elements(
                 continue
 
             elements_by_page.setdefault(int(element_page), []).append(element)
+
+    seen_element_ids = set()
 
     for barrier in accessibility_analysis.get("barriers", []):
         updated_barrier = {**barrier}
@@ -132,10 +126,6 @@ def associate_evidence_elements(
 
                 similarity = calculate_similarity(anchor_text, element_text)
 
-                if not element_text:
-                    continue
-
-                similarity = calculate_similarity(anchor, element_text)
                 compatible = types_are_compatible(
                     evidence.get("element_type"),
                     element.get("type"),
@@ -184,7 +174,31 @@ def associate_evidence_elements(
             updated["match_status"] = "matched"
             updated_evidence.append(updated)
 
-        updated_barrier["evidence"] = updated_evidence
-        result["barriers"].append(updated_barrier)
+        for evidence in updated_evidence:
+            element_id = evidence.get("element_id")
+
+            # Avoid generating multiple barriers for the same document element.
+            if element_id is not None:
+                if element_id in seen_element_ids:
+                    continue
+
+                seen_element_ids.add(element_id)
+
+            single_barrier = {
+                **updated_barrier,
+                "evidence": [evidence],
+            }
+
+            # Update the location to reflect only this evidence.
+            page = evidence.get("page")
+            location = barrier.get("location")
+
+            if isinstance(location, dict) and page is not None:
+                single_barrier["location"] = {
+                    **location,
+                    "pages": [page],
+                }
+
+            result["barriers"].append(single_barrier)
 
     return result

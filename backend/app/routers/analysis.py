@@ -1,6 +1,5 @@
 
 import logging
-import os
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,7 +12,9 @@ from app.services.analysis_service import (
     get_analysis_by_id,
     process_analysis_task,
 )
-
+from app.utils.pdf_parser import extract_document
+from app.repositories import analysis_repository
+from app.utils.object_storage import resolve_material_path
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +50,27 @@ def analyze_material_endpoint(
             detail="Material not found",
         )
 
-    if not os.path.isfile(material.file_path):
+    try:
+        resolve_material_path(material.file_path)
+    except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Material file not found",
+            detail=(
+                "Material file not found. "
+                "Re-upload the same file to restore it, or check "
+                "Supabase Storage configuration."
+            ),
+        ) from None
+
+    active_analysis = analysis_repository.get_processing_by_material(
+        db=db,
+        material_id=material_id,
+    )
+
+    if active_analysis is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An analysis is already processing for this material.",
         )
 
     try:
@@ -79,7 +97,6 @@ def analyze_material_endpoint(
             detail="No se pudo iniciar el análisis del material.",
         )
 
-
 @analysis_by_id_router.get(
     "/{analysis_id}",
     response_model=AnalysisResponse,
@@ -100,3 +117,81 @@ def get_analysis_by_id_endpoint(
         )
 
     return analysis
+@analysis_by_id_router.post("/{analysis_id}/cancel")
+def cancel_analysis_endpoint(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+):
+    analysis = analysis_repository.get_by_id(
+        db=db,
+        analysis_id=analysis_id,
+    )
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis not found.",
+        )
+
+    if analysis.status != "processing":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Analysis cannot be cancelled.",
+        )
+
+    cancelled = analysis_repository.request_cancellation(
+        db=db,
+        analysis_id=analysis_id,
+    )
+
+    if not cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Analysis status changed. Cancellation was not applied.",
+        )
+
+    return {
+        "analysis_id": analysis_id,
+        "status": "cancelling",
+        "message": "Analysis cancellation requested.",
+    }
+
+# Endpoint para pruebas
+"""
+@router.get(
+    "/{material_id}/parsed-document",
+)
+def get_parsed_document_endpoint(
+    material_id: int,
+    db: Session = Depends(get_db),
+):
+    material = material_repository.get_by_id(
+        db=db,
+        material_id=material_id,
+    )
+
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material not found",
+        )
+
+    if not os.path.isfile(material.file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material file not found",
+        )
+
+    try:
+        return extract_document(material.file_path)
+
+    except Exception:
+        logger.exception(
+            "Failed to parse material %s",
+            material_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo procesar el documento.",
+        )
+"""
