@@ -1,4 +1,3 @@
-
 import logging
 
 from sqlalchemy.orm import Session
@@ -8,14 +7,14 @@ from app.repositories import analysis_repository, material_repository
 from app.services.analysis_persistence_service import persist_analysis
 from app.utils.pdf_parser import extract_document
 from app.utils.object_storage import resolve_material_path
-from app.ai.gemini_client import analyze_pdf_with_gemini
+from app.ai.analysis_provider import analyze_pdf_with_fallback
 from app.ai.gemini_errors import analysis_error_message
 from app.services.evidence_matcher import associate_evidence_elements
 from app.models.analysis import Analysis
 from app.core.exceptions import AnalysisCancelledException
 
-
 logger = logging.getLogger(__name__)
+
 
 def analyze_material(
     file_path: str,
@@ -38,9 +37,12 @@ def analyze_material(
     if on_step:
         on_step("accessibility_analysis")
 
-    gemini_result = analyze_pdf_with_gemini(local_path)
+    ai_result = analyze_pdf_with_fallback(
+        local_path,
+        check_cancelled=check_cancelled,
+    )
 
-    # Gemini terminó, pero el usuario pudo cancelar
+    # La Ia terminó, pero el usuario pudo cancelar
     # el análisis mientras se procesaba la solicitud.
     if check_cancelled:
         check_cancelled()
@@ -50,7 +52,7 @@ def analyze_material(
 
     accessibility_analysis = associate_evidence_elements(
         document=document,
-        accessibility_analysis=gemini_result["analysis"],
+        accessibility_analysis=ai_result["analysis"],
     )
 
     if check_cancelled:
@@ -59,8 +61,9 @@ def analyze_material(
     return {
         **document,
         "accessibility_analysis": accessibility_analysis,
+        "ai_provider": ai_result["provider"],
+        "ai_elapsed_seconds": ai_result["elapsed_seconds"],
     }
-
 
 
 def create_material_analysis(
@@ -71,7 +74,6 @@ def create_material_analysis(
         db=db,
         material_id=material_id,
     )
-
 
 
 def process_analysis_task(
@@ -118,9 +120,7 @@ def process_analysis_task(
         )
 
         if material is None:
-            raise FileNotFoundError(
-                f"Material {material_id} not found or not uploaded"
-            )
+            raise FileNotFoundError(f"Material {material_id} not found or not uploaded")
 
         result = analyze_material(
             material.file_path,
@@ -142,7 +142,7 @@ def process_analysis_task(
             "Analysis %s completed successfully",
             analysis_id,
         )
-        
+
     except AnalysisCancelledException:
         db.rollback()
 
@@ -169,14 +169,7 @@ def process_analysis_task(
             analysis_repository.mark_failed_if_processing(
                 db=db,
                 analysis_id=analysis_id,
-                status="failed",
                 error_message=user_message,
-            )
-
-            analysis_repository.update_current_step(
-                db=db,
-                analysis_id=analysis_id,
-                current_step="failed",
             )
 
         except Exception:

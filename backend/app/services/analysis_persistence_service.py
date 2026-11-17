@@ -15,6 +15,7 @@ def persist_analysis(
     accessibility_analysis = analysis_result[
         "accessibility_analysis"
     ]
+    ai_provider = analysis_result.get("ai_provider", "gemini")
     barriers_data = accessibility_analysis.get("barriers", [])
 
     try:
@@ -63,7 +64,7 @@ def persist_analysis(
                 description=barrier_data["description"],
                 justification=barrier_data["justification"],
                 recommendation=barrier_data["recommendation"],
-                detected_by="gemini",
+                detected_by=ai_provider,
                 status="pending",
             )
 

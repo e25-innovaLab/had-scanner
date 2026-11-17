@@ -1,4 +1,3 @@
-
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
@@ -49,11 +48,7 @@ def get_by_id(
 ) -> Analysis | None:
     statement = (
         select(Analysis)
-        .options(
-            selectinload(Analysis.barriers).selectinload(
-                Barrier.evidences
-            )
-        )
+        .options(selectinload(Analysis.barriers).selectinload(Barrier.evidences))
         .where(Analysis.id == analysis_id)
     )
 
@@ -104,9 +99,7 @@ def is_cancellation_requested(
     db: Session,
     analysis_id: int,
 ) -> bool:
-    statement = select(Analysis.status).where(
-        Analysis.id == analysis_id
-    )
+    statement = select(Analysis.status).where(Analysis.id == analysis_id)
 
     current_status = db.scalar(statement)
 
@@ -148,9 +141,11 @@ def get_processing_by_material(
 
     return db.scalar(statement)
 
+
 def mark_failed_if_processing(
     db: Session,
     analysis_id: int,
+    error_message: str | None = None,
 ) -> None:
     statement = (
         update(Analysis)
@@ -162,7 +157,7 @@ def mark_failed_if_processing(
             status="failed",
             current_step="failed",
             error_message=(
-                "No se pudo completar el análisis del material."
+                error_message or "No se pudo completar el análisis del material."
             ),
         )
     )
