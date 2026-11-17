@@ -1,11 +1,17 @@
-
+import logging
 from pathlib import Path
 
 from google import genai
 from google.genai import types
 
-from app.core.config import GEMINI_API_KEY, GEMINI_MODEL
+from app.core.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    GEMINI_TIMEOUT_SECONDS,
+)
 from app.ai.accessibility_schemas import AccessibilityAnalysis
+
+logger = logging.getLogger(__name__)
 
 
 ACCESSIBILITY_PROMPT = """
@@ -125,39 +131,58 @@ REGLAS DE GRANULARIDAD DE LAS BARRERAS
 
 def analyze_pdf_with_gemini(file_path: str) -> dict:
     if not GEMINI_API_KEY:
-        raise RuntimeError(
-            "GEMINI_API_KEY environment variable is not configured."
-        )
+        raise RuntimeError("GEMINI_API_KEY environment variable is not configured.")
 
     pdf_path = Path(file_path)
 
     if not pdf_path.is_file():
         raise FileNotFoundError(file_path)
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = genai.Client(
+        api_key=GEMINI_API_KEY,
+        http_options=types.HttpOptions(
+            timeout=int(GEMINI_TIMEOUT_SECONDS * 1000),
+            retry_options=types.HttpRetryOptions(
+                attempts=1,
+            ),
+        ),
+    )
+
     uploaded_file = None
 
     try:
+        logger.info(
+            "Subiendo PDF a Gemini: %s",
+            pdf_path.name,
+        )
+
         uploaded_file = client.files.upload(file=str(pdf_path))
+
+        logger.info(
+            "Solicitando analisis a Gemini con modelo %s",
+            GEMINI_MODEL,
+        )
 
         response = client.models.generate_content(
             model=GEMINI_MODEL,
-            contents=[ACCESSIBILITY_PROMPT, uploaded_file],
+            contents=[
+                ACCESSIBILITY_PROMPT,
+                uploaded_file,
+            ],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_json_schema=(
-                    AccessibilityAnalysis.model_json_schema()
-                ),
+                response_json_schema=(AccessibilityAnalysis.model_json_schema()),
             ),
         )
 
         if not response.text:
-            raise RuntimeError(
-                "Gemini returned an empty accessibility analysis."
-            )
+            raise RuntimeError("Gemini returned an empty accessibility analysis.")
 
-        analysis = AccessibilityAnalysis.model_validate_json(
-            response.text
+        analysis = AccessibilityAnalysis.model_validate_json(response.text)
+
+        logger.info(
+            "Gemini devolvio %s barreras",
+            len(analysis.barriers),
         )
 
         return {
@@ -169,6 +194,6 @@ def analyze_pdf_with_gemini(file_path: str) -> dict:
             try:
                 client.files.delete(name=uploaded_file.name)
             except Exception:
-                pass
+                logger.warning("No se pudo eliminar el archivo temporal de Gemini")
 
         client.close()
