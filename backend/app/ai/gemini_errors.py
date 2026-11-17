@@ -32,6 +32,24 @@ MSG_GENERIC_GEMINI = (
 
 MSG_GENERIC = "No se pudo completar el análisis del material."
 
+MSG_ALL_PROVIDERS = (
+    "No fue posible completar el análisis porque "
+    "los servicios de inteligencia artificial "
+    "no están disponibles. Intentá nuevamente más tarde."
+)
+
+MSG_ALL_TIMEOUT = (
+    "Los servicios de inteligencia artificial "
+    "no respondieron dentro del tiempo permitido. "
+    "Intentá nuevamente más tarde."
+)
+
+MSG_ALL_QUOTA = (
+    "Se alcanzaron los límites de uso disponibles "
+    "de los servicios de inteligencia artificial. "
+    "Intentá nuevamente más tarde."
+)
+
 
 def _exception_blob(exc: BaseException) -> str:
     parts: list[str] = [str(exc)]
@@ -121,9 +139,46 @@ def classify_gemini_failure(exc: BaseException) -> tuple[str, str, int]:
     return "unknown", MSG_GENERIC, 502
 
 
+
 def analysis_error_message(exc: BaseException) -> str:
+    from app.ai.analysis_provider import AllAIProvidersFailed
+
+    if isinstance(exc, AllAIProvidersFailed):
+        failures = exc.failures
+
+        if not failures:
+            return MSG_ALL_PROVIDERS
+
+        statuses = [
+            failure.get("status_code")
+            for failure in failures
+        ]
+
+        error_types = [
+            failure.get("error_type", "").lower()
+            for failure in failures
+        ]
+
+        # Todos fallaron por límites de solicitudes.
+        if all(status == 429 for status in statuses):
+            return MSG_ALL_QUOTA
+
+        # Todos fallaron por timeout.
+        if all(
+            status in (408, 504)
+            or "timeout" in error_type
+            for status, error_type in zip(statuses, error_types)
+        ):
+            return MSG_ALL_TIMEOUT
+
+        # Fallos mixtos o saturación de proveedores.
+        return MSG_ALL_PROVIDERS
+
+    # Conservamos el comportamiento original de Gemini.
     _code, message, _status = classify_gemini_failure(exc)
+
     return message
+
 
 
 def proposal_http_error(exc: BaseException) -> tuple[int, str]:

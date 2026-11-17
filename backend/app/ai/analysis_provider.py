@@ -1,6 +1,7 @@
 import logging
 import time
 from pathlib import Path
+from xml.parsers.expat import errors
 
 import httpx
 from google.genai import errors as gemini_errors
@@ -14,7 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 class AllAIProvidersFailed(RuntimeError):
-    """Todos los proveedores disponibles fallaron."""
+    """Guarda los errores de los proveedores de IA."""
+
+    def __init__(self, failures: list[dict]):
+        self.failures = failures
+
+        super().__init__(
+            "No fue posible completar el análisis "
+            "con los proveedores de IA disponibles."
+        )
 
 
 def is_recoverable_error(exc: Exception) -> bool:
@@ -109,14 +118,10 @@ def analyze_pdf_with_fallback(
 
             # Evitamos aceptar resultados inesperados.
             if not isinstance(result, dict):
-                raise RuntimeError(
-                    "El proveedor devolvió un resultado inesperado"
-                )
+                raise RuntimeError("El proveedor devolvió un resultado inesperado")
 
             if not isinstance(result.get("analysis"), dict):
-                raise RuntimeError(
-                    "El proveedor devolvió un resultado inesperado"
-                )
+                raise RuntimeError("El proveedor devolvió un resultado inesperado")
 
             elapsed = time.perf_counter() - start
 
@@ -136,9 +141,7 @@ def analyze_pdf_with_fallback(
             }
 
         except AnalysisCancelledException:
-            logger.info(
-                "Análisis cancelado. No se ejecutará otro proveedor."
-            )
+            logger.info("Análisis cancelado. No se ejecutará otro proveedor.")
             raise
 
         except Exception as exc:
@@ -163,21 +166,26 @@ def analyze_pdf_with_fallback(
                 type(exc).__name__,
             )
 
+            status = getattr(exc, "status_code", None)
+
+            if isinstance(exc, httpx.HTTPStatusError):
+                status = exc.response.status_code
+
             errors.append(
-                f"{provider_name}: {type(exc).__name__}"
+                {
+                    "provider": provider_name,
+                    "error_type": type(exc).__name__,
+                    "status_code": status,
+                }
             )
 
-            logger.info(
-                "Intentando el siguiente proveedor disponible"
-            )
+            logger.info("Intentando el siguiente proveedor disponible")
 
     # Ningún proveedor pudo generar el análisis.
     logger.error(
         "Todos los proveedores fallaron: %s",
-        ", ".join(errors),
+        errors,
     )
 
-    raise AllAIProvidersFailed(
-        "No fue posible completar el análisis "
-        "con los proveedores de IA disponibles."
-    )
+
+    raise AllAIProvidersFailed(errors)
