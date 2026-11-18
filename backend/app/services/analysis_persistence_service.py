@@ -7,7 +7,7 @@ from app.models.barrier_evidence import BarrierEvidence
 from app.services.accessibility_score_service import (
     calculate_accessibility_score,
 )
-
+from app.core.exceptions import AnalysisCancelledException
 
 
 def persist_analysis(
@@ -20,17 +20,32 @@ def persist_analysis(
     ]
     barriers_data = accessibility_analysis.get("barriers", [])
 
-    analysis = db.get(Analysis, analysis_id)
+    try:
+        # Bloquea el análisis hasta finalizar la transacción.
+        analysis = db.execute(
+            select(Analysis)
+            .where(Analysis.id == analysis_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
 
-    if analysis is None:
-        raise RuntimeError(
-            f"Analysis {analysis_id} not found"
-        )
+        if analysis is None:
+            raise RuntimeError(
+                f"Analysis {analysis_id} not found"
+            )
+
+        # No persistir resultados si se solicitó la cancelación.
+        if analysis.status in ("cancelling", "cancelled"):
+            raise AnalysisCancelledException()
+
+        if analysis.status != "processing":
+            raise RuntimeError(
+                f"Analysis {analysis_id} is not processing"
+            )
 
     try:
         # Calculate the accessibility score.
         score = calculate_accessibility_score(barriers_data)
-
         for barrier_data in barriers_data:
             evidence_data = barrier_data.get("evidence", [])
 
