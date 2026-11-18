@@ -38,11 +38,18 @@ def persist_analysis(
                 if isinstance(evidence.get("page"), int)
             })
 
+            severity = barrier_data["severity"]
+
+            if severity not in {"high", "medium", "low"}:
+                raise ValueError(
+                    f"Invalid barrier severity: {severity}"
+                )
+
             barrier = Barrier(
                 analysis_id=analysis.id,
                 type=barrier_data["dimension"],
                 title=barrier_data["title"],
-                severity="medium",
+                severity=severity,
                 location={"pages": pages},
                 description=barrier_data["description"],
                 justification=barrier_data["justification"],
