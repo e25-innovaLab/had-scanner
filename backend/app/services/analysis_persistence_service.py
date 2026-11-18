@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.barrier_evidence import BarrierEvidence
+from app.services.accessibility_score_service import (
+    calculate_accessibility_score,
+)
+
 
 
 def persist_analysis(
@@ -24,6 +28,9 @@ def persist_analysis(
         )
 
     try:
+        # Calculate the accessibility score.
+        score = calculate_accessibility_score(barriers_data)
+
         for barrier_data in barriers_data:
             evidence_data = barrier_data.get("evidence", [])
 
@@ -79,7 +86,7 @@ def persist_analysis(
 
         analysis.status = "completed"
         analysis.current_step = "completed"
-        analysis.score = 100
+        analysis.score = score
         analysis.error_message = None
 
         db.commit()
