@@ -4,7 +4,11 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
-from app.core.config import GEMINI_API_KEY, GEMINI_MODEL
+from app.core.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    GEMINI_TIMEOUT_SECONDS,
+)
 from app.ai.accessibility_schemas import AccessibilityAnalysis
 
 
@@ -187,7 +191,12 @@ def analyze_pdf_with_gemini(file_path: str) -> dict:
     if not pdf_path.is_file():
         raise FileNotFoundError(file_path)
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = genai.Client(
+        api_key=GEMINI_API_KEY,
+        http_options=types.HttpOptions(
+            timeout=int(GEMINI_TIMEOUT_SECONDS * 1000),
+        ),
+    )
     uploaded_file = None
 
     try:
