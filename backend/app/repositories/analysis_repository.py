@@ -8,7 +8,9 @@ from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 
 # Sin latido en este tiempo, un "processing" se considera huérfano.
-STALE_AFTER = timedelta(minutes=15)
+# El latido lo refresca un hilo mientras dura la llamada a Gemini; este
+# umbral es solo la red de seguridad si el worker murió sin avisar.
+STALE_AFTER = timedelta(minutes=30)
 
 
 def is_stale(analysis: Analysis, now: datetime | None = None) -> bool:
@@ -54,6 +56,24 @@ def update_status(
     db.refresh(analysis)
 
     return analysis
+
+
+def touch_heartbeat(
+    db: Session,
+    analysis_id: int,
+) -> None:
+    """Refresca updated_at sin cambiar el paso (latido durante Gemini)."""
+    statement = (
+        update(Analysis)
+        .where(
+            Analysis.id == analysis_id,
+            Analysis.status.in_(("processing", "cancelling")),
+        )
+        .values(updated_at=datetime.now(timezone.utc))
+    )
+
+    db.execute(statement)
+    db.commit()
 
 
 def get_by_id(

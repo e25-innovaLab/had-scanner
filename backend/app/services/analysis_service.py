@@ -1,5 +1,6 @@
 
 import logging
+import threading
 
 from sqlalchemy.orm import Session
 
@@ -74,6 +75,43 @@ def create_material_analysis(
 
 
 
+HEARTBEAT_INTERVAL_SECONDS = 60
+
+
+def _start_heartbeat(analysis_id: int) -> threading.Event:
+    """Refresca updated_at mientras dura el análisis, aunque Gemini tarde.
+
+    Devuelve un Event: al activarlo, el hilo termina.
+    """
+    stop = threading.Event()
+
+    def beat() -> None:
+        db = SessionLocal()
+        try:
+            while not stop.wait(HEARTBEAT_INTERVAL_SECONDS):
+                try:
+                    analysis_repository.touch_heartbeat(
+                        db=db,
+                        analysis_id=analysis_id,
+                    )
+                except Exception:
+                    db.rollback()
+                    logger.warning(
+                        "Heartbeat failed for analysis %s",
+                        analysis_id,
+                        exc_info=True,
+                    )
+        finally:
+            db.close()
+
+    threading.Thread(
+        target=beat,
+        daemon=True,
+        name=f"heartbeat-{analysis_id}",
+    ).start()
+    return stop
+
+
 def process_analysis_task(
     analysis_id: int,
     material_id: int,
@@ -122,11 +160,15 @@ def process_analysis_task(
                 f"Material {material_id} not found or not uploaded"
             )
 
-        result = analyze_material(
-            material.file_path,
-            on_step=set_analysis_step,
-            check_cancelled=check_cancelled,
-        )
+        heartbeat = _start_heartbeat(analysis_id)
+        try:
+            result = analyze_material(
+                material.file_path,
+                on_step=set_analysis_step,
+                check_cancelled=check_cancelled,
+            )
+        finally:
+            heartbeat.set()
 
         check_cancelled()
 
