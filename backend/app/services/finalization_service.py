@@ -11,7 +11,6 @@ from app.repositories import (
 from app.repositories import material_repository
 from app.utils.pdf_parser import extract_document
 from app.utils.pdf_generator import generate_pdf, extract_document_title
-from app.utils.object_storage import resolve_material_path
 from app.models.finalized_document import FinalizedDocument
 
 
@@ -191,8 +190,7 @@ def finalize_material(
     )
 
     # 4. Parse the original document.
-    local_path = str(resolve_material_path(material.file_path))
-    document = extract_document(local_path)
+    document = extract_document(material.file_path)
 
     document_title = extract_document_title(document)
 
