@@ -177,6 +177,11 @@ function rememberBackendProposal(
   );
 }
 
+function forgetBackendProposal(analysisId: string, barrierId: string): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(backendProposalKey(analysisId, barrierId));
+}
+
 function withBackendProposal(
   barrier: ApiBarrier,
   proposal: BackendProposalResponse | null,
@@ -207,10 +212,26 @@ async function mapBackendBarriers(
       const proposalId = storedBackendProposalId(analysisId, barrierId);
       const apiBarrier = toApiBarrier(barrier, analysisId);
       if (proposalId === null) return apiBarrier;
-      const proposal = await request<BackendProposalResponse>(
-        `/proposals/${proposalId}`,
-      );
-      return withBackendProposal(apiBarrier, proposal);
+      try {
+        const proposal = await request<BackendProposalResponse>(
+          `/proposals/${proposalId}`,
+        );
+        // Tras reiniciar la base los ids se reutilizan: si la propuesta
+        // guardada es de otra barrera, es un residuo y se descarta.
+        if (String(proposal.barrier_id) !== barrierId) {
+          forgetBackendProposal(analysisId, barrierId);
+          return apiBarrier;
+        }
+        return withBackendProposal(apiBarrier, proposal);
+      } catch (err) {
+        // Propuesta guardada que ya no existe (base reiniciada o borrada):
+        // no debe impedir revisar las barreras.
+        if (err instanceof ApiError && err.status === 404) {
+          forgetBackendProposal(analysisId, barrierId);
+          return apiBarrier;
+        }
+        throw err;
+      }
     }),
   );
 }
