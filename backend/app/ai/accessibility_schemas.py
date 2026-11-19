@@ -1,5 +1,7 @@
+
 from typing import Literal
 from pydantic import BaseModel, Field
+
 
 class AccessibilityEvidence(BaseModel):
     page: int = Field(ge=1)
@@ -31,6 +33,13 @@ class AccessibilityBarrierCandidate(BaseModel):
     description: str
     justification: str
     recommendation: str
+
+    severity: Literal["high", "medium", "low"] = Field(
+        description=(
+            "Nivel de severidad de la barrera según su impacto "
+            "en la accesibilidad y comprensión del material educativo."
+        )
+    )
 
     evidence: list[AccessibilityEvidence] = Field(
         min_length=1,

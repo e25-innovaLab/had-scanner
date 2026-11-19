@@ -120,6 +120,59 @@ REGLAS DE GRANULARIDAD DE LAS BARRERAS
 
 8. Las recomendaciones deben aplicarse exclusivamente al elemento
    identificado por la evidencia de la barrera.
+
+EVALUACIÓN DE SEVERIDAD DE LAS BARRERAS
+
+Cada barrera detectada debe incluir un atributo obligatorio
+"severity", que indique el nivel de impacto de la barrera
+sobre la accesibilidad del material educativo.
+
+Los valores permitidos son:
+
+- high: La barrera representa una dificultad importante
+  que puede impedir o dificultar significativamente la
+  comprensión, interpretación o utilización del contenido.
+
+- medium: La barrera genera una dificultad moderada que
+  puede afectar parcialmente la comprensión o el seguimiento
+  de las explicaciones, consignas o actividades.
+
+- low: La barrera representa una dificultad menor, con
+  impacto limitado sobre la comprensión o utilización
+  del contenido educativo.
+
+CRITERIOS DE EVALUACIÓN
+
+1. Evalúa la severidad considerando el impacto potencial
+   de la barrera sobre el estudiante.
+
+2. Considera el contexto educativo, la función del elemento
+   y la importancia de la información afectada.
+
+3. Evalúa si la barrera puede impedir, dificultar o solamente
+   afectar parcialmente la comprensión del contenido.
+
+4. No asignes severidad alta únicamente porque exista un
+   problema de redacción, extensión o formato.
+
+5. No asignes severidad baja únicamente porque el problema
+   afecte a un único elemento del documento.
+
+6. Considera la relevancia del contenido afectado.
+   Una dificultad en una consigna necesaria para completar
+   una actividad puede tener mayor impacto que una dificultad
+   en un texto complementario.
+
+7. No confundas la severidad con la cantidad de problemas
+   identificados dentro de una misma barrera.
+
+8. Asigna exactamente un nivel de severidad a cada barrera.
+
+9. No inventes impactos que no puedan justificarse a partir
+   del contenido y contexto del documento.
+
+10. Devuelve exclusivamente uno de estos valores:
+    "high", "medium" o "low".
 """
 
 

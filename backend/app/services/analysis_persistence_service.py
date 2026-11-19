@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.barrier_evidence import BarrierEvidence
+from app.services.accessibility_score_service import (
+    calculate_accessibility_score,
+)
 from app.core.exceptions import AnalysisCancelledException
 
 
@@ -40,6 +43,9 @@ def persist_analysis(
                 f"Analysis {analysis_id} is not processing"
             )
 
+    try:
+        # Calculate the accessibility score.
+        score = calculate_accessibility_score(barriers_data)
         for barrier_data in barriers_data:
             evidence_data = barrier_data.get("evidence", [])
 
@@ -54,11 +60,18 @@ def persist_analysis(
                 if isinstance(evidence.get("page"), int)
             })
 
+            severity = barrier_data["severity"]
+
+            if severity not in {"high", "medium", "low"}:
+                raise ValueError(
+                    f"Invalid barrier severity: {severity}"
+                )
+
             barrier = Barrier(
                 analysis_id=analysis.id,
                 type=barrier_data["dimension"],
                 title=barrier_data["title"],
-                severity="medium",
+                severity=severity,
                 location={"pages": pages},
                 description=barrier_data["description"],
                 justification=barrier_data["justification"],
@@ -88,7 +101,7 @@ def persist_analysis(
 
         analysis.status = "completed"
         analysis.current_step = "completed"
-        analysis.score = 100
+        analysis.score = score
         analysis.error_message = None
 
         db.commit()

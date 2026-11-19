@@ -1,5 +1,6 @@
 
 from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 
 
 class BarrierEvidenceResponse(BaseModel):
@@ -20,7 +21,7 @@ class BarrierResponse(BaseModel):
     id: int
     type: str
     title: str
-    severity: str
+    severity: Literal["high", "medium", "low"]
     location: dict
     description: str
     justification: str
