@@ -1,9 +1,22 @@
 
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
+
+# Sin latido en este tiempo, un "processing" se considera huérfano.
+STALE_AFTER = timedelta(minutes=15)
+
+
+def is_stale(analysis: Analysis, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    reference = analysis.updated_at or analysis.created_at
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    return (now - reference) > STALE_AFTER
 
 
 def create_pending(
@@ -71,7 +84,10 @@ def update_current_step(
             Analysis.id == analysis_id,
             Analysis.status == "processing",
         )
-        .values(current_step=current_step)
+        .values(
+            current_step=current_step,
+            updated_at=datetime.now(timezone.utc),  # latido
+        )
     )
 
     db.execute(statement)
@@ -165,8 +181,33 @@ def mark_failed_if_processing(
             status="failed",
             current_step="failed",
             error_message=error_message,
+            updated_at=datetime.now(timezone.utc),
         )
     )
 
     db.execute(statement)
     db.commit()
+
+
+def fail_interrupted_analyses(
+    db: Session,
+    error_message: str = (
+        "Análisis interrumpido por reinicio del servidor."
+    ),
+) -> int:
+    """Marca processing/cancelling residuales como failed. Devuelve cuántos."""
+    statement = (
+        update(Analysis)
+        .where(Analysis.status.in_(("processing", "cancelling")))
+        .values(
+            status="failed",
+            current_step="failed",
+            error_message=error_message,
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+
+    result = db.execute(statement)
+    db.commit()
+
+    return result.rowcount or 0

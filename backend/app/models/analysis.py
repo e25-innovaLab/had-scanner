@@ -50,6 +50,14 @@ class Analysis(Base):
         default=lambda: datetime.now(timezone.utc),
     )
 
+    # Latido: se refresca en cada cambio de paso (ver analysis_repository).
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
     barriers: Mapped[list["Barrier"]] = relationship(
         back_populates="analysis",
         cascade="all, delete-orphan",

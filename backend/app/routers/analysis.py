@@ -68,9 +68,17 @@ def analyze_material_endpoint(
     )
 
     if active_analysis is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An analysis is already processing for this material.",
+        if not analysis_repository.is_stale(active_analysis):
+            # Análisis vivo: devolver el mismo en lugar de duplicarlo.
+            return active_analysis
+
+        # Huérfano (sin latido reciente): liberar el candado.
+        analysis_repository.mark_failed_if_processing(
+            db=db,
+            analysis_id=active_analysis.id,
+            error_message=(
+                "Análisis interrumpido. Se liberó para permitir un reintento."
+            ),
         )
 
     try:
