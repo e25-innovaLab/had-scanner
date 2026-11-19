@@ -597,6 +597,12 @@ export const api = {
     return request<BackendAnalysis>(`/analysis/${analysisId}`);
   },
 
+  cancelBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
+    return request<BackendAnalysis>(`/analysis/${analysisId}/cancel`, {
+      method: "POST",
+    });
+  },
+
   finalizeMaterial(materialId: number): Promise<FinalizeResponse> {
     return request<FinalizeResponse>(`/materials/${materialId}/finalize`, {
       method: "POST",

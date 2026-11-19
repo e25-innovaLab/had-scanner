@@ -33,7 +33,12 @@ import { ANALYSIS_PIPELINE } from "@/lib/api/analysis-pipeline";
 import { waitForBackendAnalysis } from "@/lib/api/wait-for-backend-analysis";
 import { cn } from "@/lib/utils";
 
-export type AnalysisUiStatus = "analyzing" | "ready" | "failed" | "incomplete";
+export type AnalysisUiStatus =
+  | "analyzing"
+  | "ready"
+  | "failed"
+  | "incomplete"
+  | "cancelled";
 
 type Row = {
   id: string;
@@ -85,7 +90,7 @@ function rowsFromStep(step: string, failed: boolean): Row[] {
 
 function resolveUiStatus(
   rows: Row[],
-  base: "analyzing" | "ready" | "failed",
+  base: "analyzing" | "ready" | "failed" | "cancelled",
 ): AnalysisUiStatus {
   if (base !== "failed") return base;
   const done = rows.filter((row) => row.status === "done").length;
@@ -116,6 +121,7 @@ export function AnalysisChecklist({
   const [materialId, setMaterialId] = useState<number | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [stopping, setStopping] = useState(false);
 
   const doneCount = useMemo(
     () => rows.filter((row) => row.status === "done").length,
@@ -143,7 +149,10 @@ export function AnalysisChecklist({
   }
 
   const isFinished =
-    status === "ready" || status === "failed" || status === "incomplete";
+    status === "ready" ||
+    status === "failed" ||
+    status === "incomplete" ||
+    status === "cancelled";
 
   const displayElapsedSec =
     analysisId && (isFinished || readAnalysisEndedAt(analysisId) != null)
@@ -167,7 +176,12 @@ export function AnalysisChecklist({
     let timer: number | undefined;
 
     function applyStatus(next: AnalysisUiStatus, nextRows: Row[]) {
-      if (next === "ready" || next === "failed" || next === "incomplete") {
+      if (
+        next === "ready" ||
+        next === "failed" ||
+        next === "incomplete" ||
+        next === "cancelled"
+      ) {
         markAnalysisEnded(analysisId!);
       }
       setStatus(next);
@@ -189,17 +203,28 @@ export function AnalysisChecklist({
                 a.material_name?.trim() || `material-${a.material_id}.pdf`,
               );
               setFileSize(0);
+              const stopped = a.status === "cancelled";
               const nextRows = rowsFromStep(
                 a.current_step,
                 a.status === "failed",
+              ).map((row) =>
+                stopped && row.status === "running"
+                  ? { ...row, status: "pending" as const }
+                  : row,
               );
               setRows(nextRows);
+              setStopping((prev) =>
+                a.status === "cancelling" ||
+                (prev && a.status === "processing"),
+              );
               const base =
                 a.status === "completed"
                   ? "ready"
                   : a.status === "failed"
                     ? "failed"
-                    : "analyzing";
+                    : stopped
+                      ? "cancelled"
+                      : "analyzing";
               applyStatus(resolveUiStatus(nextRows, base), nextRows);
               setError(
                 a.status === "failed"
@@ -277,12 +302,31 @@ export function AnalysisChecklist({
     }
   }
 
+  async function cancelAnalysis() {
+    if (!analysisId || !isBackendId(analysisId) || stopping) return;
+    setStopping(true);
+    setError(null);
+    try {
+      // El polling refleja el estado: cancelling → cancelled.
+      await api.cancelBackendAnalysis(Number(analysisId));
+    } catch (err) {
+      setStopping(false);
+      setError(
+        toUserFacingErrorMessage(
+          err instanceof Error ? err.message : "No se pudo detener el análisis",
+          { fallback: "No se pudo detener el análisis" },
+        ),
+      );
+    }
+  }
+
   if (!analysisId) {
     return <MissingAnalysis step="analizar el material" />;
   }
 
   const incomplete = status === "incomplete";
   const failed = status === "failed";
+  const stopped = status === "cancelled";
 
   return (
     <div className="space-y-4">
@@ -302,25 +346,40 @@ export function AnalysisChecklist({
             </p>
           </div>
         </div>
-        <Pill
-          tone={
-            status === "ready"
-              ? "ok"
+        <div className="flex shrink-0 items-center gap-2">
+          {status === "analyzing" && isBackendId(analysisId) ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={stopping}
+              onClick={() => void cancelAnalysis()}
+            >
+              {stopping ? "Deteniendo…" : "Detener"}
+            </Button>
+          ) : null}
+          <Pill
+            tone={
+              status === "ready"
+                ? "ok"
+                : incomplete || stopped
+                  ? "warn"
+                  : failed
+                    ? "alta"
+                    : "step"
+            }
+          >
+            {status === "ready"
+              ? "Listo"
               : incomplete
-                ? "warn"
+                ? "Análisis incompleto"
                 : failed
-                  ? "alta"
-                  : "step"
-          }
-        >
-          {status === "ready"
-            ? "Listo"
-            : incomplete
-              ? "Análisis incompleto"
-              : failed
-                ? "Falló"
-                : "Analizando..."}
-        </Pill>
+                  ? "Falló"
+                  : stopped
+                    ? "Detenido"
+                    : "Analizando..."}
+          </Pill>
+        </div>
       </Card>
 
       {status === "analyzing" ? (
@@ -365,7 +424,18 @@ export function AnalysisChecklist({
         </Card>
       ) : null}
 
-      {failed || incomplete ? (
+      {stopped ? (
+        <Card className="shadow-none ring-1 ring-border/70">
+          <CardContent className="space-y-2 py-4">
+            <p className="text-sm font-semibold">Detuviste el análisis.</p>
+            <p className="text-sm leading-6">
+              Podés analizar el material de nuevo cuando quieras.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {failed || incomplete || stopped ? (
         <div className="flex flex-wrap gap-2">
           {materialId != null ? (
             <Button

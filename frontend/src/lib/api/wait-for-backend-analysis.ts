@@ -14,7 +14,11 @@ export async function waitForBackendAnalysis(
     const a = await api.getBackendAnalysis(analysisId);
     opts?.onStep?.(a);
 
-    if (a.status === "completed" || a.status === "failed") {
+    if (
+      a.status === "completed" ||
+      a.status === "failed" ||
+      a.status === "cancelled"
+    ) {
       return a;
     }
 
