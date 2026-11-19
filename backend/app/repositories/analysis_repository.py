@@ -151,19 +151,20 @@ def get_processing_by_material(
 def mark_failed_if_processing(
     db: Session,
     analysis_id: int,
+    error_message: str = (
+        "No se pudo completar el análisis del material."
+    ),
 ) -> None:
     statement = (
         update(Analysis)
         .where(
             Analysis.id == analysis_id,
-            Analysis.status == "processing",
+            Analysis.status.in_(("processing", "cancelling")),
         )
         .values(
             status="failed",
             current_step="failed",
-            error_message=(
-                "No se pudo completar el análisis del material."
-            ),
+            error_message=error_message,
         )
     )
 

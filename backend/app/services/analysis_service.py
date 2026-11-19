@@ -169,7 +169,6 @@ def process_analysis_task(
             analysis_repository.mark_failed_if_processing(
                 db=db,
                 analysis_id=analysis_id,
-                status="failed",
                 error_message=user_message,
             )
 
