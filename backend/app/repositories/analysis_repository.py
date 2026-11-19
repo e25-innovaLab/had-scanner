@@ -125,8 +125,12 @@ def request_cancellation(
             Analysis.status == "processing",
         )
         .values(
-            status="cancelling",
-            current_step="cancelling",
+            # Se cierra al instante: el worker sigue esperando a Gemini, pero
+            # su resultado se descarta (persist_analysis rechaza cualquier
+            # estado distinto de "processing").
+            status="cancelled",
+            current_step="cancelled",
+            updated_at=datetime.now(timezone.utc),
         )
     )
 
@@ -153,6 +157,8 @@ def finish_cancellation(
     db: Session,
     analysis_id: int,
 ) -> None:
+    # Solo aplica a filas heredadas en "cancelling": ahora cancelar cierra
+    # directamente en "cancelled" (ver request_cancellation).
     statement = (
         update(Analysis)
         .where(

@@ -307,7 +307,7 @@ export function AnalysisChecklist({
     setStopping(true);
     setError(null);
     try {
-      // El polling refleja el estado: cancelling → cancelled.
+      // El backend cierra en "cancelled" al instante; el polling lo refleja.
       await api.cancelBackendAnalysis(Number(analysisId));
     } catch (err) {
       setStopping(false);
