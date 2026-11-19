@@ -1,4 +1,5 @@
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.analysis import Analysis
@@ -42,8 +43,6 @@ def persist_analysis(
             raise RuntimeError(
                 f"Analysis {analysis_id} is not processing"
             )
-
-    try:
         # Calculate the accessibility score.
         score = calculate_accessibility_score(barriers_data)
         for barrier_data in barriers_data:
