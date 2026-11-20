@@ -333,27 +333,13 @@ export function AdaptBoard({
     const left =
       displayStateById[entry.id]?.remaining ?? entry.remainingAttempts;
     setOverlay({ entryId: entry.id, kind: "edit" });
-    if (usesBackendApi) {
-      navigate(
-        detalleHref(entry, {
-          origen: "ia",
-          desde: "editar",
-          intentos: left,
-        }),
-      );
-      return;
-    }
-    window.setTimeout(() => {
-      void api.reopen(analysisId, entry.id).finally(() => {
-        navigate(
-          detalleHref(entry, {
-            origen: "ia",
-            desde: "editar",
-            intentos: left,
-          }),
-        );
-      });
-    }, RESUME_EDIT_TIMEOUT_MS);
+    navigate(
+      detalleHref(entry, {
+        origen: "ia",
+        desde: "editar",
+        intentos: left,
+      }),
+    );
   }
 
   function generate(entry: ApiBarrier) {
@@ -388,7 +374,11 @@ export function AdaptBoard({
 
   function openBarrier(entry: ApiBarrier) {
     const state = displayStateById[entry.id] ?? toState(entry);
-    if (state.decision === "accepted" || state.mode === "ready") {
+    if (
+      state.decision === "discarded" ||
+      state.decision === "accepted" ||
+      state.mode === "ready"
+    ) {
       resumeEdit(entry);
       return;
     }
@@ -692,17 +682,22 @@ export function AdaptBoard({
                   : isNext
                     ? "Próxima"
                     : "Pendiente";
+            const isDiscarded = decision === "discarded";
+            const isAccepted = decision === "accepted";
             const actionLabel =
-              decision === "accepted" || state.mode === "ready"
-                ? "Ver o cambiar"
-                : "Revisar";
+              isAccepted || isDiscarded
+                ? "Ver"
+                : state.mode === "ready"
+                  ? "Ver o cambiar"
+                  : "Revisar";
 
             return (
               <Card
                 key={entry.id}
                 className={cn(
                   "flex-row flex-wrap items-center gap-3 px-(--card-spacing) py-3 sm:flex-nowrap",
-                  isNext && "ring-2 ring-ink",
+                  isNext && !isDiscarded && "ring-2 ring-ink",
+                  isDiscarded && "opacity-80",
                 )}
               >
                 <span
@@ -799,8 +794,8 @@ export function AdaptBoard({
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Revisar</span> abre el
             detalle. Ahí podés generar una propuesta con IA.{" "}
-            <span className="font-medium text-foreground">Ver o cambiar</span>{" "}
-            retoma una propuesta ya aceptada o generada.
+            <span className="font-medium text-foreground">Ver</span> muestra una
+            barrera aceptada o descartada en solo lectura.
           </p>
         </div>
       ) : (

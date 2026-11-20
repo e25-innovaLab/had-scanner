@@ -53,10 +53,11 @@ export function CargarStep() {
     null,
   );
 
-  const canContinue = useRealApi
-    ? Boolean(file && file.name.toLowerCase().endsWith(".pdf"))
-    : mode === "archivo"
-      ? Boolean(file)
+  const canContinue =
+    mode === "archivo"
+      ? Boolean(
+          file && (!useRealApi || file.name.toLowerCase().endsWith(".pdf")),
+        )
       : text.trim().length > 0;
 
   async function startAnalysisForMaterial(materialId: number) {
@@ -142,9 +143,33 @@ export function CargarStep() {
         }
       }
 
-      setError(
-        "En el camino API real hace falta un PDF. Para texto u otros formatos, volvé al inicio y elegí Demo (mock).",
-      );
+      if (mode === "texto" && text.trim()) {
+        const name =
+          text.trim().split("\n")[0]?.slice(0, 80).trim() || "Material pegado";
+        setStatusLabel("Convirtiendo texto a PDF…");
+        try {
+          const material = await api.uploadMaterialFromText(name, text.trim());
+          await startAnalysisForMaterial(material.id);
+          return;
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409) {
+            const { materials } = await api.listMaterials();
+            const match = findMaterialByFileName(materials, `${name}.pdf`);
+            setDuplicateMaterial(match ?? null);
+            setError(
+              match
+                ? "Este material ya está cargado. Podés analizarlo de nuevo con el botón de abajo o desde el historial."
+                : "Este material ya está cargado. Elegilo en el historial de abajo para analizarlo de nuevo.",
+            );
+            setSubmitting(false);
+            setStatusLabel(null);
+            return;
+          }
+          throw err;
+        }
+      }
+
+      setError("Elegí un PDF o pegá texto para continuar.");
       setSubmitting(false);
       setStatusLabel(null);
     } catch (err) {
@@ -159,7 +184,7 @@ export function CargarStep() {
   return (
     <>
       <UploadPanel
-        pdfOnly={useRealApi}
+        pdfOnly={false}
         onSelectionChange={({
           file: nextFile,
           text: nextText,
@@ -167,15 +192,15 @@ export function CargarStep() {
         }) => {
           setFile(nextFile);
           setText(nextText);
-          setMode(useRealApi ? "archivo" : nextMode);
+          setMode(nextMode);
           setError(null);
           setDuplicateMaterial(null);
         }}
       />
       {useRealApi ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          API real: solo PDF (máx. 50 MB). El historial reutiliza materiales ya
-          subidos. Para Word, PowerPoint o texto pegado, usá Demo (mock).
+          API real: PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el
+          servidor). El historial reutiliza materiales ya subidos.
         </p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">

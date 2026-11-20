@@ -2,23 +2,14 @@ import {
   AI_ATTEMPTS_PER_BARRIER,
   BARRIERS,
   DETAIL_BARRIERS,
-  DIMENSIONS,
 } from '@/lib/aula';
+import { ANALYSIS_PIPELINE } from '@/lib/api/analysis-pipeline';
 import type { ApiBarrier, DimensionProgress } from '@/lib/api/types';
 
-const DIMENSION_IDS = [
-  'comprension',
-  'estructura',
-  'visual',
-  'representacion',
-  'multimedia',
-  'navegacion',
-] as const;
-
 export function initialDimensionProgress(): DimensionProgress[] {
-  return DIMENSION_IDS.map((id, index) => ({
-    id,
-    label: DIMENSIONS[index] ?? id,
+  return ANALYSIS_PIPELINE.map((step) => ({
+    id: step.id,
+    label: step.label,
     status: 'pending' as const,
   }));
 }

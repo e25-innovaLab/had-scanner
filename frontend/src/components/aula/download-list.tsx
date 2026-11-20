@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import type { ExportFile } from '@/lib/api/types';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import type { ExportFile } from "@/lib/api/types";
 
 export function DownloadList({
   files,
@@ -14,21 +14,34 @@ export function DownloadList({
 }) {
   const [done, setDone] = useState<Record<string, boolean>>({});
 
-  function download(name: string) {
+  function download(file: ExportFile) {
+    if (file.url) {
+      const anchor = document.createElement("a");
+      anchor.href = file.url;
+      anchor.download = file.name;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.click();
+      setDone((current) => ({ ...current, [file.name]: true }));
+      onDownloaded?.(file.name);
+      return;
+    }
+
     const blob = new Blob(
-      [`VERA — ${name}\nMaterial simulado exportado desde la API local.\n`],
-      { type: 'text/plain;charset=utf-8' }
+      [
+        `VERA — ${file.name}\nMaterial simulado exportado desde la API local.\n`,
+      ],
+      { type: "text/plain;charset=utf-8" },
     );
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
+    const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = name.replace(/\.(pdf|docx)$/i, '.txt');
+    anchor.download = file.name.replace(/\.(pdf|docx)$/i, ".txt");
     anchor.click();
     URL.revokeObjectURL(url);
-    setDone((current) => ({ ...current, [name]: true }));
-    onDownloaded?.(name);
+    setDone((current) => ({ ...current, [file.name]: true }));
+    onDownloaded?.(file.name);
   }
-
   if (files.length === 0) {
     return (
       <Card className="px-4 py-4 text-sm text-muted-foreground">
@@ -52,9 +65,9 @@ export function DownloadList({
             type="button"
             variant="outline"
             className="h-10 px-4 sm:shrink-0"
-            onClick={() => download(file.name)}
+            onClick={() => download(file)}
           >
-            {done[file.name] ? 'Descargado' : 'Descargar'}
+            {done[file.name] ? "Descargado" : "Descargar"}
           </Button>
         </div>
       ))}
