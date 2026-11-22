@@ -1,4 +1,5 @@
-
+import tempfile
+from shutil import copyfile
 from pathlib import Path
 
 from google import genai
@@ -191,7 +192,13 @@ def analyze_pdf_with_gemini(file_path: str) -> dict:
     uploaded_file = None
 
     try:
-        uploaded_file = client.files.upload(file=str(pdf_path))
+        with tempfile.TemporaryDirectory() as temp_dir:
+         safe_path = Path(temp_dir) / "material.pdf"
+         copyfile(pdf_path, safe_path)
+
+         uploaded_file = client.files.upload(
+            file=str(safe_path)
+         )
 
         response = client.models.generate_content(
             model=GEMINI_MODEL,
