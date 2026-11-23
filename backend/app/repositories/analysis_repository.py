@@ -1,9 +1,24 @@
 
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
+
+# Sin latido en este tiempo, un "processing" se considera huérfano.
+# El latido lo refresca un hilo mientras dura la llamada a Gemini; este
+# umbral es solo la red de seguridad si el worker murió sin avisar.
+STALE_AFTER = timedelta(minutes=30)
+
+
+def is_stale(analysis: Analysis, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    reference = analysis.updated_at or analysis.created_at
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    return (now - reference) > STALE_AFTER
 
 
 def create_pending(
@@ -43,6 +58,24 @@ def update_status(
     return analysis
 
 
+def touch_heartbeat(
+    db: Session,
+    analysis_id: int,
+) -> None:
+    """Refresca updated_at sin cambiar el paso (latido durante Gemini)."""
+    statement = (
+        update(Analysis)
+        .where(
+            Analysis.id == analysis_id,
+            Analysis.status.in_(("processing", "cancelling")),
+        )
+        .values(updated_at=datetime.now(timezone.utc))
+    )
+
+    db.execute(statement)
+    db.commit()
+
+
 def get_by_id(
     db: Session,
     analysis_id: int,
@@ -71,7 +104,10 @@ def update_current_step(
             Analysis.id == analysis_id,
             Analysis.status == "processing",
         )
-        .values(current_step=current_step)
+        .values(
+            current_step=current_step,
+            updated_at=datetime.now(timezone.utc),  # latido
+        )
     )
 
     db.execute(statement)
@@ -89,8 +125,12 @@ def request_cancellation(
             Analysis.status == "processing",
         )
         .values(
-            status="cancelling",
-            current_step="cancelling",
+            # Se cierra al instante: el worker sigue esperando a Gemini, pero
+            # su resultado se descarta (persist_analysis rechaza cualquier
+            # estado distinto de "processing").
+            status="cancelled",
+            current_step="cancelled",
+            updated_at=datetime.now(timezone.utc),
         )
     )
 
@@ -117,6 +157,8 @@ def finish_cancellation(
     db: Session,
     analysis_id: int,
 ) -> None:
+    # Solo aplica a filas heredadas en "cancelling": ahora cancelar cierra
+    # directamente en "cancelled" (ver request_cancellation).
     statement = (
         update(Analysis)
         .where(
@@ -151,21 +193,47 @@ def get_processing_by_material(
 def mark_failed_if_processing(
     db: Session,
     analysis_id: int,
+    error_message: str = (
+        "No se pudo completar el análisis del material."
+    ),
 ) -> None:
     statement = (
         update(Analysis)
         .where(
             Analysis.id == analysis_id,
-            Analysis.status == "processing",
+            Analysis.status.in_(("processing", "cancelling")),
         )
         .values(
             status="failed",
             current_step="failed",
-            error_message=(
-                "No se pudo completar el análisis del material."
-            ),
+            error_message=error_message,
+            updated_at=datetime.now(timezone.utc),
         )
     )
 
     db.execute(statement)
     db.commit()
+
+
+def fail_interrupted_analyses(
+    db: Session,
+    error_message: str = (
+        "Análisis interrumpido por reinicio del servidor."
+    ),
+) -> int:
+    """Marca processing/cancelling residuales como failed. Devuelve cuántos."""
+    statement = (
+        update(Analysis)
+        .where(Analysis.status.in_(("processing", "cancelling")))
+        .values(
+            status="failed",
+            current_step="failed",
+            error_message=error_message,
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+
+    result = db.execute(statement)
+    db.commit()
+
+    return result.rowcount or 0

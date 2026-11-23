@@ -1,14 +1,41 @@
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.database.session import SessionLocal
+from app.repositories import analysis_repository
 from app.routers.materials import router as materials_router
 from app.routers import analysis, proposals, finalization, adaptations, barriers
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Al arrancar, las tareas en background de la instancia anterior ya murieron.
+    db = SessionLocal()
+    try:
+        count = analysis_repository.fail_interrupted_analyses(db=db)
+        if count:
+            logger.warning(
+                "Marked %s interrupted analyses as failed on startup",
+                count,
+            )
+    except Exception:
+        logger.exception("Could not clean up interrupted analyses on startup")
+    finally:
+        db.close()
+    yield
+
 
 app = FastAPI(
     title="API de Accesibilidad Docente",
     description="API para el análisis de accesibilidad de materiales educativos.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

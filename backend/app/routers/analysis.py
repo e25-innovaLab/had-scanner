@@ -68,9 +68,17 @@ def analyze_material_endpoint(
     )
 
     if active_analysis is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An analysis is already processing for this material.",
+        if not analysis_repository.is_stale(active_analysis):
+            # Análisis vivo: devolver el mismo en lugar de duplicarlo.
+            return active_analysis
+
+        # Huérfano (sin latido reciente): liberar el candado.
+        analysis_repository.mark_failed_if_processing(
+            db=db,
+            analysis_id=active_analysis.id,
+            error_message=(
+                "Análisis interrumpido. Se liberó para permitir un reintento."
+            ),
         )
 
     try:
@@ -117,7 +125,10 @@ def get_analysis_by_id_endpoint(
         )
 
     return analysis
-@analysis_by_id_router.post("/{analysis_id}/cancel")
+@analysis_by_id_router.post(
+    "/{analysis_id}/cancel",
+    response_model=AnalysisResponse,
+)
 def cancel_analysis_endpoint(
     analysis_id: int,
     db: Session = Depends(get_db),
@@ -133,10 +144,26 @@ def cancel_analysis_endpoint(
             detail="Analysis not found.",
         )
 
+    # Idempotente: si ya se pidió cancelar, devolver el estado actual.
+    if analysis.status in ("cancelling", "cancelled"):
+        return analysis
+
     if analysis.status != "processing":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Analysis cannot be cancelled.",
+        )
+
+    # Huérfano: no hay worker que procese la cancelación; cerrarlo ya.
+    if analysis_repository.is_stale(analysis):
+        analysis_repository.mark_failed_if_processing(
+            db=db,
+            analysis_id=analysis_id,
+            error_message="Análisis cancelado (sin progreso reciente).",
+        )
+        return analysis_repository.get_by_id(
+            db=db,
+            analysis_id=analysis_id,
         )
 
     cancelled = analysis_repository.request_cancellation(
@@ -145,16 +172,22 @@ def cancel_analysis_endpoint(
     )
 
     if not cancelled:
+        # Otro request cambió el estado entre medio.
+        current = analysis_repository.get_by_id(
+            db=db,
+            analysis_id=analysis_id,
+        )
+        if current is not None and current.status in ("cancelling", "cancelled"):
+            return current
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Analysis status changed. Cancellation was not applied.",
         )
 
-    return {
-        "analysis_id": analysis_id,
-        "status": "cancelling",
-        "message": "Analysis cancellation requested.",
-    }
+    return analysis_repository.get_by_id(
+        db=db,
+        analysis_id=analysis_id,
+    )
 
 # Endpoint para pruebas
 """

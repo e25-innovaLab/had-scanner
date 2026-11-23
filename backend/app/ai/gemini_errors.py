@@ -34,10 +34,12 @@ MSG_GENERIC = "No se pudo completar el análisis del material."
 
 
 def _exception_blob(exc: BaseException) -> str:
-    parts: list[str] = [str(exc)]
+    # El nombre de la clase importa: p. ej. httpx.ReadTimeout llega con
+    # mensaje vacío y solo el tipo revela que fue un timeout.
+    parts: list[str] = [str(exc), type(exc).__name__]
     cause = exc.__cause__ or exc.__context__
     if cause is not None:
-        parts.append(str(cause))
+        parts.extend([str(cause), type(cause).__name__])
     # google.genai ServerError often embeds JSON in the message already.
     status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
     if status is not None:
