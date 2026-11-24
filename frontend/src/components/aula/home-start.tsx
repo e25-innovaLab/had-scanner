@@ -21,6 +21,32 @@ import {
   type FlowResume,
 } from '@/lib/api/url';
 import { DEFAULT_VERA_SOURCE, writeVeraSource } from '@/lib/api/vera-source';
+import { cn } from '@/lib/utils';
+
+const CONNECTION_SEGMENTS = 8;
+
+function ConnectionProgress({ filled }: { filled: number }) {
+  return (
+    <div
+      className="flex gap-1.5"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={CONNECTION_SEGMENTS}
+      aria-valuenow={filled}
+      aria-label="Conectando con Vera"
+    >
+      {Array.from({ length: CONNECTION_SEGMENTS }, (_, index) => (
+        <span
+          key={index}
+          className={cn(
+            'h-1.5 flex-1 rounded-full transition-colors duration-300',
+            index < filled ? 'bg-primary' : 'bg-muted'
+          )}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function HomeStart() {
   const navigate = useNavigate();
@@ -28,6 +54,7 @@ export function HomeStart() {
     readFlowResume()
   );
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
+  const [connectionFilled, setConnectionFilled] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +66,27 @@ export function HomeStart() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (backendUp === true) {
+      setConnectionFilled(CONNECTION_SEGMENTS);
+      return;
+    }
+    if (backendUp === false) {
+      return;
+    }
+
+    setConnectionFilled(1);
+    const timer = window.setInterval(() => {
+      setConnectionFilled((current) =>
+        current >= CONNECTION_SEGMENTS - 1 ? current : current + 1
+      );
+    }, 450);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [backendUp]);
 
   function startAnalysis() {
     if (backendUp !== true) return;
@@ -100,17 +148,24 @@ export function HomeStart() {
             Nuevo análisis
           </CardTitle>
           <CardDescription className="text-sm leading-6">
-            Subí un PDF para analizarlo con la API.
+            Subí un PDF para analizarlo con Vera.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-xs leading-5 text-muted-foreground">
-            {apiChecking
-              ? 'Comprobando disponibilidad del backend…'
-              : backendUp === false
-                ? 'Backend no disponible ahora (`/health`).'
-                : 'Solo PDF vía el backend desplegado.'}
-          </p>
+          {apiChecking ? (
+            <div className="space-y-2">
+              <ConnectionProgress filled={connectionFilled} />
+              <p className="text-xs leading-5 text-muted-foreground">
+                Preparando Vera…
+              </p>
+            </div>
+          ) : null}
+          {backendUp === false ? (
+            <p className="text-xs leading-5 text-muted-foreground">
+              Vera no está disponible por ahora. Probá de nuevo en unos
+              minutos.
+            </p>
+          ) : null}
           <Button
             type="button"
             size="lg"
