@@ -1,4 +1,4 @@
-/** Shared analysis checklist stages (API real + mock). */
+/** Etapas compartidas del análisis en la interfaz. */
 
 export const ANALYSIS_PIPELINE = [
   { id: "queued", label: "Preparando" },

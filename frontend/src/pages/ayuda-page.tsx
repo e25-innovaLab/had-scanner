@@ -10,7 +10,7 @@ import { FLOW_STEPS } from '@/lib/aula';
 import { cn } from '@/lib/utils';
 
 const HELP = [
-  'API real: solo PDF (máx. 50 MB). Demo: también Word, PowerPoint o texto pegado.',
+  'API real: PDF (máx. 50 MB) o texto pegado, convertido a PDF en el servidor.',
   'El sistema revisa solo las 6 dimensiones. No hace falta intervenir.',
   'Leé el diagnóstico: barreras, severidad y dónde aparecen. Todavía no hay adaptación.',
   'Pedí una propuesta solo en las barreras que elijas. Aceptá, editá o descartá.',

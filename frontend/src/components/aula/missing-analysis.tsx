@@ -8,7 +8,7 @@ export function MissingAnalysis({ step }: { step: string }) {
       <p className="font-medium">Falta un análisis activo</p>
       <p className="mt-1 text-muted-foreground">
         Para {step}, primero cargá un material. El flujo usa{' '}
-        <code className="text-xs">analysisId</code> en la URL (API simulada).
+        <code className="text-xs">analysisId</code> en la URL.
       </p>
       <Link
         to="/analisis/cargar"

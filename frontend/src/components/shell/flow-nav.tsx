@@ -5,11 +5,6 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { SideNav } from '@/components/shell/side-nav';
 import { resolveAnalysisId, withAnalysisId } from '@/lib/api/url';
-import {
-  readVeraSource,
-  VERA_SOURCE,
-  veraSourceLabel,
-} from '@/lib/api/vera-source';
 import { FLOW_STEPS } from '@/lib/aula';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +12,6 @@ export function FlowNav() {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const analysisId = resolveAnalysisId(searchParams.get('analysisId'));
-  const veraSource = readVeraSource() ?? VERA_SOURCE.mock;
   const isDetalle = pathname.startsWith('/analisis/detalle');
   const flowPath = isDetalle ? '/analisis/adaptar' : pathname;
   const currentIndex = Math.max(
@@ -104,9 +98,6 @@ export function FlowNav() {
           </div>
         );
       })}
-      <p className="mt-3 hidden px-3 text-[11px] leading-4 text-muted-foreground md:block">
-        Origen: {veraSourceLabel(veraSource)}
-      </p>
     </SideNav>
   );
 }
