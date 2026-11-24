@@ -5,6 +5,8 @@ export const VERA_SOURCE = {
 
 export type VeraSource = (typeof VERA_SOURCE)[keyof typeof VERA_SOURCE];
 
+export const DEFAULT_VERA_SOURCE = VERA_SOURCE.api;
+
 const STORAGE_KEY = "vera-data-source";
 
 export function isVeraSource(value: string): value is VeraSource {
@@ -20,6 +22,10 @@ export function readVeraSource(): VeraSource | null {
   } catch {
     return null;
   }
+}
+
+export function resolveVeraSource(): VeraSource {
+  return readVeraSource() ?? DEFAULT_VERA_SOURCE;
 }
 
 export function writeVeraSource(source: VeraSource) {

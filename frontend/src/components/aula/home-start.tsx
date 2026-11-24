@@ -20,12 +20,7 @@ import {
   withAnalysisId,
   type FlowResume,
 } from '@/lib/api/url';
-import {
-  VERA_SOURCE,
-  writeVeraSource,
-  type VeraSource,
-} from '@/lib/api/vera-source';
-import { cn } from '@/lib/utils';
+import { DEFAULT_VERA_SOURCE, writeVeraSource } from '@/lib/api/vera-source';
 
 export function HomeStart() {
   const navigate = useNavigate();
@@ -33,7 +28,6 @@ export function HomeStart() {
     readFlowResume()
   );
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
-  const [source, setSource] = useState<VeraSource>(VERA_SOURCE.mock);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,10 +41,10 @@ export function HomeStart() {
   }, []);
 
   function startAnalysis() {
-    if (source === VERA_SOURCE.api && backendUp !== true) return;
+    if (backendUp !== true) return;
     clearFlowResume();
     setResume(null);
-    writeVeraSource(source);
+    writeVeraSource(DEFAULT_VERA_SOURCE);
     navigate('/analisis/cargar');
   }
 
@@ -59,8 +53,6 @@ export function HomeStart() {
     : null;
   const apiDisabled = backendUp !== true;
   const apiChecking = backendUp === null;
-  const canStart =
-    source === VERA_SOURCE.mock || (source === VERA_SOURCE.api && !apiDisabled);
 
   return (
     <div className="space-y-4">
@@ -108,51 +100,22 @@ export function HomeStart() {
             Nuevo análisis
           </CardTitle>
           <CardDescription className="text-sm leading-6">
-            {source === VERA_SOURCE.api
-              ? 'Subí un PDF para analizarlo con la API real.'
-              : 'Subí un PDF, Word, PowerPoint o pegá texto directamente para empezar.'}
+            Subí un PDF para analizarlo con la API.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setSource(VERA_SOURCE.mock)}
-              className={cn(
-                'rounded-xl border px-3 py-2 text-left text-sm transition-[color,background-color,border-color]',
-                source === VERA_SOURCE.mock
-                  ? 'border-ink bg-ink text-sidebar-primary-foreground active:bg-ink/90'
-                  : 'border-border bg-card text-muted-foreground hover:text-foreground active:bg-muted'
-              )}
-            >
-              Demo (mock)
-            </button>
-            <button
-              type="button"
-              disabled={apiDisabled}
-              onClick={() => setSource(VERA_SOURCE.api)}
-              className={cn(
-                'rounded-xl border px-3 py-2 text-left text-sm transition-[color,background-color,border-color] disabled:pointer-events-none disabled:opacity-50',
-                source === VERA_SOURCE.api
-                  ? 'border-ink bg-ink text-sidebar-primary-foreground active:bg-ink/90'
-                  : 'border-border bg-card text-muted-foreground hover:text-foreground active:bg-muted'
-              )}
-            >
-              {apiChecking ? 'API real…' : 'API real'}
-            </button>
-          </div>
           <p className="text-xs leading-5 text-muted-foreground">
-            {source === VERA_SOURCE.mock
-              ? 'Demo: flujo completo con la API simulada (texto o archivo).'
+            {apiChecking
+              ? 'Comprobando disponibilidad del backend…'
               : backendUp === false
                 ? 'Backend no disponible ahora (`/health`).'
-                : 'API real: solo PDF vía el backend desplegado.'}
+                : 'Solo PDF vía el backend desplegado.'}
           </p>
           <Button
             type="button"
             size="lg"
             className="h-11 rounded-xl px-5 font-semibold"
-            disabled={!canStart}
+            disabled={apiDisabled}
             onClick={startAnalysis}
           >
             Comenzar

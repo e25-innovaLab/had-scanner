@@ -15,7 +15,7 @@ import {
   writeFlowResume,
 } from "@/lib/api/url";
 import {
-  readVeraSource,
+  resolveVeraSource,
   VERA_SOURCE,
   type VeraSource,
 } from "@/lib/api/vera-source";
@@ -38,9 +38,7 @@ function findMaterialByFileName(
 
 export function CargarStep() {
   const navigate = useNavigate();
-  const [source] = useState<VeraSource>(
-    () => readVeraSource() ?? VERA_SOURCE.mock,
-  );
+  const [source] = useState<VeraSource>(() => resolveVeraSource());
   const useRealApi = source === VERA_SOURCE.api;
 
   const [file, setFile] = useState<File | null>(null);
@@ -199,8 +197,8 @@ export function CargarStep() {
       />
       {useRealApi ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          API real: PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el
-          servidor). El historial reutiliza materiales ya subidos.
+          PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el servidor).
+          El historial reutiliza materiales ya subidos.
         </p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
