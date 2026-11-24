@@ -24,6 +24,9 @@ import { DEFAULT_VERA_SOURCE, writeVeraSource } from '@/lib/api/vera-source';
 import { cn } from '@/lib/utils';
 
 const CONNECTION_SEGMENTS = 8;
+const HEALTH_ATTEMPT_TIMEOUT_MS = 8000;
+const HEALTH_RETRY_GAP_MS = 2000;
+const HEALTH_MAX_WAIT_MS = 180_000;
 
 function ConnectionProgress({ filled }: { filled: number }) {
   return (
@@ -48,6 +51,12 @@ function ConnectionProgress({ filled }: { filled: number }) {
   );
 }
 
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 export function HomeStart() {
   const navigate = useNavigate();
   const [resume, setResume] = useState<FlowResume | null>(() =>
@@ -58,10 +67,29 @@ export function HomeStart() {
 
   useEffect(() => {
     let cancelled = false;
+    const startedAt = Date.now();
+
     void (async () => {
-      const ok = await api.isBackendHealthy();
-      if (!cancelled) setBackendUp(ok);
+      while (!cancelled) {
+        const ok = await api.isBackendHealthy({
+          timeoutMs: HEALTH_ATTEMPT_TIMEOUT_MS,
+        });
+        if (cancelled) return;
+
+        if (ok) {
+          setBackendUp(true);
+          return;
+        }
+
+        if (Date.now() - startedAt >= HEALTH_MAX_WAIT_MS) {
+          setBackendUp(false);
+          return;
+        }
+
+        await sleep(HEALTH_RETRY_GAP_MS);
+      }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -79,7 +107,7 @@ export function HomeStart() {
     setConnectionFilled(1);
     const timer = window.setInterval(() => {
       setConnectionFilled((current) =>
-        current >= CONNECTION_SEGMENTS - 1 ? current : current + 1
+        current >= CONNECTION_SEGMENTS - 1 ? 1 : current + 1
       );
     }, 450);
 

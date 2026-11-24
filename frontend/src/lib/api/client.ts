@@ -596,11 +596,12 @@ export const api = {
     });
   },
 
-  async isBackendHealthy(): Promise<boolean> {
+  async isBackendHealthy(opts?: { timeoutMs?: number }): Promise<boolean> {
+    const timeoutMs = opts?.timeoutMs ?? 2500;
     try {
       const res = await fetch(`${baseUrl()}/health`, {
         method: "GET",
-        signal: AbortSignal.timeout(2500),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       return res.ok;
     } catch {
