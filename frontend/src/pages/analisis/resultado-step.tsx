@@ -87,7 +87,7 @@ export function ResultadoStep() {
             const docs = await api.listFinalizedDocuments(analysis.material_id);
             if (cancelled) return;
             setFiles(
-              docs.map((doc) => ({
+              (Array.isArray(docs) ? docs : []).map((doc) => ({
                 name: doc.filename,
                 detail: `Generado ${new Date(doc.created_at).toLocaleString()}`,
                 url: api.finalizedDownloadHref(doc.download_url),
@@ -134,15 +134,24 @@ export function ResultadoStep() {
     setFinalizing(true);
     setError(null);
     try {
-      await api.finalizeMaterial(materialId);
-      const docs = await api.listFinalizedDocuments(materialId);
-      setFiles(
-        docs.map((doc) => ({
+      const created = await api.finalizeMaterial(materialId);
+      const fromFinalize: ExportFile = {
+        name: created.filename,
+        detail: `Generado ${new Date(created.created_at).toLocaleString()}`,
+        url: api.finalizedDownloadHref(created.download_url),
+      };
+
+      try {
+        const docs = await api.listFinalizedDocuments(materialId);
+        const listed = (Array.isArray(docs) ? docs : []).map((doc) => ({
           name: doc.filename,
           detail: `Generado ${new Date(doc.created_at).toLocaleString()}`,
           url: api.finalizedDownloadHref(doc.download_url),
-        })),
-      );
+        }));
+        setFiles(listed.length > 0 ? listed : [fromFinalize]);
+      } catch {
+        setFiles([fromFinalize]);
+      }
       setExportUnavailable(false);
     } catch (err) {
       setError(
@@ -189,7 +198,7 @@ export function ResultadoStep() {
                   : `${summary.accepted} adaptaciones aplicadas · ${summary.discarded} descartadas · ${resolved} barreras resueltas de ${summary.total} · el original permanece intacto`}
               </p>
             </div>
-            {!exportUnavailable ? (
+            {files.length > 0 ? (
               <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
                 <span className="size-1.5 rounded-full bg-primary-foreground" />
                 Listo para descarga

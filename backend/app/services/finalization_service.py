@@ -156,9 +156,6 @@ def finalize_material(
     if material is None:
         raise LookupError("Material not found")
 
-    if not os.path.isfile(material.file_path):
-        raise FileNotFoundError("Material file not found")
-
     # 1. Retrieve the latest completed analysis.
     analysis = (
         finalization_repository.get_latest_completed_analysis(
@@ -190,7 +187,7 @@ def finalize_material(
         statuses=["accepted"],
     )
 
-    # 4. Parse the original document.
+    # 4. Resolve storage:// (or local) to an on-disk path, then parse.
     local_path = str(resolve_material_path(material.file_path))
     document = extract_document(local_path)
 
@@ -213,7 +210,7 @@ def finalize_material(
 
     # 7. Generate a unique filename.
     filename = (
-        f"{Path(material.file_path).stem}_final_"
+        f"{Path(material.name).stem}_final_"
         f"{uuid.uuid4().hex[:8]}.pdf"
     )
 
