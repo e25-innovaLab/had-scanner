@@ -27,7 +27,7 @@ class TestDeleteMaterial(unittest.TestCase):
                 delete_material(db=db, material_id=99)
         self.assertEqual(ctx.exception.status_code, 404)
 
-    def test_delete_material_soft_deletes_and_clears_files(self) -> None:
+    def test_delete_material_only_soft_deletes(self) -> None:
         from app.services.material_service import delete_material
 
         db = MagicMock()
@@ -42,14 +42,11 @@ class TestDeleteMaterial(unittest.TestCase):
                 return_value=material,
             ),
             patch(
-                "app.services.finalization_service.delete_finalized_documents_for_material",
+                "app.services.finalization_service.soft_delete_finalized_documents_for_material",
                 side_effect=lambda **_kwargs: call_order.append("finalized"),
-            ) as delete_finalized_docs,
+            ) as soft_finalized,
             patch(
                 "app.utils.object_storage.delete_stored_file",
-                side_effect=lambda *_args, **_kwargs: call_order.append(
-                    "storage",
-                ),
             ) as delete_file,
             patch(
                 "app.services.material_service.material_repository.soft_delete",
@@ -57,15 +54,10 @@ class TestDeleteMaterial(unittest.TestCase):
             ) as soft_delete,
         ):
             delete_material(db=db, material_id=5)
-            delete_finalized_docs.assert_called_once_with(db=db, material_id=5)
-            delete_file.assert_called_once_with(
-                "storage://materials/abc/doc.pdf",
-            )
+            soft_finalized.assert_called_once_with(db=db, material_id=5)
             soft_delete.assert_called_once_with(db=db, material=material)
-            self.assertEqual(
-                call_order,
-                ["finalized", "storage", "soft_delete"],
-            )
+            delete_file.assert_not_called()
+            self.assertEqual(call_order, ["finalized", "soft_delete"])
 
 
 class TestDeleteFinalizedDocument(unittest.TestCase):
@@ -88,13 +80,12 @@ class TestDeleteFinalizedDocument(unittest.TestCase):
                     document_id=2,
                 )
 
-    def test_delete_finalized_removes_file_before_row(self) -> None:
+    def test_delete_finalized_soft_deletes_without_storage(self) -> None:
         from app.services.finalization_service import delete_finalized_document
 
         db = MagicMock()
         document = MagicMock()
         document.file_path = "storage://finalized/1/out.pdf"
-        call_order: list[str] = []
 
         with (
             patch(
@@ -103,37 +94,27 @@ class TestDeleteFinalizedDocument(unittest.TestCase):
             ),
             patch(
                 "app.services.finalization_service.delete_stored_file",
-                side_effect=lambda *_args, **_kwargs: call_order.append(
-                    "storage",
-                ),
             ) as delete_file,
             patch(
-                "app.services.finalization_service.finalization_repository.delete_finalized_document",
-                side_effect=lambda **_kwargs: call_order.append("row"),
-            ) as delete_row,
+                "app.services.finalization_service.finalization_repository.soft_delete_finalized_document",
+            ) as soft_delete,
         ):
             delete_finalized_document(
                 db=db,
                 material_id=1,
                 document_id=2,
             )
-            delete_file.assert_called_once_with(
-                "storage://finalized/1/out.pdf",
-            )
-            delete_row.assert_called_once_with(db=db, document=document)
-            self.assertEqual(call_order, ["storage", "row"])
+            soft_delete.assert_called_once_with(db=db, document=document)
+            delete_file.assert_not_called()
 
-    def test_delete_finalized_documents_for_material_clears_all(self) -> None:
+    def test_soft_delete_finalized_documents_for_material(self) -> None:
         from app.services.finalization_service import (
-            delete_finalized_documents_for_material,
+            soft_delete_finalized_documents_for_material,
         )
 
         db = MagicMock()
         first = MagicMock()
-        first.file_path = "storage://finalized/5/a.pdf"
         second = MagicMock()
-        second.file_path = "storage://finalized/5/b.pdf"
-        call_order: list[str] = []
 
         with (
             patch(
@@ -142,26 +123,15 @@ class TestDeleteFinalizedDocument(unittest.TestCase):
             ),
             patch(
                 "app.services.finalization_service.delete_stored_file",
-                side_effect=lambda path: call_order.append(f"storage:{path}"),
-            ),
+            ) as delete_file,
             patch(
-                "app.services.finalization_service.finalization_repository.delete_finalized_document",
-                side_effect=lambda **kwargs: call_order.append(
-                    f"row:{kwargs['document'].file_path}",
-                ),
-            ),
+                "app.services.finalization_service.finalization_repository.soft_delete_finalized_document",
+            ) as soft_delete,
         ):
-            delete_finalized_documents_for_material(db=db, material_id=5)
+            soft_delete_finalized_documents_for_material(db=db, material_id=5)
 
-        self.assertEqual(
-            call_order,
-            [
-                "storage:storage://finalized/5/a.pdf",
-                "row:storage://finalized/5/a.pdf",
-                "storage:storage://finalized/5/b.pdf",
-                "row:storage://finalized/5/b.pdf",
-            ],
-        )
+        self.assertEqual(soft_delete.call_count, 2)
+        delete_file.assert_not_called()
 
 
 class TestDeleteStorageHelper(unittest.TestCase):

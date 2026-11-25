@@ -80,7 +80,7 @@ export function MaterialsHistory({
       return;
     }
     const confirmed = window.confirm(
-      `¿Eliminar “${material.name}”? También se eliminarán sus PDF adaptados.`,
+      `¿Quitar “${material.name}” del historial? También se ocultarán sus PDF adaptados. Los archivos quedan en el servidor hasta una limpieza administrativa.`,
     );
     if (!confirmed) return;
     setDeletingId(material.id);

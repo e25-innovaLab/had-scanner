@@ -50,7 +50,7 @@ export function HomeHistories({
         </h2>
         <p className="text-sm text-muted-foreground">
           Materiales subidos y PDF adaptados guardados en el servidor, ordenados
-          por fecha. Podés eliminarlos cuando ya no los necesites.
+          por fecha. Podés quitarlos del historial cuando ya no los necesites.
         </p>
       </header>
       {backendReady === null ? (

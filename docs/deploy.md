@@ -32,3 +32,6 @@ Luego: `pnpm dev:vite`.
   - adaptados: `finalized/<material_id>/…`
 - Retención de PDF adaptados (Render): `FINALIZED_RETENTION_DAYS`,
   `FINALIZED_RETENTION_CLEANUP_SECONDS`
+- Soft-delete de usuario: `material.status=deleted` y
+  `finalized_document.status=deleted` (se ocultan en la UI). Los archivos
+  quedan en Storage/DB hasta purge manual en Supabase o la retención TTL.

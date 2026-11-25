@@ -53,7 +53,7 @@ class TestFinalizedRetention(unittest.TestCase):
                 ),
             ) as delete_file,
             patch(
-                "app.services.finalization_service.finalization_repository.delete_finalized_document",
+                "app.services.finalization_service.finalization_repository.hard_delete_finalized_document",
                 side_effect=lambda **_kwargs: call_order.append("row"),
             ) as delete_row,
         ):

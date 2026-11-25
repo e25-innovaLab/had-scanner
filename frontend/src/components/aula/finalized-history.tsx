@@ -105,7 +105,7 @@ export function FinalizedHistory({
     if (disabled || deletingId != null || doc.material_id == null) return;
     const label = doc.filename || "este PDF";
     const confirmed = window.confirm(
-      `¿Eliminar “${label}”? No se podrá volver a descargar.`,
+      `¿Quitar “${label}” del historial? Dejará de mostrarse; el archivo queda en el servidor hasta una limpieza administrativa.`,
     );
     if (!confirmed) return;
     setDeletingId(doc.id);

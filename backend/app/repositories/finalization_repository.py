@@ -9,6 +9,10 @@ from app.models.adaptation_proposal import AdaptationProposal
 from app.models.finalized_document import FinalizedDocument
 from app.models.material import Material
 
+FINALIZED_STATUS_AVAILABLE = "available"
+FINALIZED_STATUS_DELETED = "deleted"
+
+
 def create_finalized_document(
     db: Session,
     material_id: int,
@@ -20,6 +24,7 @@ def create_finalized_document(
         material_id=material_id,
         filename=filename,
         file_path=file_path,
+        status=FINALIZED_STATUS_AVAILABLE,
     )
 
     db.add(finalized_document)
@@ -37,6 +42,7 @@ def get_finalized_document_by_id(
     statement = select(FinalizedDocument).where(
         FinalizedDocument.id == document_id,
         FinalizedDocument.material_id == material_id,
+        FinalizedDocument.status == FINALIZED_STATUS_AVAILABLE,
     )
 
     return db.scalar(statement)
@@ -50,7 +56,8 @@ def get_finalized_documents_by_material(
     statement = (
         select(FinalizedDocument)
         .where(
-            FinalizedDocument.material_id == material_id
+            FinalizedDocument.material_id == material_id,
+            FinalizedDocument.status == FINALIZED_STATUS_AVAILABLE,
         )
         .order_by(
             FinalizedDocument.created_at.desc(),
@@ -64,11 +71,14 @@ def get_finalized_documents_by_material(
 def get_all_finalized_documents(
     db: Session,
 ) -> list[FinalizedDocument]:
-    """All finalized PDFs for active materials, newest first."""
+    """All visible finalized PDFs for active materials, newest first."""
     statement = (
         select(FinalizedDocument)
         .join(Material, Material.id == FinalizedDocument.material_id)
-        .where(Material.status == "uploaded")
+        .where(
+            Material.status == "uploaded",
+            FinalizedDocument.status == FINALIZED_STATUS_AVAILABLE,
+        )
         .options(selectinload(FinalizedDocument.material))
         .order_by(
             FinalizedDocument.created_at.desc(),
@@ -78,7 +88,16 @@ def get_all_finalized_documents(
     return list(db.scalars(statement).all())
 
 
-def delete_finalized_document(
+def soft_delete_finalized_document(
+    db: Session,
+    document: FinalizedDocument,
+) -> None:
+    document.status = FINALIZED_STATUS_DELETED
+    db.add(document)
+    db.commit()
+
+
+def hard_delete_finalized_document(
     db: Session,
     document: FinalizedDocument,
 ) -> None:
@@ -97,6 +116,7 @@ def get_finalized_documents_older_than(
         .order_by(FinalizedDocument.created_at.asc())
     )
     return list(db.scalars(statement).all())
+
 
 def get_latest_completed_analysis(
     db: Session,
@@ -117,6 +137,7 @@ def get_latest_completed_analysis(
 
     return db.scalar(statement)
 
+
 def get_latest_finalized_document(
     db: Session,
     material_id: int,
@@ -125,7 +146,8 @@ def get_latest_finalized_document(
     statement = (
         select(FinalizedDocument)
         .where(
-            FinalizedDocument.material_id == material_id
+            FinalizedDocument.material_id == material_id,
+            FinalizedDocument.status == FINALIZED_STATUS_AVAILABLE,
         )
         .order_by(
             FinalizedDocument.created_at.desc(),
@@ -135,6 +157,7 @@ def get_latest_finalized_document(
     )
 
     return db.scalar(statement)
+
 
 def get_barriers_by_analysis(
     db: Session,

@@ -305,12 +305,13 @@ def delete_finalized_document(
     if document is None:
         raise LookupError("Finalized document not found")
 
-    file_path = document.file_path
-    delete_stored_file(file_path)
-    finalization_repository.delete_finalized_document(db=db, document=document)
+    finalization_repository.soft_delete_finalized_document(
+        db=db,
+        document=document,
+    )
 
 
-def delete_finalized_documents_for_material(
+def soft_delete_finalized_documents_for_material(
     db: Session,
     material_id: int,
 ) -> None:
@@ -319,9 +320,7 @@ def delete_finalized_documents_for_material(
         material_id=material_id,
     )
     for document in documents:
-        file_path = document.file_path
-        delete_stored_file(file_path)
-        finalization_repository.delete_finalized_document(
+        finalization_repository.soft_delete_finalized_document(
             db=db,
             document=document,
         )
@@ -352,7 +351,7 @@ def cleanup_expired_finalized_documents(
         file_path = document.file_path
         try:
             delete_stored_file(file_path)
-            finalization_repository.delete_finalized_document(
+            finalization_repository.hard_delete_finalized_document(
                 db=db,
                 document=document,
             )
