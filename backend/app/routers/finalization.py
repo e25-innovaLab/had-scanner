@@ -201,7 +201,10 @@ def download_finalized_document_endpoint(
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="PDF file not found",
+            detail=(
+                "No se pudo encontrar el PDF adaptado. "
+                "Puede haber expirado o el almacenamiento no está disponible."
+            ),
         ) from None
 
     return FileResponse(
@@ -238,7 +241,10 @@ def download_finalized_material_endpoint(
         except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="El archivo PDF no existe.",
+                detail=(
+                    "No se pudo encontrar el PDF adaptado. "
+                    "Puede haber expirado o el almacenamiento no está disponible."
+                ),
             ) from None
 
         return FileResponse(

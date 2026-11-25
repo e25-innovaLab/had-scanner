@@ -9,6 +9,9 @@ from app.database.session import SessionLocal
 from app.repositories import analysis_repository
 from app.routers.materials import router as materials_router
 from app.routers import analysis, proposals, finalization, adaptations, barriers
+from app.services.finalization_service import (
+    cleanup_expired_finalized_documents,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,16 @@ async def lifespan(_app: FastAPI):
             )
     except Exception:
         logger.exception("Could not clean up interrupted analyses on startup")
+
+    try:
+        expired = cleanup_expired_finalized_documents(db=db)
+        if expired:
+            logger.info(
+                "Removed %s expired finalized document(s) on startup",
+                expired,
+            )
+    except Exception:
+        logger.exception("Could not clean up expired finalized documents")
     finally:
         db.close()
     yield

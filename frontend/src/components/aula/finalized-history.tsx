@@ -27,6 +27,7 @@ export function FinalizedHistory({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,9 +55,50 @@ export function FinalizedHistory({
     };
   }, [refreshKey]);
 
-  function handleDownload(doc: FinalizedDocument) {
-    const href = api.finalizedDownloadHref(doc.download_url);
-    window.open(href, "_blank", "noopener,noreferrer");
+  async function handleDownload(doc: FinalizedDocument) {
+    if (disabled || downloadingId != null || deletingId != null) return;
+    setDownloadingId(doc.id);
+    setError(null);
+    try {
+      const href = api.finalizedDownloadHref(doc.download_url);
+      const res = await fetch(href);
+      if (!res.ok) {
+        let message =
+          "No se pudo descargar el PDF. Puede haber expirado o no estar disponible.";
+        try {
+          const data: unknown = await res.json();
+          if (
+            data &&
+            typeof data === "object" &&
+            "detail" in data &&
+            typeof (data as { detail: unknown }).detail === "string"
+          ) {
+            message = (data as { detail: string }).detail;
+          }
+        } catch {
+          // Keep fallback message when the body is not JSON.
+        }
+        throw new Error(message);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = doc.filename || "material-adaptado.pdf";
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo descargar el material adaptado.",
+      );
+    } finally {
+      setDownloadingId(null);
+    }
   }
 
   async function handleDelete(doc: FinalizedDocument) {
@@ -89,8 +131,9 @@ export function FinalizedHistory({
           Materiales adaptados
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          PDFs generados al finalizar el flujo. Podés volver a descargarlos o
-          eliminarlos.
+          PDFs generados al finalizar el flujo, ordenados por fecha. Se
+          eliminan automáticamente tras un tiempo si el servidor está
+          configurado con retención.
         </p>
       </CardHeader>
       <CardContent>
@@ -104,7 +147,8 @@ export function FinalizedHistory({
         ) : null}
         {!loading && !error && documents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Todavía no hay materiales adaptados.
+            Todavía no hay materiales adaptados. Cuando generes un PDF en
+            “Obtener resultado”, va a aparecer acá para volver a descargarlo.
           </p>
         ) : null}
         {!loading && documents.length > 0 ? (
@@ -128,10 +172,12 @@ export function FinalizedHistory({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={disabled || deletingId != null}
-                    onClick={() => handleDownload(doc)}
+                    disabled={
+                      disabled || deletingId != null || downloadingId != null
+                    }
+                    onClick={() => void handleDownload(doc)}
                   >
-                    Descargar
+                    {downloadingId === doc.id ? "Descargando…" : "Descargar"}
                   </Button>
                   <Button
                     type="button"
@@ -140,6 +186,7 @@ export function FinalizedHistory({
                     disabled={
                       disabled ||
                       deletingId != null ||
+                      downloadingId != null ||
                       doc.material_id == null
                     }
                     onClick={() => void handleDelete(doc)}

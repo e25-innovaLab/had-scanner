@@ -123,7 +123,8 @@ export function MaterialsHistory({
         ) : null}
         {!loading && !error && materials.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Todavía no hay materiales cargados.
+            Todavía no hay materiales cargados. Subí un PDF o pegá texto desde
+            “Nuevo análisis” / Cargar.
           </p>
         ) : null}
         {!loading && materials.length > 0 ? (

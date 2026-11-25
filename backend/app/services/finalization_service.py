@@ -1,10 +1,12 @@
+import logging
 import os
 import uuid
-
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from app.core.config import FINALIZED_RETENTION_DAYS
 from app.repositories import (
     finalization_repository,
 )
@@ -18,6 +20,8 @@ from app.utils.object_storage import (
     upload_finalized_file,
 )
 from app.models.finalized_document import FinalizedDocument
+
+logger = logging.getLogger(__name__)
 
 
 class NoCompletedAnalysisError(Exception):
@@ -306,3 +310,41 @@ def delete_finalized_documents_for_material(
             document=document,
         )
         delete_stored_file(file_path)
+
+
+def cleanup_expired_finalized_documents(
+    db: Session,
+    *,
+    retention_days: int | None = None,
+    now: datetime | None = None,
+) -> int:
+    """Delete finalized PDFs older than retention. Returns deleted count."""
+    days = (
+        FINALIZED_RETENTION_DAYS
+        if retention_days is None
+        else retention_days
+    )
+    if days <= 0:
+        return 0
+
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+    expired = finalization_repository.get_finalized_documents_older_than(
+        db=db,
+        cutoff=cutoff,
+    )
+    deleted = 0
+    for document in expired:
+        file_path = document.file_path
+        try:
+            finalization_repository.delete_finalized_document(
+                db=db,
+                document=document,
+            )
+            delete_stored_file(file_path)
+            deleted += 1
+        except Exception:
+            logger.exception(
+                "Failed to expire finalized document %s",
+                getattr(document, "id", "?"),
+            )
+    return deleted

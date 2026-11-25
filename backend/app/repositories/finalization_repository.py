@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -82,6 +84,19 @@ def delete_finalized_document(
 ) -> None:
     db.delete(document)
     db.commit()
+
+
+def get_finalized_documents_older_than(
+    db: Session,
+    *,
+    cutoff: datetime,
+) -> list[FinalizedDocument]:
+    statement = (
+        select(FinalizedDocument)
+        .where(FinalizedDocument.created_at < cutoff)
+        .order_by(FinalizedDocument.created_at.asc())
+    )
+    return list(db.scalars(statement).all())
 
 def get_latest_completed_analysis(
     db: Session,
