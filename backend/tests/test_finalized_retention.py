@@ -67,9 +67,44 @@ class TestFinalizedRetention(unittest.TestCase):
         older_than.assert_called_once()
         cutoff = older_than.call_args.kwargs["cutoff"]
         self.assertEqual(cutoff.day, 18)
-        delete_file.assert_called_once_with("storage://finalized/1/old.pdf")
+        delete_file.assert_called_once_with(
+            "storage://finalized/1/old.pdf",
+            strict=True,
+        )
         delete_row.assert_called_once_with(db=db, document=doc)
         self.assertEqual(call_order, ["storage", "row"])
+
+    def test_cleanup_keeps_row_when_storage_delete_fails(self) -> None:
+        from app.services.finalization_service import (
+            cleanup_expired_finalized_documents,
+        )
+
+        db = MagicMock()
+        doc = MagicMock()
+        doc.id = 12
+        doc.file_path = "storage://finalized/1/stuck.pdf"
+
+        with (
+            patch(
+                "app.services.finalization_service.finalization_repository.get_finalized_documents_older_than",
+                return_value=[doc],
+            ),
+            patch(
+                "app.services.finalization_service.delete_stored_file",
+                side_effect=RuntimeError("storage unavailable"),
+            ),
+            patch(
+                "app.services.finalization_service.finalization_repository.hard_delete_finalized_document",
+            ) as delete_row,
+        ):
+            deleted = cleanup_expired_finalized_documents(
+                db=db,
+                retention_days=7,
+                now=datetime(2026, 11, 25, tzinfo=timezone.utc),
+            )
+
+        self.assertEqual(deleted, 0)
+        delete_row.assert_not_called()
 
     def test_maybe_cleanup_throttles_repeat_calls(self) -> None:
         import app.services.finalization_service as service

@@ -210,8 +210,12 @@ def resolve_material_path(file_path: str) -> Path:
 resolve_stored_path = resolve_material_path
 
 
-def delete_storage_object(storage_uri: str) -> None:
-    """Best-effort remove of a Supabase Storage object."""
+def delete_storage_object(
+    storage_uri: str,
+    *,
+    strict: bool = False,
+) -> None:
+    """Remove a Supabase Storage object. Best-effort unless strict=True."""
     if not is_storage_uri(storage_uri) or not material_storage_enabled():
         return
     object_key = storage_object_key(storage_uri)
@@ -221,16 +225,22 @@ def delete_storage_object(storage_uri: str) -> None:
         client.storage.from_(SUPABASE_STORAGE_BUCKET).remove([object_key])
     except Exception:
         logger.exception("Could not delete storage object %s", object_key)
+        if strict:
+            raise
 
     cached = cache_path_for(object_key)
     if cached.is_file():
         cached.unlink(missing_ok=True)
 
 
-def delete_stored_file(file_path: str) -> None:
+def delete_stored_file(
+    file_path: str,
+    *,
+    strict: bool = False,
+) -> None:
     """Remove a storage:// object or a local finalized/material file."""
     if is_storage_uri(file_path):
-        delete_storage_object(file_path)
+        delete_storage_object(file_path, strict=strict)
         return
     path = Path(file_path)
     if path.is_file():

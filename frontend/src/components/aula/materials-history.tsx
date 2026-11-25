@@ -80,7 +80,7 @@ export function MaterialsHistory({
       return;
     }
     const confirmed = window.confirm(
-      `¿Quitar “${material.name}” del historial? También se ocultarán sus PDF adaptados. Los archivos quedan en el servidor hasta la retención automática o una limpieza en Supabase.`,
+      `¿Quitar “${material.name}” del historial? También se ocultarán sus PDF adaptados. El original queda en el servidor hasta una limpieza en Supabase; los adaptados hasta la retención automática o esa limpieza.`,
     );
     if (!confirmed) return;
     setDeletingId(material.id);

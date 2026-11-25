@@ -33,8 +33,9 @@ Luego: `pnpm dev:vite`.
 - Retención de PDF adaptados (Render): `FINALIZED_RETENTION_DAYS`,
   `FINALIZED_RETENTION_CLEANUP_SECONDS`
 - Soft-delete de usuario: `material.status=deleted` y
-  `finalized_document.status=deleted` (se ocultan en la UI). Los archivos
-  quedan en Storage/DB hasta purge manual en Supabase o la retención TTL.
+  `finalized_document.status=deleted` (se ocultan en la UI).
+  - Adaptados (`finalized/<material_id>/…`): purge manual o retención TTL.
+  - Originales (`materials/<hash>/…`): sin TTL automático; solo purge manual.
 - Al purgar Storage a mano: no borrar `materials/<hash>/…` si otro material
   activo reutiliza el mismo hash (re-subida del mismo PDF tras soft-delete).
   Los adaptados van por `finalized/<material_id>/…` y no colisionan.

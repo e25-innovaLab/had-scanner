@@ -353,7 +353,7 @@ def cleanup_expired_finalized_documents(
     for document in expired:
         file_path = document.file_path
         try:
-            delete_stored_file(file_path)
+            delete_stored_file(file_path, strict=True)
             finalization_repository.hard_delete_finalized_document(
                 db=db,
                 document=document,
