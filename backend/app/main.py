@@ -1,19 +1,50 @@
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import (
+    FINALIZED_RETENTION_CLEANUP_SECONDS,
+    FINALIZED_RETENTION_DAYS,
+)
 from app.database.session import SessionLocal
 from app.repositories import analysis_repository
 from app.routers.materials import router as materials_router
 from app.routers import analysis, proposals, finalization, adaptations, barriers
 from app.services.finalization_service import (
-    cleanup_expired_finalized_documents,
+    maybe_cleanup_expired_finalized_documents,
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def _retention_cleanup_loop() -> None:
+    interval = FINALIZED_RETENTION_CLEANUP_SECONDS
+    if FINALIZED_RETENTION_DAYS <= 0 or interval <= 0:
+        return
+
+    while True:
+        await asyncio.sleep(interval)
+        db = SessionLocal()
+        try:
+            expired = maybe_cleanup_expired_finalized_documents(
+                db=db,
+                force=True,
+            )
+            if expired:
+                logger.info(
+                    "Removed %s expired finalized document(s) on schedule",
+                    expired,
+                )
+        except Exception:
+            logger.exception(
+                "Could not clean up expired finalized documents on schedule",
+            )
+        finally:
+            db.close()
 
 
 @asynccontextmanager
@@ -31,7 +62,7 @@ async def lifespan(_app: FastAPI):
         logger.exception("Could not clean up interrupted analyses on startup")
 
     try:
-        expired = cleanup_expired_finalized_documents(db=db)
+        expired = maybe_cleanup_expired_finalized_documents(db=db, force=True)
         if expired:
             logger.info(
                 "Removed %s expired finalized document(s) on startup",
@@ -41,7 +72,20 @@ async def lifespan(_app: FastAPI):
         logger.exception("Could not clean up expired finalized documents")
     finally:
         db.close()
-    yield
+
+    retention_task: asyncio.Task[None] | None = None
+    if FINALIZED_RETENTION_DAYS > 0 and FINALIZED_RETENTION_CLEANUP_SECONDS > 0:
+        retention_task = asyncio.create_task(_retention_cleanup_loop())
+
+    try:
+        yield
+    finally:
+        if retention_task is not None:
+            retention_task.cancel()
+            try:
+                await retention_task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(

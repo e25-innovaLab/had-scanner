@@ -65,6 +65,59 @@ class TestFinalizedRetention(unittest.TestCase):
         delete_row.assert_called_once_with(db=db, document=doc)
         delete_file.assert_called_once_with("storage://finalized/1/old.pdf")
 
+    def test_maybe_cleanup_throttles_repeat_calls(self) -> None:
+        import app.services.finalization_service as service
+
+        db = MagicMock()
+        service._last_retention_cleanup_at = 0.0
+
+        with (
+            patch.object(service, "FINALIZED_RETENTION_DAYS", 14),
+            patch.object(service, "FINALIZED_RETENTION_CLEANUP_SECONDS", 3600),
+            patch.object(
+                service,
+                "cleanup_expired_finalized_documents",
+                return_value=2,
+            ) as cleanup,
+        ):
+            first = service.maybe_cleanup_expired_finalized_documents(
+                db=db,
+                now_monotonic=100.0,
+            )
+            second = service.maybe_cleanup_expired_finalized_documents(
+                db=db,
+                now_monotonic=200.0,
+            )
+            forced = service.maybe_cleanup_expired_finalized_documents(
+                db=db,
+                force=True,
+                now_monotonic=250.0,
+            )
+
+        self.assertEqual(first, 2)
+        self.assertEqual(second, 0)
+        self.assertEqual(forced, 2)
+        self.assertEqual(cleanup.call_count, 2)
+
+    def test_list_triggers_maybe_cleanup(self) -> None:
+        import app.services.finalization_service as service
+
+        db = MagicMock()
+        with (
+            patch.object(
+                service,
+                "maybe_cleanup_expired_finalized_documents",
+            ) as maybe_cleanup,
+            patch.object(
+                service.finalization_repository,
+                "get_all_finalized_documents",
+                return_value=[],
+            ),
+        ):
+            service.list_all_finalized_documents(db=db)
+
+        maybe_cleanup.assert_called_once_with(db=db)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -131,9 +131,9 @@ export function FinalizedHistory({
           Materiales adaptados
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          PDFs generados al finalizar el flujo, ordenados por fecha. Se
-          eliminan automáticamente tras un tiempo si el servidor está
-          configurado con retención.
+          PDFs generados al finalizar el flujo, ordenados por fecha. El
+          servidor puede borrarlos automáticamente cuando superan el plazo
+          de retención configurado.
         </p>
       </CardHeader>
       <CardContent>

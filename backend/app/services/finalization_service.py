@@ -1,12 +1,17 @@
 import logging
 import os
+import threading
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from app.core.config import FINALIZED_RETENTION_DAYS
+from app.core.config import (
+    FINALIZED_RETENTION_CLEANUP_SECONDS,
+    FINALIZED_RETENTION_DAYS,
+)
 from app.repositories import (
     finalization_repository,
 )
@@ -15,6 +20,7 @@ from app.utils.pdf_parser import extract_document
 from app.utils.pdf_generator import generate_pdf, extract_document_title
 from app.utils.object_storage import (
     delete_stored_file,
+    is_storage_uri,
     material_storage_enabled,
     resolve_material_path,
     upload_finalized_file,
@@ -22,6 +28,9 @@ from app.utils.object_storage import (
 from app.models.finalized_document import FinalizedDocument
 
 logger = logging.getLogger(__name__)
+
+_retention_lock = threading.Lock()
+_last_retention_cleanup_at = 0.0
 
 
 class NoCompletedAnalysisError(Exception):
@@ -258,12 +267,17 @@ def finalize_material(
         db.commit()
         db.refresh(finalized_document)
 
+        if is_storage_uri(stored_path) and os.path.isfile(output_path):
+            os.remove(output_path)
+
         return finalized_document
 
     except Exception:
         db.rollback()
 
-        # Remove the generated local file if persistence fails.
+        if is_storage_uri(stored_path):
+            delete_stored_file(stored_path)
+
         if os.path.isfile(output_path):
             os.remove(output_path)
 
@@ -273,6 +287,7 @@ def finalize_material(
 def list_all_finalized_documents(
     db: Session,
 ) -> list[FinalizedDocument]:
+    maybe_cleanup_expired_finalized_documents(db=db)
     return finalization_repository.get_all_finalized_documents(db=db)
 
 
@@ -348,3 +363,30 @@ def cleanup_expired_finalized_documents(
                 getattr(document, "id", "?"),
             )
     return deleted
+
+
+def maybe_cleanup_expired_finalized_documents(
+    db: Session,
+    *,
+    force: bool = False,
+    now_monotonic: float | None = None,
+) -> int:
+    """Throttled retention sweep for startup, background, and list traffic."""
+    global _last_retention_cleanup_at
+
+    interval = FINALIZED_RETENTION_CLEANUP_SECONDS
+    if FINALIZED_RETENTION_DAYS <= 0:
+        return 0
+
+    current = time.monotonic() if now_monotonic is None else now_monotonic
+    with _retention_lock:
+        if (
+            not force
+            and interval > 0
+            and _last_retention_cleanup_at > 0
+            and (current - _last_retention_cleanup_at) < interval
+        ):
+            return 0
+        _last_retention_cleanup_at = current
+
+    return cleanup_expired_finalized_documents(db=db)

@@ -36,5 +36,10 @@ SUPABASE_STORAGE_BUCKET = os.getenv(
     "vera-materials",
 )
 
-# Auto-delete finalized PDFs older than N days on startup (0 = disabled).
+# Auto-delete finalized PDFs older than N days (0 = disabled).
 FINALIZED_RETENTION_DAYS = _non_negative_int_env("FINALIZED_RETENTION_DAYS", 14)
+# Minimum seconds between retention sweeps (startup, background, and list).
+FINALIZED_RETENTION_CLEANUP_SECONDS = _non_negative_int_env(
+    "FINALIZED_RETENTION_CLEANUP_SECONDS",
+    3600,
+)
