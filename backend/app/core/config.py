@@ -6,6 +6,19 @@ GEMINI_MODEL = os.getenv(
     "gemini-flash-latest",
 )
 
+
+def _positive_float_env(name: str, default: float) -> float:
+    try:
+        value = float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+# Tope de espera por cada request a Gemini (subida del PDF y análisis).
+# Acota el peor caso de "Deteniendo…" y evita workers colgados.
+GEMINI_TIMEOUT_SECONDS = _positive_float_env("GEMINI_TIMEOUT_SECONDS", 600.0)
+
 # Durable material files (survives Render free ephemeral disk).
 # When both URL and service role key are set, uploads go to Supabase Storage.
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")

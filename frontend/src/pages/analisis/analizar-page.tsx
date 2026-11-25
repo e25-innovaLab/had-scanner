@@ -41,7 +41,9 @@ export function AnalizarPage() {
         ? "El análisis falló. Reintentá o volvé a Cargar."
         : status === "incomplete"
           ? "Podés continuar con las dimensiones analizadas; el informe marcará las que faltan."
-          : null;
+          : status === "cancelled"
+            ? "Detuviste el análisis. Reanalizá el material para continuar."
+            : null;
 
   return (
     <>

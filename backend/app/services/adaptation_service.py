@@ -247,7 +247,19 @@ def _get_barrier_original_content(
             detail="Material not found.",
         )
 
-    document = extract_document(material.file_path)
+    try:
+        local_path = str(resolve_material_path(material.file_path))
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "Material file not found. "
+                "Re-upload the same file to restore it, or check "
+                "Supabase Storage configuration."
+            ),
+        ) from exc
+
+    document = extract_document(local_path)
 
     original_content = _extract_original_content(
         document,

@@ -35,6 +35,7 @@ export function CargarStep() {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
+  const [title, setTitle] = useState("");
   const [mode, setMode] = useState<"archivo" | "texto">("archivo");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +114,9 @@ export function CargarStep() {
 
       if (mode === "texto" && text.trim()) {
         const name =
-          text.trim().split("\n")[0]?.slice(0, 80).trim() || "Material pegado";
+          title.trim().slice(0, 150) ||
+          text.trim().split("\n")[0]?.slice(0, 80).trim() ||
+          "Material pegado";
         setStatusLabel("Convirtiendo texto a PDF…");
         try {
           const material = await api.uploadMaterialFromText(name, text.trim());
@@ -156,18 +159,20 @@ export function CargarStep() {
         onSelectionChange={({
           file: nextFile,
           text: nextText,
+          title: nextTitle,
           mode: nextMode,
         }) => {
           setFile(nextFile);
           setText(nextText);
+          setTitle(nextTitle);
           setMode(nextMode);
           setError(null);
           setDuplicateMaterial(null);
         }}
       />
       <p className="mt-3 text-sm text-muted-foreground">
-        API real: PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el
-        servidor). El historial reutiliza materiales ya subidos.
+        PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el servidor). El
+        historial reutiliza materiales ya subidos.
       </p>
       {error ? (
         <div className="mt-3 space-y-2" role="alert">

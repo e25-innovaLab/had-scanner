@@ -146,6 +146,11 @@ function rememberBackendProposal(
   );
 }
 
+function forgetBackendProposal(analysisId: string, barrierId: string): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(backendProposalKey(analysisId, barrierId));
+}
+
 function withBackendProposal(
   barrier: ApiBarrier,
   proposal: BackendProposalResponse | null,
@@ -176,10 +181,26 @@ async function mapBackendBarriers(
       const proposalId = storedBackendProposalId(analysisId, barrierId);
       const apiBarrier = toApiBarrier(barrier, analysisId);
       if (proposalId === null) return apiBarrier;
-      const proposal = await request<BackendProposalResponse>(
-        `/proposals/${proposalId}`,
-      );
-      return withBackendProposal(apiBarrier, proposal);
+      try {
+        const proposal = await request<BackendProposalResponse>(
+          `/proposals/${proposalId}`,
+        );
+        // Tras reiniciar la base los ids se reutilizan: si la propuesta
+        // guardada es de otra barrera, es un residuo y se descarta.
+        if (String(proposal.barrier_id) !== barrierId) {
+          forgetBackendProposal(analysisId, barrierId);
+          return apiBarrier;
+        }
+        return withBackendProposal(apiBarrier, proposal);
+      } catch (err) {
+        // Propuesta guardada que ya no existe (base reiniciada o borrada):
+        // no debe impedir revisar las barreras.
+        if (err instanceof ApiError && err.status === 404) {
+          forgetBackendProposal(analysisId, barrierId);
+          return apiBarrier;
+        }
+        throw err;
+      }
     }),
   );
 }
@@ -284,7 +305,7 @@ export const api = {
   createProposal(
     analysisId: string,
     barrierId: string,
-    body?: { variant?: keyof ApiBarrier["variants"] },
+    _body?: { variant?: keyof ApiBarrier["variants"] },
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
     if (isBackendId(analysisId)) {
       return request<BackendProposalResponse>(
@@ -370,9 +391,9 @@ export const api = {
   },
 
   saveDraft(
-    analysisId: string,
-    barrierId: string,
-    draft: string,
+    _analysisId: string,
+    _barrierId: string,
+    _draft: string,
   ): Promise<ApiBarrier> {
     return Promise.reject(
       new ApiError(501, "El backend todavía no permite guardar borradores."),
@@ -462,13 +483,13 @@ export const api = {
     return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
-  reopen(analysisId: string, barrierId: string): Promise<ApiBarrier> {
+  reopen(_analysisId: string, _barrierId: string): Promise<ApiBarrier> {
     return Promise.reject(
       new ApiError(501, "El backend todavía no permite reabrir propuestas."),
     );
   },
 
-  export(analysisId: string): Promise<{
+  export(_analysisId: string): Promise<{
     exportStatus: string;
     exports: ExportFile[];
   }> {
@@ -480,7 +501,7 @@ export const api = {
     );
   },
 
-  getExports(analysisId: string): Promise<{
+  getExports(_analysisId: string): Promise<{
     exportStatus: string;
     exports: ExportFile[];
     appliedChanges: string[];
@@ -515,11 +536,12 @@ export const api = {
     });
   },
 
-  async isBackendHealthy(): Promise<boolean> {
+  async isBackendHealthy(opts?: { timeoutMs?: number }): Promise<boolean> {
+    const timeoutMs = opts?.timeoutMs ?? 2500;
     try {
       const res = await fetch(`${baseUrl()}/health`, {
         method: "GET",
-        signal: AbortSignal.timeout(2500),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       return res.ok;
     } catch {
@@ -535,6 +557,12 @@ export const api = {
 
   getBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
     return request<BackendAnalysis>(`/analysis/${analysisId}`);
+  },
+
+  cancelBackendAnalysis(analysisId: number): Promise<BackendAnalysis> {
+    return request<BackendAnalysis>(`/analysis/${analysisId}/cancel`, {
+      method: "POST",
+    });
   },
 
   finalizeMaterial(materialId: number): Promise<FinalizeResponse> {
