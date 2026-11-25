@@ -12,6 +12,7 @@ import { api } from "@/lib/api/client";
 import { isBackendId } from "@/lib/api/ids";
 import {
   PROPOSAL_JOB_STATUS,
+  cancelProposal,
   clearProposalJob,
   startProposal,
   useProposalJobs,
@@ -759,33 +760,42 @@ export function AdaptBoard({
                           : "○ "}
                     {statusLabel}
                   </span>
-                  <Button
-                    type="button"
-                    variant={
-                      isNext || state.generateFail ? "default" : "outline"
-                    }
-                    className={cn(
-                      "h-9 rounded-xl px-3",
-                      (isNext || state.generateFail) &&
-                        "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
-                    )}
-                    disabled={isOpeningEdit || state.mode === "generating"}
-                    onClick={() => openBarrier(entry)}
-                  >
-                    {state.mode === "generating" ? (
+                  {state.mode === "generating" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 rounded-xl px-3"
+                      disabled={isOpeningEdit || !analysisId}
+                      onClick={() => {
+                        if (!analysisId) return;
+                        cancelProposal(analysisId, entry.id);
+                      }}
+                    >
                       <span className="inline-flex items-center gap-1.5">
                         <Sparkles
                           className="size-3.5 animate-pulse"
                           aria-hidden="true"
                         />
-                        Generando…
+                        Cancelar
                       </span>
-                    ) : state.generateFail ? (
-                      "Reintentar"
-                    ) : (
-                      actionLabel
-                    )}
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant={
+                        isNext || state.generateFail ? "default" : "outline"
+                      }
+                      className={cn(
+                        "h-9 rounded-xl px-3",
+                        (isNext || state.generateFail) &&
+                          "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
+                      )}
+                      disabled={isOpeningEdit}
+                      onClick={() => openBarrier(entry)}
+                    >
+                      {state.generateFail ? "Reintentar" : actionLabel}
+                    </Button>
+                  )}
                 </div>
               </Card>
             );

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.proposal import ProposalResponse
 from app.services.adaptation_service import (
+    cancel_adaptation_proposal_generation,
     create_adaptation_proposal,
     get_adaptation_proposal,
     create_manual_adaptation_proposal,
@@ -30,6 +31,25 @@ def generate_proposal_endpoint(
         db=db,
         barrier_id=barrier_id,
     )
+
+
+@router.post(
+    "/barriers/{barrier_id}/proposals/generate/cancel",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def cancel_proposal_generation_endpoint(
+    barrier_id: int,
+    db: Session = Depends(get_db),
+):
+    cancelled = cancel_adaptation_proposal_generation(
+        db=db,
+        barrier_id=barrier_id,
+    )
+    if not cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hay una generación de propuesta en curso.",
+        )
 
 @router.post(
     "/barriers/{barrier_id}/proposals",
