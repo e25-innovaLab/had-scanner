@@ -29,7 +29,7 @@ export function DownloadList({
 
     const blob = new Blob(
       [
-        `VERA — ${file.name}\nMaterial simulado exportado desde la API local.\n`,
+        `VERA — ${file.name}\nDocumento exportado desde la aplicación.\n`,
       ],
       { type: "text/plain;charset=utf-8" },
     );

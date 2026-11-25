@@ -1,5 +1,4 @@
 import type {
-  Analysis,
   AnalysisStatusResponse,
   ApiBarrier,
   BarriersResponse,
@@ -14,38 +13,8 @@ import type {
 import { toUserFacingErrorMessage } from "@/lib/api/ai-availability";
 import { toApiBarrier, toBarriersResponse } from "./mappers/backend-analysis";
 import { isBackendId } from "./ids";
-import * as mockService from "@/lib/api/service";
-
 const DEFAULT_BASE = "";
 const BACKEND_PROPOSAL_STORAGE_KEY = "vera-backend-proposal";
-
-async function fromMockResult<T>(
-  result: T | Response | Promise<T | Response>,
-): Promise<T> {
-  const value = await result;
-  if (value instanceof Response) {
-    const data = (await value.json().catch(() => null)) as unknown;
-    let message = `Error HTTP ${value.status}`;
-    if (
-      data &&
-      typeof data === "object" &&
-      "error" in data &&
-      typeof (data as { error: unknown }).error === "string"
-    ) {
-      message = (data as { error: string }).error;
-    }
-    throw new ApiError(
-      value.status,
-      toUserFacingErrorMessage(message, {
-        status: value.status,
-        fallback:
-          "No se pudo completar la operación. Reintentá en unos minutos.",
-      }),
-      data,
-    );
-  }
-  return value;
-}
 
 type BackendProposalResponse = {
   proposal_id: number;
@@ -250,32 +219,29 @@ function barrierFromDetail(
 }
 
 export const api = {
-  createAnalysis(input: {
-    fileName: string;
-    fileSize: number;
-  }): Promise<Analysis> {
-    return fromMockResult(mockService.createAnalysis(input));
-  },
-
   getStatus(analysisId: string): Promise<AnalysisStatusResponse> {
-    if (isBackendId(analysisId)) {
-      throw new ApiError(400, "getStatus solo aplica al camino Demo (mock).");
+    if (!isBackendId(analysisId)) {
+      return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
     }
-    return fromMockResult(mockService.getAnalysisStatus(analysisId));
-  },
-
-  getAnalysis(analysisId: string): Promise<Analysis> {
-    if (isBackendId(analysisId)) {
-      throw new ApiError(400, "getAnalysis solo aplica al camino Demo (mock).");
-    }
-    return fromMockResult(mockService.getAnalysis(analysisId));
+    return this.getBackendAnalysis(Number(analysisId)).then((analysis) => ({
+      id: String(analysis.analysis_id),
+      status:
+        analysis.status === "completed"
+          ? "ready"
+          : analysis.status === "failed"
+            ? "failed"
+            : "analyzing",
+      originalFileName: analysis.material_name?.trim() || `material-${analysis.material_id}.pdf`,
+      originalFileSize: 0,
+      dimensionProgress: [],
+    }));
   },
 
   listBarriers(analysisId: string): Promise<BarriersResponse> {
     if (isBackendId(analysisId)) {
       return this.getBarriersForUi(analysisId);
     }
-    return fromMockResult(mockService.listBarriers(analysisId));
+    return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
   listBarriersFlat(analysisId: string): Promise<{ barriers: ApiBarrier[] }> {
@@ -304,9 +270,7 @@ export const api = {
       );
     }
 
-    return fromMockResult(mockService.listBarriersFlat(analysisId)).then(
-      (barriers) => ({ barriers }),
-    );
+    return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
   /** Alias: misma hidratación que listBarriersFlat (analysis + GET /proposals). */
@@ -335,7 +299,7 @@ export const api = {
         return barrier;
       });
     }
-    return fromMockResult(mockService.getBarrier(analysisId, barrierId));
+    return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
   createProposal(
@@ -375,9 +339,7 @@ export const api = {
       });
     }
 
-    return fromMockResult(
-      mockService.createProposal(analysisId, barrierId, body),
-    );
+    return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
   createManualProposal(
@@ -433,13 +395,9 @@ export const api = {
     barrierId: string,
     draft: string,
   ): Promise<ApiBarrier> {
-    if (isBackendId(analysisId)) {
-      return Promise.reject(
-        new ApiError(501, "El backend todavía no permite guardar borradores."),
-      );
-    }
-
-    return fromMockResult(mockService.saveDraft(analysisId, barrierId, draft));
+    return Promise.reject(
+      new ApiError(501, "El backend todavía no permite guardar borradores."),
+    );
   },
 
   async accept(
@@ -494,9 +452,7 @@ export const api = {
       return this.updateBackendProposalStatus(analysisId, barrierId, "accept");
     }
 
-    return fromMockResult(
-      mockService.setBarrierStatus(analysisId, barrierId, "accepted", draft),
-    );
+    return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
   discard(analysisId: string, barrierId: string): Promise<ApiBarrier> {
@@ -524,20 +480,12 @@ export const api = {
       );
     }
 
-    return fromMockResult(
-      mockService.setBarrierStatus(analysisId, barrierId, "discarded"),
-    );
+    return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
   reopen(analysisId: string, barrierId: string): Promise<ApiBarrier> {
-    if (isBackendId(analysisId)) {
-      return Promise.reject(
-        new ApiError(501, "El backend todavía no permite reabrir propuestas."),
-      );
-    }
-
-    return fromMockResult(
-      mockService.setBarrierStatus(analysisId, barrierId, "pending"),
+    return Promise.reject(
+      new ApiError(501, "El backend todavía no permite reabrir propuestas."),
     );
   },
 
@@ -545,16 +493,12 @@ export const api = {
     exportStatus: string;
     exports: ExportFile[];
   }> {
-    if (isBackendId(analysisId)) {
-      return Promise.reject(
-        new ApiError(
-          501,
-          "El backend todavía no ofrece exportación de archivos.",
-        ),
-      );
-    }
-
-    return fromMockResult(mockService.startExport(analysisId));
+    return Promise.reject(
+      new ApiError(
+        501,
+        "El backend todavía no ofrece exportación de archivos.",
+      ),
+    );
   },
 
   getExports(analysisId: string): Promise<{
@@ -564,16 +508,12 @@ export const api = {
     discardedChanges: string[];
     summary: { accepted: number; discarded: number; total: number };
   }> {
-    if (isBackendId(analysisId)) {
-      return Promise.reject(
-        new ApiError(
-          501,
-          "El backend todavía no ofrece exportación de archivos.",
-        ),
-      );
-    }
-
-    return fromMockResult(mockService.getExports(analysisId));
+    return Promise.reject(
+      new ApiError(
+        501,
+        "El backend todavía no ofrece exportación de archivos.",
+      ),
+    );
   },
 
   uploadMaterial(file: File): Promise<Material> {

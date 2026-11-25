@@ -32,9 +32,6 @@ export const AI_ATTEMPTS_PER_BARRIER = 5;
 /** @deprecated Usar AI_ATTEMPTS_PER_BARRIER */
 export const AI_ATTEMPTS_PER_DIMENSION = AI_ATTEMPTS_PER_BARRIER;
 
-/** Tiempo fijo de “generación” mock antes de mostrar el detalle. */
-export const GENERATE_TIMEOUT_MS = 2000;
-
 /** Pausa breve al abrir Detalle desde “Volver a editar” en Adaptar. */
 export const RESUME_EDIT_TIMEOUT_MS = 450;
 
@@ -356,80 +353,6 @@ export const SUGGESTIONS: Suggestion[] = [
     },
   },
 ];
-
-export type DetailBarrier = Suggestion & {
-  barrierId: string;
-  dimensionId: string;
-};
-
-function mockVariants(
-  aiProposal: string,
-  recommendation: string,
-  where: string
-) {
-  return {
-    simple: aiProposal,
-    breve: recommendation,
-    pasos: `1. Revisar ${where}.\n2. ${recommendation}`,
-    ejemplo: aiProposal,
-    otra: aiProposal,
-  };
-}
-
-const RICH_BY_BARRIER_ID: Record<string, Suggestion> = {
-  'comprension-0': SUGGESTIONS.find((item) => item.id === 'intro')!,
-  'comprension-1': SUGGESTIONS.find((item) => item.id === 'glosario')!,
-  'estructura-0': SUGGESTIONS.find((item) => item.id === 'seccion')!,
-  'visual-0': SUGGESTIONS.find((item) => item.id === 'alt')!,
-  'multimedia-0': SUGGESTIONS.find((item) => item.id === 'audio')!,
-};
-
-/** Todas las barreras detectadas, en orden de dimensión, para el paso Detalle. */
-export const DETAIL_BARRIERS: DetailBarrier[] = BARRIERS.filter(
-  (group) => group.items.length > 0
-).flatMap((group) =>
-  group.items.map((item, index) => {
-    const barrierId = `${group.id}-${index}`;
-    const severity: Severity =
-      group.severity === 'ninguna' ? 'baja' : group.severity;
-    const dimension = group.name as Dimension;
-    const rich = RICH_BY_BARRIER_ID[barrierId];
-
-    if (rich) {
-      return {
-        ...rich,
-        id: barrierId,
-        barrierId,
-        dimensionId: group.id,
-        title: item.title,
-        dimension,
-        severity,
-        why: item.why,
-        proposes: item.recommendation,
-        location: item.where,
-      };
-    }
-
-    const aiProposal = `Propuesta: ${item.recommendation.charAt(0).toUpperCase()}${item.recommendation.slice(1)}`;
-    return {
-      id: barrierId,
-      barrierId,
-      dimensionId: group.id,
-      title: item.title,
-      dimension,
-      severity,
-      criterion: group.name,
-      detected: item.why,
-      why: item.why,
-      proposes: item.recommendation,
-      location: item.where,
-      original: `(Fragmento en ${item.where})`,
-      aiProposal,
-      editedProposal: aiProposal,
-      variants: mockVariants(aiProposal, item.recommendation, item.where),
-    };
-  })
-);
 
 export const RESULT_FILES = [
   {

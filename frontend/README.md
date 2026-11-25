@@ -19,7 +19,6 @@ pnpm dev:vite
 ```
 
 - UI: http://localhost:5173
-- **Demo (mock):** in-browser (localStorage). No requiere servicio en `:3001`.
 - **API real:** `VITE_API_BASE_URL` en `.env`, por ejemplo:
   - Render: `https://had-scanner-rk7u.onrender.com`
   - Local: `http://localhost:8000`
@@ -30,21 +29,16 @@ Reiniciá Vite si cambiás el `.env`.
 
 | Script | Qué hace |
 | --- | --- |
-| `pnpm dev:vite` | Solo Vite (recomendado: Demo o API real vía env) |
-| `pnpm dev` | Vite + mock Express opcional en `:3001` (legacy / proxy `/api`) |
-| `pnpm dev:mock` | Solo mock Express |
+| `pnpm dev:vite` | Solo Vite |
 | `pnpm build` | Build de producción |
 
 ## Docs
 
-- [`readme/api-simulada.md`](./readme/api-simulada.md) — contrato HTTP del mock (histórico / Express)
 - [`readme/frontend-explicado.md`](./readme/frontend-explicado.md) — arquitectura de pantallas
 
 ## Contrato
 
-- **Demo:** `src/lib/api/service.ts` + store en localStorage (`store-browser`).
 - **API real:** FastAPI (`/materials`, `/analysis`, …) según `VITE_API_BASE_URL`.
-- El mock Express (`mock/server.ts`, puerto `3001`) es opcional; el SPA Demo no lo necesita.
 
 ## Opcional: Nix / direnv
 
