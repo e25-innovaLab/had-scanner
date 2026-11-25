@@ -9,8 +9,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { FLOW_STEPS } from '@/lib/aula';
+import { useBackendHealth } from '@/lib/api/use-backend-health';
 
 export function HomePage() {
+  const {
+    backendUp,
+    connectionFilled,
+    connectionSegments,
+  } = useBackendHealth();
+
   return (
     <div className="space-y-5">
       <header className="mb-2 space-y-2">
@@ -23,9 +30,13 @@ export function HomePage() {
         </p>
       </header>
 
-      <HomeStart />
+      <HomeStart
+        backendUp={backendUp}
+        connectionFilled={connectionFilled}
+        connectionSegments={connectionSegments}
+      />
 
-      <HomeHistories />
+      <HomeHistories backendReady={backendUp} />
 
       <Card className="border-transparent bg-tertiary-container shadow-none ring-1 ring-primary/20">
         <CardHeader className="gap-2">

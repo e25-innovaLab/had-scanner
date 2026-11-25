@@ -12,14 +12,18 @@ import {
   writeFlowResume,
 } from "@/lib/api/url";
 
-export function HomeHistories() {
+export function HomeHistories({
+  backendReady,
+}: {
+  backendReady: boolean | null;
+}) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finalizedRefreshKey, setFinalizedRefreshKey] = useState(0);
 
   async function analyzeExistingMaterial(material: Material) {
-    if (busy) return;
+    if (busy || backendReady !== true) return;
     setBusy(true);
     setError(null);
     try {
@@ -49,18 +53,32 @@ export function HomeHistories() {
           por fecha. Podés eliminarlos cuando ya no los necesites.
         </p>
       </header>
+      {backendReady === null ? (
+        <p className="text-sm text-muted-foreground">
+          Esperando conexión con Vera para cargar el historial…
+        </p>
+      ) : null}
+      {backendReady === false ? (
+        <p className="text-sm text-muted-foreground">
+          El historial no está disponible porque Vera no responde.
+        </p>
+      ) : null}
       {error ? (
         <p className="text-sm text-danger-foreground" role="alert">
           {error}
         </p>
       ) : null}
-      <MaterialsHistory
-        disabled={busy}
-        allowDelete
-        onUseMaterial={analyzeExistingMaterial}
-        onDeleted={() => setFinalizedRefreshKey((value) => value + 1)}
-      />
-      <FinalizedHistory disabled={busy} refreshKey={finalizedRefreshKey} />
+      {backendReady === true ? (
+        <>
+          <MaterialsHistory
+            disabled={busy}
+            allowDelete
+            onUseMaterial={analyzeExistingMaterial}
+            onDeleted={() => setFinalizedRefreshKey((value) => value + 1)}
+          />
+          <FinalizedHistory disabled={busy} refreshKey={finalizedRefreshKey} />
+        </>
+      ) : null}
     </section>
   );
 }

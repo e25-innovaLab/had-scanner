@@ -26,5 +26,9 @@ VITE_API_BASE_URL=https://had-scanner-rk7u.onrender.com
 Luego: `pnpm dev:vite`.
 
 ## Supabase (datos; lo usa Render, no Vercel)
-- Postgres: historial (materiales, análisis, barreras, propuestas)
-- Storage: bucket privado `vera-materials` (PDF en `materials/<hash>/…`)
+- Postgres: historial (materiales, análisis, barreras, propuestas, PDF finalizados)
+- Storage: bucket privado `vera-materials`
+  - originales: `materials/<hash>/…`
+  - adaptados: `finalized/<material_id>/…`
+- Retención de PDF adaptados (Render): `FINALIZED_RETENTION_DAYS`,
+  `FINALIZED_RETENTION_CLEANUP_SECONDS`

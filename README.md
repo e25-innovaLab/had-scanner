@@ -32,12 +32,9 @@ pnpm dev:vite
 ```
 
 - UI: [http://localhost:5173](http://localhost:5173)
-- **Demo (mock):** corre en el browser (localStorage). No hace falta el Express en `:3001`.
-- **API real (local o Render):** creá `frontend/.env` con, por ejemplo:
+- Creá `frontend/.env` con la API, por ejemplo:
   `VITE_API_BASE_URL=https://had-scanner-rk7u.onrender.com`
   (o `http://localhost:8000` si levantás el backend local).
-
-`pnpm dev` también arranca un mock Express opcional en `:3001` (proxy Vite `/api`); el camino Demo del SPA ya no depende de él.
 
 Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/readme/`](./frontend/readme/). Nix/direnv es opcional y solo para quien lo use.
 
@@ -57,8 +54,6 @@ docker compose up --build
 ```
 
 Documentación de la API: [http://localhost:8000/docs](http://localhost:8000/docs).
-
-El camino **API real** (PDF) usa FastAPI async; el camino **Demo** del front usa el mock in-browser (texto/archivo).
 
 ## Deployed Demo
 
