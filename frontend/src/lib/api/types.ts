@@ -182,4 +182,6 @@ export type FinalizedDocument = {
   filename: string;
   created_at: string;
   download_url: string;
+  material_id?: number;
+  material_name?: string | null;
 };

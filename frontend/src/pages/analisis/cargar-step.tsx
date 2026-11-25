@@ -195,6 +195,7 @@ export function CargarStep() {
 
       <MaterialsHistory
         disabled={submitting}
+        allowDelete
         onUseMaterial={analyzeExistingMaterial}
       />
 

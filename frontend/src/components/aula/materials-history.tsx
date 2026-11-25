@@ -19,14 +19,19 @@ function formatCreatedAt(value: string | undefined) {
 export function MaterialsHistory({
   disabled = false,
   onUseMaterial,
+  allowDelete = false,
+  onDeleted,
 }: {
   disabled?: boolean;
-  onUseMaterial: (material: Material) => void;
+  onUseMaterial?: (material: Material) => void | Promise<void>;
+  allowDelete?: boolean;
+  onDeleted?: () => void;
 }) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingId, setUsingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,12 +64,41 @@ export function MaterialsHistory({
   }, []);
 
   async function handleUse(material: Material) {
-    if (disabled || usingId != null) return;
+    if (!onUseMaterial || disabled || usingId != null || deletingId != null) {
+      return;
+    }
     setUsingId(material.id);
     try {
       await onUseMaterial(material);
     } finally {
       setUsingId(null);
+    }
+  }
+
+  async function handleDelete(material: Material) {
+    if (!allowDelete || disabled || deletingId != null || usingId != null) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `¿Eliminar “${material.name}”? También se eliminarán sus PDF adaptados.`,
+    );
+    if (!confirmed) return;
+    setDeletingId(material.id);
+    setError(null);
+    try {
+      await api.deleteMaterial(material.id);
+      setMaterials((current) =>
+        current.filter((item) => item.id !== material.id),
+      );
+      onDeleted?.();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo eliminar el material.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -105,17 +139,36 @@ export function MaterialsHistory({
                     Id {material.id} · {formatCreatedAt(material.created_at)}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={disabled || usingId != null}
-                  onClick={() => void handleUse(material)}
-                >
-                  {usingId === material.id
-                    ? "Iniciando…"
-                    : "Analizar de nuevo"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {allowDelete ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        disabled || deletingId != null || usingId != null
+                      }
+                      onClick={() => void handleDelete(material)}
+                    >
+                      {deletingId === material.id ? "Eliminando…" : "Eliminar"}
+                    </Button>
+                  ) : null}
+                  {onUseMaterial ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        disabled || usingId != null || deletingId != null
+                      }
+                      onClick={() => void handleUse(material)}
+                    >
+                      {usingId === material.id
+                        ? "Iniciando…"
+                        : "Analizar de nuevo"}
+                    </Button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

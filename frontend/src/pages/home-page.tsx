@@ -1,3 +1,4 @@
+import { HomeHistories } from '@/components/aula/home-histories';
 import { HomeStart } from '@/components/aula/home-start';
 import { TutorialDialog } from '@/components/aula/tutorial-dialog';
 import {
@@ -24,18 +25,19 @@ export function HomePage() {
 
       <HomeStart />
 
+      <HomeHistories />
+
       <Card className="border-transparent bg-tertiary-container shadow-none ring-1 ring-primary/20">
         <CardHeader className="gap-2">
           <CardTitle className="text-base">Estás usando VERA sin cuenta</CardTitle>
           <CardDescription className="text-sm leading-6 text-foreground/80">
-            El trabajo solo se conserva en esta sesión del navegador. No hay
-            historial en la nube ni en otros dispositivos. Antes de salir,
-            descargá el material desde &quot;Obtener resultado&quot; si ya
-            terminaste.
+            Los materiales subidos y los PDF adaptados se guardan en el
+            servidor y aparecen en el historial de esta página. El progreso del
+            análisis en curso vive en esta sesión del navegador.
           </CardDescription>
           <p className="text-sm leading-6 text-muted-foreground">
-            Próximamente vas a poder ingresar con una cuenta para guardar tu
-            historial y retomar trabajos anteriores.
+            Próximamente vas a poder ingresar con una cuenta para asociar el
+            historial a tu usuario.
           </p>
         </CardHeader>
       </Card>

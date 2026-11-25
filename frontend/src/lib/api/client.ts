@@ -529,6 +529,12 @@ export const api = {
     return request<MaterialListResponse>("/materials");
   },
 
+  deleteMaterial(materialId: number): Promise<void> {
+    return request<void>(`/materials/${materialId}`, {
+      method: "DELETE",
+    });
+  },
+
   uploadMaterialFromText(name: string, text: string): Promise<Material> {
     return request<Material>("/materials/text", {
       method: "POST",
@@ -574,6 +580,20 @@ export const api = {
   listFinalizedDocuments(materialId: number): Promise<FinalizedDocument[]> {
     return request<FinalizedDocument[]>(
       `/materials/${materialId}/finalized-documents`,
+    );
+  },
+
+  listAllFinalizedDocuments(): Promise<FinalizedDocument[]> {
+    return request<FinalizedDocument[]>("/materials/finalized-documents");
+  },
+
+  deleteFinalizedDocument(
+    materialId: number,
+    documentId: number,
+  ): Promise<void> {
+    return request<void>(
+      `/materials/${materialId}/finalized-documents/${documentId}`,
+      { method: "DELETE" },
     );
   },
 
