@@ -53,7 +53,7 @@ export function AccesoPage() {
             <CardTitle className="text-xl">Ingresar sin cuenta</CardTitle>
             <CardDescription className="text-sm leading-6">
               Ideal para un análisis puntual, sin registro. Podés recorrer todo
-              el flujo ahora.
+              el flujo y retomar materiales desde el historial.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -68,7 +68,7 @@ export function AccesoPage() {
               </li>
               <li className="flex gap-2 text-muted-foreground">
                 <Clock className="mt-0.5 size-4 shrink-0" />
-                El trabajo no se guarda al cerrar la sesión
+                Historial en el servidor (compartido hasta que haya cuentas)
               </li>
             </ul>
             <Button
@@ -91,13 +91,13 @@ export function AccesoPage() {
               Ingresar con mi cuenta
             </CardTitle>
             <CardDescription className="text-sm leading-6">
-              Estará disponible en una versión futura para guardar tu trabajo y
-              retomarlo después.
+              Estará disponible en una versión futura para asociar el historial
+              a tu usuario y retomarlo entre dispositivos.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Historial de análisis</li>
+              <li>• Historial propio, no compartido</li>
               <li>• Retomar trabajos pendientes</li>
               <li>• Preferencias guardadas</li>
             </ul>
@@ -119,8 +119,8 @@ export function AccesoPage() {
           <CardTitle className="text-base">Antes de empezar</CardTitle>
           <CardDescription className="text-sm leading-6">
             El contenido se envía a un servicio externo de IA para el análisis.
-            Los archivos se eliminan después del procesamiento. No incluyas
-            datos personales de estudiantes.
+            Los materiales y PDF adaptados se guardan en el servidor (historial)
+            con retención limitada. No incluyas datos personales de estudiantes.
           </CardDescription>
           <Dialog>
             <DialogTrigger
@@ -147,10 +147,12 @@ export function AccesoPage() {
                   barreras y proponer adaptaciones.
                 </p>
                 <p>
-                  Los archivos subidos se usan para el análisis y se eliminan
-                  después del procesamiento. En el modo sin cuenta, el trabajo
-                  no se guarda en la nube ni entre dispositivos: vive en esta
-                  sesión del navegador.
+                  Los materiales subidos y los PDF adaptados se guardan en el
+                  servidor y aparecen en el historial. Podés ocultarlos desde la
+                  app; la retención automática o una limpieza en Supabase los
+                  elimina después. El progreso de un análisis en curso vive en
+                  esta sesión del navegador. Sin cuenta, el historial es
+                  compartido entre quienes usan este entorno.
                 </p>
                 <p>
                   No incluyas datos personales de estudiantes ni información
