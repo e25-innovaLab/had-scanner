@@ -306,8 +306,8 @@ def delete_finalized_document(
         raise LookupError("Finalized document not found")
 
     file_path = document.file_path
-    finalization_repository.delete_finalized_document(db=db, document=document)
     delete_stored_file(file_path)
+    finalization_repository.delete_finalized_document(db=db, document=document)
 
 
 def delete_finalized_documents_for_material(
@@ -320,11 +320,11 @@ def delete_finalized_documents_for_material(
     )
     for document in documents:
         file_path = document.file_path
+        delete_stored_file(file_path)
         finalization_repository.delete_finalized_document(
             db=db,
             document=document,
         )
-        delete_stored_file(file_path)
 
 
 def cleanup_expired_finalized_documents(
@@ -351,11 +351,11 @@ def cleanup_expired_finalized_documents(
     for document in expired:
         file_path = document.file_path
         try:
+            delete_stored_file(file_path)
             finalization_repository.delete_finalized_document(
                 db=db,
                 document=document,
             )
-            delete_stored_file(file_path)
             deleted += 1
         except Exception:
             logger.exception(

@@ -185,7 +185,9 @@ def delete_material(
     db: Session,
     material_id: int,
 ) -> None:
-    from app.repositories import finalization_repository
+    from app.services.finalization_service import (
+        delete_finalized_documents_for_material,
+    )
     from app.utils.object_storage import delete_stored_file
 
     material = material_repository.get_by_id(
@@ -198,18 +200,8 @@ def delete_material(
             detail=f"Material with id {material_id} not found",
         )
 
-    documents = finalization_repository.get_finalized_documents_by_material(
-        db=db,
-        material_id=material_id,
-    )
-    for document in documents:
-        finalized_path = document.file_path
-        finalization_repository.delete_finalized_document(
-            db=db,
-            document=document,
-        )
-        delete_stored_file(finalized_path)
+    delete_finalized_documents_for_material(db=db, material_id=material_id)
 
     file_path = material.file_path
-    material_repository.soft_delete(db=db, material=material)
     delete_stored_file(file_path)
+    material_repository.soft_delete(db=db, material=material)

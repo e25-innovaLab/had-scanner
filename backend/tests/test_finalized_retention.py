@@ -39,6 +39,7 @@ class TestFinalizedRetention(unittest.TestCase):
         doc = MagicMock()
         doc.id = 11
         doc.file_path = "storage://finalized/1/old.pdf"
+        call_order: list[str] = []
 
         with (
             patch(
@@ -46,11 +47,15 @@ class TestFinalizedRetention(unittest.TestCase):
                 return_value=[doc],
             ) as older_than,
             patch(
-                "app.services.finalization_service.finalization_repository.delete_finalized_document",
-            ) as delete_row,
-            patch(
                 "app.services.finalization_service.delete_stored_file",
+                side_effect=lambda *_args, **_kwargs: call_order.append(
+                    "storage",
+                ),
             ) as delete_file,
+            patch(
+                "app.services.finalization_service.finalization_repository.delete_finalized_document",
+                side_effect=lambda **_kwargs: call_order.append("row"),
+            ) as delete_row,
         ):
             deleted = cleanup_expired_finalized_documents(
                 db=db,
@@ -62,8 +67,9 @@ class TestFinalizedRetention(unittest.TestCase):
         older_than.assert_called_once()
         cutoff = older_than.call_args.kwargs["cutoff"]
         self.assertEqual(cutoff.day, 18)
-        delete_row.assert_called_once_with(db=db, document=doc)
         delete_file.assert_called_once_with("storage://finalized/1/old.pdf")
+        delete_row.assert_called_once_with(db=db, document=doc)
+        self.assertEqual(call_order, ["storage", "row"])
 
     def test_maybe_cleanup_throttles_repeat_calls(self) -> None:
         import app.services.finalization_service as service
