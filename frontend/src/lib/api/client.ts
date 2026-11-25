@@ -305,7 +305,7 @@ export const api = {
   createProposal(
     analysisId: string,
     barrierId: string,
-    body?: { variant?: keyof ApiBarrier["variants"] },
+    _body?: { variant?: keyof ApiBarrier["variants"] },
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
     if (isBackendId(analysisId)) {
       return request<BackendProposalResponse>(
@@ -391,9 +391,9 @@ export const api = {
   },
 
   saveDraft(
-    analysisId: string,
-    barrierId: string,
-    draft: string,
+    _analysisId: string,
+    _barrierId: string,
+    _draft: string,
   ): Promise<ApiBarrier> {
     return Promise.reject(
       new ApiError(501, "El backend todavía no permite guardar borradores."),
@@ -483,13 +483,13 @@ export const api = {
     return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
-  reopen(analysisId: string, barrierId: string): Promise<ApiBarrier> {
+  reopen(_analysisId: string, _barrierId: string): Promise<ApiBarrier> {
     return Promise.reject(
       new ApiError(501, "El backend todavía no permite reabrir propuestas."),
     );
   },
 
-  export(analysisId: string): Promise<{
+  export(_analysisId: string): Promise<{
     exportStatus: string;
     exports: ExportFile[];
   }> {
@@ -501,7 +501,7 @@ export const api = {
     );
   },
 
-  getExports(analysisId: string): Promise<{
+  getExports(_analysisId: string): Promise<{
     exportStatus: string;
     exports: ExportFile[];
     appliedChanges: string[];

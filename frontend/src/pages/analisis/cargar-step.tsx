@@ -14,11 +14,6 @@ import {
   withAnalysisId,
   writeFlowResume,
 } from "@/lib/api/url";
-import {
-  resolveVeraSource,
-  VERA_SOURCE,
-  type VeraSource,
-} from "@/lib/api/vera-source";
 import { cn } from "@/lib/utils";
 
 function findMaterialByFileName(
@@ -38,9 +33,6 @@ function findMaterialByFileName(
 
 export function CargarStep() {
   const navigate = useNavigate();
-  const [source] = useState<VeraSource>(() => resolveVeraSource());
-  const useRealApi = source === VERA_SOURCE.api;
-
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
@@ -54,9 +46,7 @@ export function CargarStep() {
 
   const canContinue =
     mode === "archivo"
-      ? Boolean(
-          file && (!useRealApi || file.name.toLowerCase().endsWith(".pdf")),
-        )
+      ? Boolean(file && file.name.toLowerCase().endsWith(".pdf"))
       : text.trim().length > 0;
 
   async function startAnalysisForMaterial(materialId: number) {
@@ -87,25 +77,6 @@ export function CargarStep() {
     }
   }
 
-  async function continueWithMock() {
-    setStatusLabel("Creando análisis (demo)…");
-    const analysis = await api.createAnalysis(
-      mode === "archivo" && file
-        ? { fileName: file.name, fileSize: file.size }
-        : {
-            fileName: `${
-              title.trim() ||
-              text.trim().split("\n")[0]?.slice(0, 80).trim() ||
-              "Material pegado"
-            }.txt`,
-            fileSize: new TextEncoder().encode(text).length,
-          },
-    );
-    storeAnalysisId(analysis.id);
-    writeFlowResume(analysis.id, "/analisis/analizar");
-    navigate(withAnalysisId("/analisis/analizar", analysis.id));
-  }
-
   async function continueToAnalyze() {
     if (!canContinue || submitting) return;
     setSubmitting(true);
@@ -114,11 +85,6 @@ export function CargarStep() {
     setDuplicateMaterial(null);
 
     try {
-      if (!useRealApi) {
-        await continueWithMock();
-        return;
-      }
-
       const isPdf =
         mode === "archivo" && file && file.name.toLowerCase().endsWith(".pdf");
 
@@ -204,16 +170,10 @@ export function CargarStep() {
           setDuplicateMaterial(null);
         }}
       />
-      {useRealApi ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el servidor).
-          El historial reutiliza materiales ya subidos.
-        </p>
-      ) : (
-        <p className="mt-3 text-sm text-muted-foreground">
-          Camino demo: archivo o texto contra la API simulada.
-        </p>
-      )}
+      <p className="mt-3 text-sm text-muted-foreground">
+        PDF (máx. 50 MB) o texto pegado (se convierte a PDF en el servidor). El
+        historial reutiliza materiales ya subidos.
+      </p>
       {error ? (
         <div className="mt-3 space-y-2" role="alert">
           <p className="text-sm text-danger-foreground">{error}</p>
@@ -233,12 +193,10 @@ export function CargarStep() {
         </div>
       ) : null}
 
-      {useRealApi ? (
-        <MaterialsHistory
-          disabled={submitting}
-          onUseMaterial={analyzeExistingMaterial}
-        />
-      ) : null}
+      <MaterialsHistory
+        disabled={submitting}
+        onUseMaterial={analyzeExistingMaterial}
+      />
 
       <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
