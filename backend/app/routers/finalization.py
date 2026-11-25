@@ -10,7 +10,6 @@ from app.services.finalization_service import (
     ProposalEvidenceError,
     delete_finalized_document,
     finalize_material,
-    list_all_finalized_documents,
 )
 from app.repositories import finalization_repository, material_repository
 from app.utils.object_storage import resolve_stored_path
@@ -22,31 +21,6 @@ router = APIRouter(
     prefix="/materials",
     tags=["Finalization"],
 )
-
-
-@router.get(
-    "/finalized-documents",
-)
-def list_finalized_documents_endpoint(
-    db: Session = Depends(get_db),
-):
-    documents = list_all_finalized_documents(db=db)
-    return [
-        {
-            "id": document.id,
-            "material_id": document.material_id,
-            "material_name": (
-                document.material.name if document.material else None
-            ),
-            "filename": document.filename,
-            "created_at": document.created_at,
-            "download_url": (
-                f"/materials/{document.material_id}/finalized-documents/"
-                f"{document.id}/download"
-            ),
-        }
-        for document in documents
-    ]
 
 
 @router.post(
