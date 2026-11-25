@@ -21,6 +21,7 @@ def upgrade() -> None:
     op.create_table(
         "proposal_generation",
         sa.Column("barrier_id", sa.Integer(), nullable=False),
+        sa.Column("generation_token", sa.String(length=36), nullable=False),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             "cancel_requested",

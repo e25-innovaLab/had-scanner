@@ -142,7 +142,7 @@ def create_adaptation_proposal(
     db: Session,
     barrier_id: int,
 ):
-    proposal_generation_repository.begin_generation(
+    generation_token = proposal_generation_repository.begin_generation(
         db=db,
         barrier_id=barrier_id,
     )
@@ -155,6 +155,7 @@ def create_adaptation_proposal(
         if proposal_generation_repository.is_cancellation_requested(
             db=db,
             barrier_id=barrier_id,
+            generation_token=generation_token,
         ):
             raise ProposalCancelledException()
 
@@ -170,6 +171,7 @@ def create_adaptation_proposal(
         if proposal_generation_repository.is_cancellation_requested(
             db=db,
             barrier_id=barrier_id,
+            generation_token=generation_token,
         ):
             raise ProposalCancelledException()
 
@@ -211,6 +213,7 @@ def create_adaptation_proposal(
         proposal_generation_repository.finish_generation(
             db=db,
             barrier_id=barrier_id,
+            generation_token=generation_token,
         )
 
 

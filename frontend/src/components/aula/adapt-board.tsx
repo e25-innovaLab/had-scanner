@@ -142,6 +142,34 @@ export function AdaptBoard({
     };
   }, [analysisId, load, pathname]);
 
+  useEffect(() => {
+    if (!analysisId) return;
+    const pendingIds = new Set(
+      proposalJobs
+        .filter(
+          (job) =>
+            job.analysisId === analysisId &&
+            job.status === PROPOSAL_JOB_STATUS.PENDING,
+        )
+        .map((job) => job.barrierId),
+    );
+    setStateById((current) => {
+      let changed = false;
+      const next: Record<string, BarrierState> = { ...current };
+      for (const [barrierId, state] of Object.entries(current)) {
+        if (state.mode === "generating" && !pendingIds.has(barrierId)) {
+          next[barrierId] = {
+            ...state,
+            mode: "empty",
+            generateFail: null,
+          };
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [analysisId, proposalJobs]);
+
   const dimensions = useMemo(() => {
     const order: string[] = [];
     const map = new Map<
@@ -769,6 +797,14 @@ export function AdaptBoard({
                       onClick={() => {
                         if (!analysisId) return;
                         cancelProposal(analysisId, entry.id);
+                        setStateById((current) => ({
+                          ...current,
+                          [entry.id]: {
+                            ...current[entry.id],
+                            mode: "empty",
+                            generateFail: null,
+                          },
+                        }));
                       }}
                     >
                       <span className="inline-flex items-center gap-1.5">

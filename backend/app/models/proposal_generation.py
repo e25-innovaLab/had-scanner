@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -15,6 +15,11 @@ class ProposalGeneration(Base):
         Integer,
         ForeignKey("barrier.id", ondelete="CASCADE"),
         primary_key=True,
+    )
+
+    generation_token: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
     )
 
     started_at: Mapped[datetime] = mapped_column(

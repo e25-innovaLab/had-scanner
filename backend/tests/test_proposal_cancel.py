@@ -66,15 +66,17 @@ class TestCreateAdaptationProposalCancel(unittest.TestCase):
         barrier.description = "d"
         barrier.justification = "j"
         barrier.recommendation = "r"
+        token = "token-a"
 
         with (
             patch(
                 "app.services.adaptation_service.proposal_generation_repository.begin_generation",
+                return_value=token,
             ) as begin,
             patch(
                 "app.services.adaptation_service.proposal_generation_repository.is_cancellation_requested",
                 side_effect=[False, True],
-            ),
+            ) as cancelled,
             patch(
                 "app.services.adaptation_service.proposal_generation_repository.finish_generation",
             ) as finish,
@@ -99,7 +101,13 @@ class TestCreateAdaptationProposalCancel(unittest.TestCase):
         self.assertEqual(ctx.exception.status_code, 409)
         begin.assert_called_once()
         create_proposal.assert_not_called()
-        finish.assert_called_once_with(db=db, barrier_id=4)
+        finish.assert_called_once_with(
+            db=db,
+            barrier_id=4,
+            generation_token=token,
+        )
+        for call in cancelled.call_args_list:
+            self.assertEqual(call.kwargs["generation_token"], token)
 
     def test_persists_when_not_cancelled(self) -> None:
         from app.services.adaptation_service import create_adaptation_proposal
@@ -113,10 +121,12 @@ class TestCreateAdaptationProposalCancel(unittest.TestCase):
         barrier.justification = "j"
         barrier.recommendation = "r"
         created = MagicMock()
+        token = "token-b"
 
         with (
             patch(
                 "app.services.adaptation_service.proposal_generation_repository.begin_generation",
+                return_value=token,
             ),
             patch(
                 "app.services.adaptation_service.proposal_generation_repository.is_cancellation_requested",
@@ -145,7 +155,60 @@ class TestCreateAdaptationProposalCancel(unittest.TestCase):
 
         self.assertIs(result, created)
         create_proposal.assert_called_once()
-        finish.assert_called_once_with(db=db, barrier_id=5)
+        finish.assert_called_once_with(
+            db=db,
+            barrier_id=5,
+            generation_token=token,
+        )
+
+
+class TestProposalGenerationToken(unittest.TestCase):
+    def test_superseded_token_is_treated_as_cancelled(self) -> None:
+        from app.repositories import proposal_generation_repository as repo
+
+        db = MagicMock()
+        row = MagicMock()
+        row.generation_token = "token-new"
+        row.cancel_requested = False
+        db.get.return_value = row
+
+        self.assertTrue(
+            repo.is_cancellation_requested(
+                db=db,
+                barrier_id=1,
+                generation_token="token-old",
+            )
+        )
+
+    def test_finish_ignores_other_generation_token(self) -> None:
+        from app.repositories import proposal_generation_repository as repo
+
+        db = MagicMock()
+        row = MagicMock()
+        row.generation_token = "token-new"
+        db.get.return_value = row
+
+        repo.finish_generation(
+            db=db,
+            barrier_id=1,
+            generation_token="token-old",
+        )
+        db.delete.assert_not_called()
+        db.commit.assert_not_called()
+
+    def test_begin_generation_returns_new_token(self) -> None:
+        from app.repositories import proposal_generation_repository as repo
+
+        db = MagicMock()
+        db.get.return_value = None
+
+        with patch.object(repo.uuid, "uuid4") as uuid4:
+            uuid4.return_value = MagicMock(__str__=lambda _self: "fixed-token")
+            token = repo.begin_generation(db=db, barrier_id=7)
+
+        self.assertEqual(token, "fixed-token")
+        db.add.assert_called_once()
+        db.commit.assert_called()
 
 
 if __name__ == "__main__":
