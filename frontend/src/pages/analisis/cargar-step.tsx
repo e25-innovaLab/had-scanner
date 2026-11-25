@@ -43,6 +43,7 @@ export function CargarStep() {
 
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
+  const [title, setTitle] = useState("");
   const [mode, setMode] = useState<"archivo" | "texto">("archivo");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +93,11 @@ export function CargarStep() {
       mode === "archivo" && file
         ? { fileName: file.name, fileSize: file.size }
         : {
-            fileName: "CARPINTERIA I (TECNO DE MAT).txt",
+            fileName: `${
+              title.trim() ||
+              text.trim().split("\n")[0]?.slice(0, 80).trim() ||
+              "Material pegado"
+            }.txt`,
             fileSize: new TextEncoder().encode(text).length,
           },
     );
@@ -143,7 +148,9 @@ export function CargarStep() {
 
       if (mode === "texto" && text.trim()) {
         const name =
-          text.trim().split("\n")[0]?.slice(0, 80).trim() || "Material pegado";
+          title.trim().slice(0, 150) ||
+          text.trim().split("\n")[0]?.slice(0, 80).trim() ||
+          "Material pegado";
         setStatusLabel("Convirtiendo texto a PDF…");
         try {
           const material = await api.uploadMaterialFromText(name, text.trim());
@@ -186,10 +193,12 @@ export function CargarStep() {
         onSelectionChange={({
           file: nextFile,
           text: nextText,
+          title: nextTitle,
           mode: nextMode,
         }) => {
           setFile(nextFile);
           setText(nextText);
+          setTitle(nextTitle);
           setMode(nextMode);
           setError(null);
           setDuplicateMaterial(null);

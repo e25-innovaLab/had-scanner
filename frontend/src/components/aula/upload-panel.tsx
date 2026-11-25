@@ -16,6 +16,7 @@ type Mode = 'archivo' | 'texto';
 export type UploadSelection = {
   file: File | null;
   text: string;
+  title: string;
   mode: Mode;
 };
 
@@ -35,6 +36,7 @@ export function UploadPanel({
   const [mode, setMode] = useState<Mode>('archivo');
   const [dragging, setDragging] = useState(false);
   const [pastedText, setPastedText] = useState('');
+  const [pastedTitle, setPastedTitle] = useState('');
 
   // Guardamos el objeto File completo
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,12 +52,14 @@ export function UploadPanel({
     next: Partial<UploadSelection> & {
       file?: File | null;
       text?: string;
+      title?: string;
       mode?: Mode;
     }
   ) {
     onSelectionChange?.({
       file: next.file !== undefined ? next.file : selectedFile,
       text: next.text !== undefined ? next.text : pastedText,
+      title: next.title !== undefined ? next.title : pastedTitle,
       mode: next.mode !== undefined ? next.mode : mode,
     });
   }
@@ -344,6 +348,12 @@ export function UploadPanel({
               <Input
                 placeholder="CARPINTERIA I — Tecnología de los materiales"
                 name="titulo"
+                value={pastedTitle}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPastedTitle(value);
+                  notify({ title: value });
+                }}
               />
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
