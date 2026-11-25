@@ -35,3 +35,6 @@ Luego: `pnpm dev:vite`.
 - Soft-delete de usuario: `material.status=deleted` y
   `finalized_document.status=deleted` (se ocultan en la UI). Los archivos
   quedan en Storage/DB hasta purge manual en Supabase o la retención TTL.
+- Al purgar Storage a mano: no borrar `materials/<hash>/…` si otro material
+  activo reutiliza el mismo hash (re-subida del mismo PDF tras soft-delete).
+  Los adaptados van por `finalized/<material_id>/…` y no colisionan.

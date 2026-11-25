@@ -246,6 +246,10 @@ def finalize_material(
 
     stored_path = output_path
     try:
+        db.expire(material)
+        if material_repository.get_by_id(db=db, material_id=material_id) is None:
+            raise LookupError("Material not found")
+
         # 9. Persist to Supabase Storage when configured (survives Render disk).
         if material_storage_enabled():
             stored_path = upload_finalized_file(
@@ -253,6 +257,10 @@ def finalize_material(
                 material_id=material_id,
                 filename=filename,
             )
+
+        db.expire_all()
+        if material_repository.get_by_id(db=db, material_id=material_id) is None:
+            raise LookupError("Material not found")
 
         # 10. Register the generated document.
         finalized_document = (
@@ -314,16 +322,11 @@ def delete_finalized_document(
 def soft_delete_finalized_documents_for_material(
     db: Session,
     material_id: int,
-) -> None:
-    documents = finalization_repository.get_finalized_documents_by_material(
+) -> int:
+    return finalization_repository.soft_delete_available_for_material(
         db=db,
         material_id=material_id,
     )
-    for document in documents:
-        finalization_repository.soft_delete_finalized_document(
-            db=db,
-            document=document,
-        )
 
 
 def cleanup_expired_finalized_documents(

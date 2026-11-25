@@ -157,7 +157,7 @@ def download_finalized_document_endpoint(
 ):
 
     document = (
-        finalization_repository.get_finalized_document_by_id(
+        finalization_repository.get_downloadable_finalized_document(
             db=db,
             material_id=material_id,
             document_id=document_id,
@@ -198,7 +198,7 @@ def download_finalized_material_endpoint(
 ):
     try:
         finalized_document = (
-            finalization_repository.get_latest_finalized_document(
+            finalization_repository.get_latest_downloadable_finalized_document(
                 db=db,
                 material_id=material_id,
             )

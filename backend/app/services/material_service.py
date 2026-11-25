@@ -108,7 +108,7 @@ def create_material(
             name=saved_file_path.name,
             file_path=stored_path,
             file_hash=file_hash,
-            status="uploaded",
+            status=material_repository.MATERIAL_STATUS_UPLOADED,
         )
 
         return material_repository.create(
@@ -200,4 +200,6 @@ def delete_material(
         )
 
     soft_delete_finalized_documents_for_material(db=db, material_id=material_id)
-    material_repository.soft_delete(db=db, material=material)
+    material_repository.soft_delete(db=db, material=material, commit=False)
+    db.commit()
+    db.refresh(material)
