@@ -8,7 +8,7 @@ Herramienta de accesibilidad para documentos docentes (VERA).
 had-scanner/
 ├── frontend/          # Vite + React + TypeScript + Tailwind
 ├── backend/           # FastAPI + Docker
-├── docs/              # architecture, deploy; archive/kickoff histórico
+├── docs/              # architecture, deploy
 └── .github/           # Configuración de la org
 ```
 

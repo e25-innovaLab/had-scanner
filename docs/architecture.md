@@ -23,5 +23,4 @@
 
 ## Docs relacionadas
 - Deploy y env: [deploy.md](./deploy.md)
-- Kickoff histórico: [archive/kickoff/](./archive/kickoff/)
 - UI detalle: `frontend/readme/`
