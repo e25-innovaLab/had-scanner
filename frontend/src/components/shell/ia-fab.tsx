@@ -11,7 +11,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { usePendingProposalJobs } from '@/lib/api/proposal-jobs';
+import {
+  cancelProposal,
+  usePendingProposalJobs,
+} from '@/lib/api/proposal-jobs';
 import { withAnalysisId } from '@/lib/api/url';
 import { cn } from '@/lib/utils';
 
@@ -103,16 +106,29 @@ export function IaFab() {
               <p className="text-sm leading-6 text-muted-foreground">
                 Cuando termine, la propuesta queda en el detalle de la barrera.
               </p>
-              {detailHref ? (
+              <div className="flex flex-wrap gap-2">
+                {detailHref ? (
+                  <Button
+                    variant="outline"
+                    className="h-10 rounded-xl"
+                    nativeButton={false}
+                    render={<Link to={detailHref} />}
+                  >
+                    Ir al detalle
+                  </Button>
+                ) : null}
                 <Button
+                  type="button"
                   variant="outline"
                   className="h-10 rounded-xl"
-                  nativeButton={false}
-                  render={<Link to={detailHref} />}
+                  onClick={() => {
+                    if (!activeJob) return;
+                    cancelProposal(activeJob.analysisId, activeJob.barrierId);
+                  }}
                 >
-                  Ir al detalle
+                  Cancelar generación
                 </Button>
-              ) : null}
+              </div>
             </div>
           ) : (
             <>

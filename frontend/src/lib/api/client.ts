@@ -302,15 +302,23 @@ export const api = {
     return Promise.reject(new ApiError(400, "Identificador de análisis inválido."));
   },
 
+  cancelProposalGeneration(barrierId: number): Promise<void> {
+    return request<void>(
+      `/barriers/${barrierId}/proposals/generate/cancel`,
+      { method: "POST" },
+    );
+  },
+
   createProposal(
     analysisId: string,
     barrierId: string,
     _body?: { variant?: keyof ApiBarrier["variants"] },
+    opts?: { signal?: AbortSignal },
   ): Promise<{ barrier: ApiBarrier; proposal: Proposal }> {
     if (isBackendId(analysisId)) {
       return request<BackendProposalResponse>(
         `/barriers/${encodeURIComponent(barrierId)}/proposals/generate`,
-        { method: "POST" },
+        { method: "POST", signal: opts?.signal },
       ).then(async (backendProposal) => {
         rememberBackendProposal(
           analysisId,

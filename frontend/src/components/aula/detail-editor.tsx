@@ -23,6 +23,7 @@ import { api } from "@/lib/api/client";
 import { isBackendId } from "@/lib/api/ids";
 import {
   PROPOSAL_JOB_STATUS,
+  cancelProposal,
   clearProposalJob,
   startProposal,
   useProposalJob,
@@ -499,7 +500,7 @@ export function DetailEditor({
   const discardingProposal = hasProposal || suggestion.hasProposal;
 
   const footerHint = generating
-    ? "La propuesta aparece en unos segundos. Podés descartar la barrera si no querés esperar."
+    ? "La propuesta aparece en unos segundos. Podés cancelar la generación si no querés esperar."
     : isDiscarded
       ? lastInDimension
         ? `Barrera descartada. Es la última de ${suggestion.dimension}.`
@@ -705,20 +706,33 @@ export function DetailEditor({
               {generating ? (
                 <div className="px-(--card-spacing)">
                   <Card className="border-primary/30 bg-primary/20 text-foreground shadow-none">
-                    <div className="px-(--card-spacing) py-3 text-sm leading-6">
-                      <p className="font-semibold">
-                        {pendingVariant
-                          ? `Generando versión «${
-                              VERSION_ACTIONS.find(
-                                (a) => a.id === pendingVariant,
-                              )?.label ?? "Otra versión"
-                            }»…`
-                          : "Generando propuesta con IA…"}
-                      </p>
-                      <p className="text-muted-foreground">
-                        El texto actual se mantiene visible. Si falla, el
-                        intento no se descuenta.
-                      </p>
+                    <div className="flex flex-col gap-3 px-(--card-spacing) py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm leading-6">
+                        <p className="font-semibold">
+                          {pendingVariant
+                            ? `Generando versión «${
+                                VERSION_ACTIONS.find(
+                                  (a) => a.id === pendingVariant,
+                                )?.label ?? "Otra versión"
+                              }»…`
+                            : "Generando propuesta con IA…"}
+                        </p>
+                        <p className="text-muted-foreground">
+                          El texto actual se mantiene visible. Si falla, el
+                          intento no se descuenta.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 shrink-0 rounded-xl bg-card px-4"
+                        onClick={() => {
+                          if (!analysisId || !suggestion) return;
+                          cancelProposal(analysisId, suggestion.id);
+                        }}
+                      >
+                        Cancelar generación
+                      </Button>
                     </div>
                   </Card>
                 </div>
