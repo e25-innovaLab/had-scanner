@@ -12,6 +12,7 @@ from app.schemas.material import (
 from app.services.material_service import (
     create_material,
     create_material_from_text,
+    delete_material,
     get_all_materials,
     get_material_by_id,
 )
@@ -92,3 +93,14 @@ def get_material(
         db=db,
         material_id=material_id,
     )
+
+
+@router.delete(
+    "/{material_id}",
+    status_code=204,
+)
+def remove_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+):
+    delete_material(db=db, material_id=material_id)

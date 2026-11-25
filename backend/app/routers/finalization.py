@@ -6,9 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.services.finalization_service import (
-    finalize_material,
     NoCompletedAnalysisError,
     ProposalEvidenceError,
+    delete_finalized_document,
+    finalize_material,
+    list_all_finalized_documents,
 )
 from app.repositories import finalization_repository, material_repository
 from app.utils.object_storage import resolve_stored_path
@@ -20,6 +22,31 @@ router = APIRouter(
     prefix="/materials",
     tags=["Finalization"],
 )
+
+
+@router.get(
+    "/finalized-documents",
+)
+def list_finalized_documents_endpoint(
+    db: Session = Depends(get_db),
+):
+    documents = list_all_finalized_documents(db=db)
+    return [
+        {
+            "id": document.id,
+            "material_id": document.material_id,
+            "material_name": (
+                document.material.name if document.material else None
+            ),
+            "filename": document.filename,
+            "created_at": document.created_at,
+            "download_url": (
+                f"/materials/{document.material_id}/finalized-documents/"
+                f"{document.id}/download"
+            ),
+        }
+        for document in documents
+    ]
 
 
 @router.post(
@@ -121,6 +148,28 @@ def get_finalized_documents_endpoint(
         }
         for document in documents
     ]
+
+
+@router.delete(
+    "/{material_id}/finalized-documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_finalized_document_endpoint(
+    material_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_finalized_document(
+            db=db,
+            material_id=material_id,
+            document_id=document_id,
+        )
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Finalized document not found",
+        ) from None
 
 
 @router.get(

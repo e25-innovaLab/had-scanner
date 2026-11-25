@@ -5,6 +5,7 @@ from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.adaptation_proposal import AdaptationProposal
 from app.models.finalized_document import FinalizedDocument
+from app.models.material import Material
 
 def create_finalized_document(
     db: Session,
@@ -56,6 +57,31 @@ def get_finalized_documents_by_material(
     )
 
     return list(db.scalars(statement).all())
+
+
+def get_all_finalized_documents(
+    db: Session,
+) -> list[FinalizedDocument]:
+    """All finalized PDFs for active materials, newest first."""
+    statement = (
+        select(FinalizedDocument)
+        .join(Material, Material.id == FinalizedDocument.material_id)
+        .where(Material.status == "uploaded")
+        .options(selectinload(FinalizedDocument.material))
+        .order_by(
+            FinalizedDocument.created_at.desc(),
+            FinalizedDocument.id.desc(),
+        )
+    )
+    return list(db.scalars(statement).all())
+
+
+def delete_finalized_document(
+    db: Session,
+    document: FinalizedDocument,
+) -> None:
+    db.delete(document)
+    db.commit()
 
 def get_latest_completed_analysis(
     db: Session,

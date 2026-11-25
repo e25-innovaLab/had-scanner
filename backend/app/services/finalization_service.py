@@ -12,6 +12,7 @@ from app.repositories import material_repository
 from app.utils.pdf_parser import extract_document
 from app.utils.pdf_generator import generate_pdf, extract_document_title
 from app.utils.object_storage import (
+    delete_stored_file,
     material_storage_enabled,
     resolve_material_path,
     upload_finalized_file,
@@ -263,3 +264,45 @@ def finalize_material(
             os.remove(output_path)
 
         raise
+
+
+def list_all_finalized_documents(
+    db: Session,
+) -> list[FinalizedDocument]:
+    return finalization_repository.get_all_finalized_documents(db=db)
+
+
+def delete_finalized_document(
+    db: Session,
+    *,
+    material_id: int,
+    document_id: int,
+) -> None:
+    document = finalization_repository.get_finalized_document_by_id(
+        db=db,
+        material_id=material_id,
+        document_id=document_id,
+    )
+    if document is None:
+        raise LookupError("Finalized document not found")
+
+    file_path = document.file_path
+    finalization_repository.delete_finalized_document(db=db, document=document)
+    delete_stored_file(file_path)
+
+
+def delete_finalized_documents_for_material(
+    db: Session,
+    material_id: int,
+) -> None:
+    documents = finalization_repository.get_finalized_documents_by_material(
+        db=db,
+        material_id=material_id,
+    )
+    for document in documents:
+        file_path = document.file_path
+        finalization_repository.delete_finalized_document(
+            db=db,
+            document=document,
+        )
+        delete_stored_file(file_path)

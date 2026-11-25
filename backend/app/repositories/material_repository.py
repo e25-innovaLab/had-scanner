@@ -27,9 +27,14 @@ def create(
     return material
 
 def get_all(db: Session) -> list[Material]:
-    statement = select(Material).order_by(Material.id)
+    statement = (
+        select(Material)
+        .where(Material.status == "uploaded")
+        .order_by(Material.created_at.desc(), Material.id.desc())
+    )
 
     return list(db.scalars(statement).all())
+
 
 def get_by_id(
     db: Session,
@@ -41,3 +46,14 @@ def get_by_id(
     )
 
     return db.scalar(statement)
+
+
+def soft_delete(
+    db: Session,
+    material: Material,
+) -> Material:
+    material.status = "deleted"
+    db.add(material)
+    db.commit()
+    db.refresh(material)
+    return material
