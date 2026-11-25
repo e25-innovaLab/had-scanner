@@ -1,4 +1,3 @@
-import os
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +11,7 @@ from app.services.finalization_service import (
     ProposalEvidenceError,
 )
 from app.repositories import finalization_repository, material_repository
+from app.utils.object_storage import resolve_stored_path
 
 
 logger = logging.getLogger(__name__)
@@ -147,14 +147,16 @@ def download_finalized_document_endpoint(
             detail="Finalized document not found",
         )
 
-    if not os.path.isfile(document.file_path):
+    try:
+        local_path = resolve_stored_path(document.file_path)
+    except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="PDF file not found",
-        )
+        ) from None
 
     return FileResponse(
-        path=document.file_path,
+        path=str(local_path),
         media_type="application/pdf",
         filename=document.filename,
     )
@@ -182,14 +184,16 @@ def download_finalized_material_endpoint(
                 detail="No se encontró un PDF generado para este material.",
             )
 
-        if not os.path.isfile(finalized_document.file_path):
+        try:
+            local_path = resolve_stored_path(finalized_document.file_path)
+        except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="El archivo PDF no existe.",
-            )
+            ) from None
 
         return FileResponse(
-            path=finalized_document.file_path,
+            path=str(local_path),
             media_type="application/pdf",
             filename=finalized_document.filename,
         )

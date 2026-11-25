@@ -11,7 +11,11 @@ from app.repositories import (
 from app.repositories import material_repository
 from app.utils.pdf_parser import extract_document
 from app.utils.pdf_generator import generate_pdf, extract_document_title
-from app.utils.object_storage import resolve_material_path
+from app.utils.object_storage import (
+    material_storage_enabled,
+    resolve_material_path,
+    upload_finalized_file,
+)
 from app.models.finalized_document import FinalizedDocument
 
 
@@ -226,14 +230,23 @@ def finalize_material(
         title=document_title,
     )
 
+    stored_path = output_path
     try:
-        # 9. Register the generated document.
+        # 9. Persist to Supabase Storage when configured (survives Render disk).
+        if material_storage_enabled():
+            stored_path = upload_finalized_file(
+                local_path=Path(output_path),
+                material_id=material_id,
+                filename=filename,
+            )
+
+        # 10. Register the generated document.
         finalized_document = (
             finalization_repository.create_finalized_document(
                 db=db,
                 material_id=material_id,
                 filename=filename,
-                file_path=output_path,
+                file_path=stored_path,
             )
         )
 
@@ -245,7 +258,7 @@ def finalize_material(
     except Exception:
         db.rollback()
 
-        # Remove the generated file if persistence fails.
+        # Remove the generated local file if persistence fails.
         if os.path.isfile(output_path):
             os.remove(output_path)
 
