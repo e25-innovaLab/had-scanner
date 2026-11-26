@@ -31,10 +31,10 @@ export function HomeNav() {
             aria-current={active ? 'page' : undefined}
             onClick={isAccount ? () => clearGuestSession() : undefined}
             className={cn(
-              'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color]',
+              'flex shrink-0 items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color] md:w-full',
               active
                 ? 'bg-ink font-medium text-sidebar-primary-foreground active:bg-ink/90'
-                : 'text-muted-foreground hover:bg-card hover:text-foreground active:bg-muted'
+                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted'
             )}
           >
             {Icon ? <Icon className="size-4 shrink-0" aria-hidden="true" /> : null}
