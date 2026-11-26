@@ -198,26 +198,25 @@ export function CargarStep() {
         onUseMaterial={analyzeExistingMaterial}
       />
 
-      <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-8 flex w-full flex-col-reverse gap-3 border-t border-[rgba(226,232,240,0.75)] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <Link
           to="/inicio"
           className={cn(
-            buttonVariants({ variant: "outline", size: "lg" }),
-            "h-11 rounded-xl px-4",
+            buttonVariants({ variant: "outline" }),
+            "rounded-[12px] px-4 py-2.5",
           )}
         >
           ← Volver al inicio
         </Link>
         <Button
           type="button"
-          size="lg"
-          className="h-11 rounded-xl px-4 font-semibold"
+          className="rounded-[12px] px-[18px] py-2.5 font-semibold"
           disabled={!canContinue || submitting}
           onClick={() => void continueToAnalyze()}
         >
           {submitting
             ? (statusLabel ?? "Subiendo material…")
-            : "Siguiente: Analizar"}
+            : "Siguiente: Analizar →"}
         </Button>
       </div>
     </>

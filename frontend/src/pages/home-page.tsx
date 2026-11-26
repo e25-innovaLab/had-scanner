@@ -11,36 +11,37 @@ import { FLOW_STEPS } from '@/lib/aula';
 
 export function HomePage() {
   return (
-    <div className="space-y-5">
-      <header className="mb-2 space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+    <div className="flex w-full flex-col gap-8">
+      <header className="space-y-2">
+        <h1 className="font-heading text-[32px] leading-normal font-bold text-[#0F172A]">
           Hola, docente
         </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+        <p className="max-w-2xl text-[14px] leading-normal font-medium text-muted-foreground">
           Este es tu punto de entrada: iniciá un análisis nuevo para revisar y
           adaptar tu material.
         </p>
       </header>
 
-      <HomeStart />
+      <div className="flex w-full flex-col gap-6">
+        <HomeStart />
 
-      <Card className="border-transparent bg-tertiary-container shadow-none ring-1 ring-primary/20">
-        <CardHeader className="gap-2">
-          <CardTitle className="text-base">Estás usando VERA sin cuenta</CardTitle>
-          <CardDescription className="text-sm leading-6 text-foreground/80">
-            El trabajo solo se conserva en esta sesión del navegador. No hay
-            historial en la nube ni en otros dispositivos. Antes de salir,
-            descargá el material desde &quot;Obtener resultado&quot; si ya
-            terminaste.
-          </CardDescription>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Próximamente vas a poder ingresar con una cuenta para guardar tu
-            historial y retomar trabajos anteriores.
-          </p>
-        </CardHeader>
-      </Card>
+        <Card className="border-primary/25 bg-tertiary-container shadow-none">
+          <CardHeader className="gap-2">
+            <CardTitle className="text-base">Estás usando VERA sin cuenta</CardTitle>
+            <CardDescription className="text-sm leading-6 text-foreground/80">
+              El trabajo solo se conserva en esta sesión del navegador. No hay
+              historial en la nube ni en otros dispositivos. Antes de salir,
+              descargá el material desde &quot;Obtener resultado&quot; si ya
+              terminaste.
+            </CardDescription>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Próximamente vas a poder ingresar con una cuenta para guardar tu
+              historial y retomar trabajos anteriores.
+            </p>
+          </CardHeader>
+        </Card>
 
-      <Card className="shadow-sm ring-1 ring-border/70">
+        <Card className="shadow-none">
         <CardHeader>
           <CardTitle>¿Cómo funciona?</CardTitle>
           <CardDescription>
@@ -54,8 +55,8 @@ export function HomePage() {
                 <span
                   className={
                     index === FLOW_STEPS.length - 1
-                      ? 'rounded-full border border-primary bg-primary/20 px-3 py-1 text-xs font-medium text-foreground'
-                      : 'rounded-full bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground'
+                      ? 'inline-flex items-center rounded-[8px] border border-[rgba(132,204,22,0.45)] bg-primary/20 px-[10px] py-[4px] text-xs font-medium text-foreground shadow-[0_2px_6px_0_rgba(132,204,22,0.06)] backdrop-blur-[4px]'
+                      : 'inline-flex items-center rounded-[8px] border border-[rgba(132,204,22,0.35)] bg-white/85 px-[10px] py-[4px] text-xs font-medium text-foreground shadow-[0_2px_6px_0_rgba(132,204,22,0.06)] backdrop-blur-[4px]'
                   }
                 >
                   {step.label}
@@ -71,6 +72,7 @@ export function HomePage() {
           <TutorialDialog />
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -69,7 +69,7 @@ export function MaterialsHistory({
   }
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-6 w-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium">
           Historial de materiales

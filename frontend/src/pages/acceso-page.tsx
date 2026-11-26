@@ -28,45 +28,48 @@ export function AccesoPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8 sm:px-6 md:py-12 lg:px-8">
-      <div className="mb-10">
-        <VeraLogo to="/" compact />
+    <div className="vera-landing-bg flex flex-1 flex-col">
+      <div className="mx-auto flex w-full max-w-[968px] flex-1 flex-col px-4 py-8 sm:px-6 md:py-10">
+      <div className="mb-5">
+        <VeraLogo to="/" compact size="lg" />
       </div>
 
-      <header className="mb-8 max-w-2xl space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+      <header className="mb-8 max-w-2xl space-y-2.5">
+        <h1 className="font-heading text-[32px] leading-normal font-bold text-[#0F172A]">
           ¿Cómo querés ingresar?
         </h1>
-        <p className="text-sm leading-6 text-muted-foreground sm:text-[15px]">
+        <p className="text-[14px] leading-normal font-medium text-muted-foreground">
           VERA usa inteligencia artificial para detectar barreras de
           accesibilidad en materiales educativos y proponerte adaptaciones.
         </p>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-border/80 shadow-sm ring-1 ring-border/60">
-          <CardHeader className="gap-3">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
-              <span className="size-1.5 rounded-full bg-primary-foreground" />
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card className="flex flex-1 flex-col items-start gap-5 rounded-[24px] border-2 border-[rgba(226,232,240,0.90)] bg-white/88 p-8 backdrop-blur-[8px]">
+          <CardHeader className="w-full gap-3 p-0">
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-container px-3 py-1 text-xs font-semibold text-info-foreground">
+              <span className="size-1.5 rounded-full bg-info-foreground" />
               Disponible
             </span>
-            <CardTitle className="text-xl">Ingresar sin cuenta</CardTitle>
-            <CardDescription className="text-sm leading-6">
+            <CardTitle className="font-heading text-[22px] font-bold text-[#0F172A]">
+              Ingresar sin cuenta
+            </CardTitle>
+            <CardDescription className="text-[14px] leading-normal font-medium">
               Ideal para un análisis puntual, sin registro. Podés recorrer todo
               el flujo ahora.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <ul className="space-y-2 text-sm text-foreground">
-              <li className="flex gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-success-foreground" />
+          <CardContent className="flex w-full flex-1 flex-col justify-between gap-6 p-0">
+            <ul className="space-y-3 text-[14px] leading-normal font-medium text-foreground">
+              <li className="flex items-start gap-2.5">
+                <Check className="mt-0.5 size-4 shrink-0 text-vera-mark-lime" />
                 Analizar y adaptar materiales
               </li>
-              <li className="flex gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-success-foreground" />
+              <li className="flex items-start gap-2.5">
+                <Check className="mt-0.5 size-4 shrink-0 text-vera-mark-lime" />
                 Descargar informes y material adaptado
               </li>
-              <li className="flex gap-2 text-muted-foreground">
+              <li className="flex items-start gap-2.5 text-muted-foreground">
                 <Clock className="mt-0.5 size-4 shrink-0" />
                 El trabajo no se guarda al cerrar la sesión
               </li>
@@ -74,7 +77,7 @@ export function AccesoPage() {
             <Button
               type="button"
               size="lg"
-              className="h-11 w-full rounded-xl px-4 text-sm font-semibold"
+              className="w-full text-sm font-semibold"
               onClick={enterWithoutAccount}
             >
               Ingresar sin cuenta →
@@ -82,21 +85,21 @@ export function AccesoPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/80 opacity-95 shadow-sm">
-          <CardHeader className="gap-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <Card className="flex flex-1 flex-col items-start gap-5 rounded-[24px] border-2 border-[rgba(226,232,240,0.90)] bg-white/88 p-8 backdrop-blur-[8px]">
+          <CardHeader className="w-full gap-3 p-0">
+            <span className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
               Próximamente
             </span>
-            <CardTitle className="text-xl text-muted-foreground">
+            <CardTitle className="font-heading text-[22px] font-bold text-[#0F172A]">
               Ingresar con mi cuenta
             </CardTitle>
-            <CardDescription className="text-sm leading-6">
+            <CardDescription className="text-[14px] leading-normal font-medium">
               Estará disponible en una versión futura para guardar tu trabajo y
               retomarlo después.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <ul className="space-y-2 text-sm text-muted-foreground">
+          <CardContent className="flex w-full flex-1 flex-col justify-between gap-6 p-0">
+            <ul className="space-y-3 text-[14px] leading-normal font-medium text-muted-foreground">
               <li>• Historial de análisis</li>
               <li>• Retomar trabajos pendientes</li>
               <li>• Preferencias guardadas</li>
@@ -105,7 +108,7 @@ export function AccesoPage() {
               type="button"
               variant="outline"
               size="lg"
-              className="h-11 w-full rounded-xl px-4"
+              className="w-full"
               disabled
             >
               Iniciar sesión
@@ -114,10 +117,12 @@ export function AccesoPage() {
         </Card>
       </div>
 
-      <Card className="mt-6 border-border/80 border-l-4 border-l-primary shadow-sm ring-1 ring-border/60">
-        <CardHeader className="gap-2">
-          <CardTitle className="text-base">Antes de empezar</CardTitle>
-          <CardDescription className="text-sm leading-6">
+      <Card className="mt-8 rounded-[20px] border-2 border-[rgba(226,232,240,0.90)] border-l-4 border-l-primary bg-white/88 px-8 py-6 backdrop-blur-[8px]">
+        <CardHeader className="gap-2 p-0">
+          <CardTitle className="font-heading text-base font-bold text-[#0F172A]">
+            Antes de empezar
+          </CardTitle>
+          <CardDescription className="text-[14px] leading-normal font-medium">
             El contenido se envía a un servicio externo de IA para el análisis.
             Los archivos se eliminan después del procesamiento. No incluyas
             datos personales de estudiantes.
@@ -162,6 +167,7 @@ export function AccesoPage() {
           </Dialog>
         </CardHeader>
       </Card>
+      </div>
     </div>
   );
 }

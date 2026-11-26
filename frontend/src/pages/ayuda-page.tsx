@@ -20,12 +20,12 @@ const HELP = [
 
 export function AyudaPage() {
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
+        <h1 className="font-heading text-[32px] leading-normal font-bold text-[#0F172A]">
           Ayuda
         </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+        <p className="max-w-2xl text-[14px] leading-normal font-medium text-muted-foreground">
           VERA acompaña la revisión de accesibilidad. La IA propone; el cambio
           se aplica recién cuando lo aceptás.
         </p>
@@ -34,7 +34,7 @@ export function AyudaPage() {
         {FLOW_STEPS.map((step, index) => (
           <Card key={step.href}>
             <CardHeader>
-              <CardTitle>
+              <CardTitle className="font-heading font-bold text-[#0F172A]">
                 {String(index + 1).padStart(2, '0')} · {step.label}
               </CardTitle>
               <CardDescription>{HELP[index]}</CardDescription>
@@ -44,7 +44,10 @@ export function AyudaPage() {
       </div>
       <Link
         to="/analisis/cargar"
-        className={cn(buttonVariants({ size: 'lg' }), 'h-10 px-4')}
+        className={cn(
+          buttonVariants({ size: 'lg' }),
+          'rounded-[12px] font-semibold'
+        )}
       >
         Comenzar un análisis
       </Link>

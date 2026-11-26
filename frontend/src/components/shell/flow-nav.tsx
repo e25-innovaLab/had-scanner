@@ -62,17 +62,17 @@ export function FlowNav() {
         const number = String(index + 1).padStart(2, '0');
         const isAdaptar = step.href === '/analisis/adaptar';
         return (
-          <div key={step.href} className="space-y-1">
+          <div key={step.href} className="space-y-1 md:w-full">
             <Link
               to={stepHref(step.href)}
               aria-current={state === 'current' ? 'step' : undefined}
               className={cn(
-                'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color]',
+                'flex shrink-0 items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm whitespace-nowrap transition-[color,background-color] md:w-full',
                 state === 'current'
                   ? 'bg-ink font-medium text-sidebar-primary-foreground active:bg-ink/90'
                   : state === 'done'
-                    ? 'text-foreground hover:bg-card active:bg-muted'
-                    : 'text-muted-foreground hover:bg-card hover:text-foreground active:bg-muted'
+                    ? 'text-foreground hover:bg-muted/60 active:bg-muted'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted'
               )}
             >
               {state === 'done' ? (

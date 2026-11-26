@@ -131,9 +131,9 @@ export function HomeStart() {
   const apiChecking = backendUp === null;
 
   return (
-    <div className="space-y-4">
+    <div className="flex w-full flex-col gap-6">
       {resume && continueHref ? (
-        <Card className="shadow-sm ring-1 ring-primary/30">
+        <Card className="border-primary/30 shadow-none">
           <CardHeader>
             <CardTitle>Continuar análisis</CardTitle>
             <CardDescription>
@@ -146,7 +146,7 @@ export function HomeStart() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2 sm:flex-row">
             <Button
-              className="h-10 rounded-xl px-4 font-semibold"
+              className="rounded-[12px] font-semibold"
               nativeButton={false}
               render={<Link to={continueHref} />}
             >
@@ -155,7 +155,7 @@ export function HomeStart() {
             <Button
               type="button"
               variant="outline"
-              className="h-10 rounded-xl px-4"
+              className="rounded-[12px]"
               onClick={() => {
                 clearFlowResume();
                 setResume(null);
@@ -167,7 +167,7 @@ export function HomeStart() {
         </Card>
       ) : null}
 
-      <Card className="shadow-sm ring-1 ring-border/70">
+      <Card className="shadow-none">
         <CardHeader className="gap-2">
           <CardTitle className="flex items-center gap-2 text-xl">
             <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
@@ -197,7 +197,7 @@ export function HomeStart() {
           <Button
             type="button"
             size="lg"
-            className="h-11 rounded-xl px-5 font-semibold"
+            className="rounded-[12px] font-semibold"
             disabled={apiDisabled}
             onClick={startAnalysis}
           >
