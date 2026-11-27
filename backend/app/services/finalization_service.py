@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import threading
 import time
 import uuid
@@ -9,23 +10,25 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.core.config import (
+    FINALIZE_MODE,
     FINALIZED_RETENTION_CLEANUP_SECONDS,
     FINALIZED_RETENTION_DAYS,
 )
+from app.models.finalized_document import FinalizedDocument
+from app.models.material import Material
 from app.repositories import (
     finalization_repository,
 )
 from app.repositories import material_repository
 from app.services.ocr_service import resolve_analyzed_pdf_path
-from app.utils.pdf_parser import extract_document
-from app.utils.pdf_generator import generate_pdf, extract_document_title
 from app.utils.object_storage import (
     delete_stored_file,
     is_storage_uri,
     material_storage_enabled,
     upload_finalized_file,
 )
-from app.models.finalized_document import FinalizedDocument
+from app.utils.pdf_generator import generate_pdf, extract_document_title
+from app.utils.pdf_parser import extract_document
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +44,11 @@ class ProposalEvidenceError(Exception):
     pass
 
 
-def _apply_adaptations(
+def _collect_replacements(
     document: dict,
     barriers: list,
     proposals: list,
-) -> dict:
-
+) -> tuple[dict[str, str], set[str]]:
     elements = [
         element
         for page in document.get("pages", [])
@@ -64,14 +66,12 @@ def _apply_adaptations(
         for barrier in barriers
     }
 
-    replacements = {}
-    skipped_elements = set()
-    claimed_elements = set()
+    replacements: dict[str, str] = {}
+    skipped_elements: set[str] = set()
+    claimed_elements: set[str] = set()
 
     for proposal in proposals:
-
         barrier = barriers_by_id.get(proposal.barrier_id)
-
         if barrier is None:
             continue
 
@@ -91,19 +91,16 @@ def _apply_adaptations(
             for element_id in element_ids
             if element_id not in element_positions
         ]
-
         if missing_ids:
             raise ProposalEvidenceError(
                 f"Proposal {proposal.id} references "
                 f"unknown elements: {missing_ids}"
             )
 
-        # Order elements according to their position in the document.
         element_ids.sort(
             key=lambda element_id: element_positions[element_id]
         )
 
-        # Avoid applying overlapping proposals.
         if any(
             element_id in claimed_elements
             for element_id in element_ids
@@ -112,45 +109,40 @@ def _apply_adaptations(
                 f"Proposal {proposal.id} overlaps another proposal."
             )
 
-        # Replace the first original element.
         first_element_id = element_ids[0]
-
-        replacements[first_element_id] = (
-            proposal.proposed_content
-        )
-
-        # The remaining original elements are already
-        # represented by the proposed content.
+        replacements[first_element_id] = proposal.proposed_content
         skipped_elements.update(element_ids[1:])
-
         claimed_elements.update(element_ids)
 
+    return replacements, skipped_elements
+
+
+def _apply_adaptations(
+    document: dict,
+    barriers: list,
+    proposals: list,
+) -> tuple[dict, dict[str, str]]:
+    replacements, skipped_elements = _collect_replacements(
+        document=document,
+        barriers=barriers,
+        proposals=proposals,
+    )
+
     adapted_pages = []
-
     for page in document.get("pages", []):
-
         adapted_elements = []
-
         for element in page.get("elements", []):
-
             element_id = element.get("element_id")
-
             if element_id in skipped_elements:
                 continue
-
             if element_id in replacements:
-
-                adapted_element = {
+                adapted_elements.append({
                     **element,
                     "text": replacements[element_id],
                     "_is_adaptation": True,
-                }
-
-                adapted_elements.append(adapted_element)
-
+                })
             else:
                 adapted_elements.append(element)
-
         adapted_pages.append({
             **page,
             "elements": adapted_elements,
@@ -159,7 +151,145 @@ def _apply_adaptations(
     return {
         **document,
         "pages": adapted_pages,
-    }
+    }, replacements
+
+
+def _output_paths(material: Material) -> tuple[str, str]:
+    output_dir = os.getenv(
+        "FINALIZED_DIR",
+        "/app/data/finalized",
+    )
+    os.makedirs(output_dir, exist_ok=True)
+    filename = (
+        f"{Path(material.name).stem}_final_"
+        f"{uuid.uuid4().hex[:8]}.pdf"
+    )
+    return os.path.join(output_dir, filename), filename
+
+
+def _write_adapted_pdf(
+    *,
+    material: Material,
+    adapted_document: dict,
+    source_document: dict,
+    replacements: dict[str, str],
+    source_path: Path,
+    title: str | None = None,
+) -> tuple[str, str, list[str]]:
+    """Write the adapted PDF.
+
+    Prefers in-place patch (keeps figures). Falls back to ReportLab rebuild.
+    Returns ``(output_path, filename, user_facing_warnings)``.
+    """
+    output_path, filename = _output_paths(material)
+    warnings: list[str] = []
+    is_pdf = source_path.suffix.lower() == ".pdf"
+    mode = FINALIZE_MODE
+
+    if is_pdf and not replacements:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_path, output_path)
+        logger.info(
+            "Wrote unmodified source PDF to %s (no accepted adaptations)",
+            output_path,
+        )
+        return output_path, filename, warnings
+
+    use_patch = mode == "patch" and is_pdf and bool(replacements)
+
+    if use_patch:
+        from app.services.pdf_patch import (
+            append_appendix_pages,
+            build_patches_for_replacements,
+            patch_pdf,
+        )
+
+        patches, patch_warnings, skipped = build_patches_for_replacements(
+            source_document,
+            replacements,
+            source_path=source_path,
+        )
+        for warning in patch_warnings:
+            logger.warning("PDF patch: %s", warning)
+
+        appendix: list[dict[str, str]] = []
+        for element_id, reason in skipped.items():
+            content = replacements.get(element_id)
+            if not content:
+                continue
+            appendix.append({
+                "title": f"Bloque {element_id}",
+                "content": content,
+            })
+            logger.warning(
+                "PDF patch: element %s moved to appendix (%s)",
+                element_id,
+                reason,
+            )
+
+        if patches:
+            try:
+                result = patch_pdf(
+                    source_path,
+                    patches,
+                    output_path,
+                )
+                for warning in result.warnings:
+                    logger.warning("PDF patch: %s", warning)
+                if appendix:
+                    append_appendix_pages(output_path, appendix)
+                    warnings.append(
+                        f"{len(appendix)} adaptación"
+                        f"{'' if len(appendix) == 1 else 'es'} sin ubicación "
+                        "exacta se agregaron al final del PDF."
+                    )
+                if result.overflows:
+                    warnings.append(
+                        f"{len(result.overflows)} adaptación"
+                        f"{'' if len(result.overflows) == 1 else 'es'} no "
+                        "entraron bien en el bloque original."
+                    )
+                if any("scan overlay" in item for item in result.warnings):
+                    warnings.append(
+                        "Algunas páginas son escaneos: la adaptación se "
+                        "dibujó encima de la imagen."
+                    )
+                logger.info(
+                    "Wrote patched PDF (%s applied) to %s",
+                    result.applied,
+                    output_path,
+                )
+                return output_path, filename, warnings
+            except Exception:
+                logger.exception(
+                    "PDF patch failed; falling back to text rebuild"
+                )
+                warnings.append(
+                    "No se pudo editar el PDF original conservando figuras; "
+                    "se regeneró un PDF solo con texto."
+                )
+        elif appendix:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_path, output_path)
+            append_appendix_pages(output_path, appendix)
+            warnings.append(
+                f"{len(appendix)} adaptación"
+                f"{'' if len(appendix) == 1 else 'es'} se agregaron al "
+                "final del PDF (sin ubicación exacta)."
+            )
+            return output_path, filename, warnings
+
+    generate_pdf(
+        document=adapted_document,
+        output_path=output_path,
+        title=title,
+    )
+    if use_patch and not warnings:
+        warnings.append(
+            "Se regeneró un PDF solo con texto (modo patch no aplicó)."
+        )
+    logger.info("Wrote rebuilt PDF to %s", output_path)
+    return output_path, filename, warnings
 
 def finalize_material(
     db: Session,
@@ -206,43 +336,30 @@ def finalize_material(
     )
 
     # 4. Prefer OCR working copy when analysis produced one, then parse.
-    local_path = str(resolve_analyzed_pdf_path(material.file_path))
+    source_path = resolve_analyzed_pdf_path(material.file_path)
+    local_path = str(source_path)
     document = extract_document(local_path)
 
     document_title = extract_document_title(document)
 
-    # 5. Apply the adaptations.
-    adapted_document = _apply_adaptations(
+    # 5. Apply the adaptations (and collect element_id → text for patch).
+    adapted_document, replacements = _apply_adaptations(
         document=document,
         barriers=barriers,
         proposals=proposals,
     )
 
-    # 6. Create the output directory.
-    output_dir = os.getenv(
-        "FINALIZED_DIR",
-        "/app/data/finalized",
-    )
-
-    os.makedirs(output_dir, exist_ok=True)
-
-    # 7. Generate a unique filename.
-    filename = (
-        f"{Path(material.name).stem}_final_"
-        f"{uuid.uuid4().hex[:8]}.pdf"
-    )
-
-    output_path = os.path.join(
-        output_dir,
-        filename,
-    )
-
-    # 8. Generate the PDF.
-    generate_pdf(
-        document=adapted_document,
-        output_path=output_path,
+    # 6–8. Patch source PDF in place (keeps figures) or rebuild text-only.
+    output_path, filename, patch_warnings = _write_adapted_pdf(
+        material=material,
+        adapted_document=adapted_document,
+        source_document=document,
+        replacements=replacements,
+        source_path=source_path,
         title=document_title,
     )
+    for warning in patch_warnings:
+        logger.info("Finalize warning: %s", warning)
 
     stored_path = output_path
     try:

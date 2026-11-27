@@ -261,7 +261,6 @@ def _reconstruct_page(
     )
 
     for element in reconstructed:
-        element.pop("_font_size", None)
         element.pop("_line_height", None)
 
     return reconstructed

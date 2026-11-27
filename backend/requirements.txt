@@ -6,6 +6,7 @@ psycopg[binary]==3.2.10
 alembic==1.16.5
 python-multipart==0.0.20
 pymupdf4llm==1.28.2
+pymupdf
 google-genai
 reportlab
 supabase==2.27.2

@@ -64,3 +64,15 @@ OCR_TIMEOUT_SECONDS = int(os.getenv("OCR_TIMEOUT_SECONDS", "600"))
 OCR_FORCE_ALL = _env_bool("OCR_FORCE_ALL", "false")
 OCR_DESKEW = _env_bool("OCR_DESKEW", "true")
 OCR_ROTATE_PAGES = _env_bool("OCR_ROTATE_PAGES", "true")
+
+# Finalize: "patch" edits the source PDF in place (keeps figures);
+# "rebuild" regenerates a text-only PDF with ReportLab.
+FINALIZE_MODE = os.getenv("FINALIZE_MODE", "patch").strip().lower()
+BBOX_MAX_PAGE_COVERAGE = float(os.getenv("BBOX_MAX_PAGE_COVERAGE", "0.70"))
+BBOX_SCAN_REJECT_COVERAGE = float(
+    os.getenv("BBOX_SCAN_REJECT_COVERAGE", "0.55")
+)
+BBOX_SCAN_IMPRECISE_COVERAGE = float(
+    os.getenv("BBOX_SCAN_IMPRECISE_COVERAGE", "0.35")
+)
+BBOX_SCAN_MIN_AREA = float(os.getenv("BBOX_SCAN_MIN_AREA", "120"))

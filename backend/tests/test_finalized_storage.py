@@ -93,11 +93,11 @@ class TestFinalizeStorageCleanup(unittest.TestCase):
         material.file_path = "/tmp/tema.pdf"
         analysis = MagicMock()
         analysis.id = 1
-        local_output = Path(tmp) / "out.pdf"
 
-        def fake_generate_pdf(*, document, output_path, title):
-            del document, title
+        def fake_write_adapted_pdf(**_kwargs):
+            output_path = str(Path(tmp) / "tema_final_abcd1234.pdf")
             Path(output_path).write_bytes(b"%PDF-1.4")
+            return output_path, "tema_final_abcd1234.pdf", []
 
         storage_uri = "storage://finalized/3/tema_final_abcd1234.pdf"
         upload = MagicMock(
@@ -127,13 +127,21 @@ class TestFinalizeStorageCleanup(unittest.TestCase):
             ),
             patch.object(
                 service,
-                "resolve_material_path",
+                "resolve_analyzed_pdf_path",
                 return_value=Path("/tmp/tema.pdf"),
             ),
             patch.object(service, "extract_document", return_value={"pages": []}),
             patch.object(service, "extract_document_title", return_value="Tema"),
-            patch.object(service, "_apply_adaptations", return_value={"pages": []}),
-            patch.object(service, "generate_pdf", side_effect=fake_generate_pdf),
+            patch.object(
+                service,
+                "_apply_adaptations",
+                return_value=({"pages": []}, {}),
+            ),
+            patch.object(
+                service,
+                "_write_adapted_pdf",
+                side_effect=fake_write_adapted_pdf,
+            ),
             patch.object(service, "material_storage_enabled", return_value=True),
             patch.object(service, "upload_finalized_file", upload),
             patch.object(
@@ -143,9 +151,7 @@ class TestFinalizeStorageCleanup(unittest.TestCase):
             ),
             patch.object(service, "delete_stored_file") as delete_stored,
             patch.dict("os.environ", {"FINALIZED_DIR": tmp}, clear=False),
-            patch.object(service.uuid, "uuid4") as uuid4,
         ):
-            uuid4.return_value.hex = "abcd1234ffff"
             try:
                 result = service.finalize_material(db=db, material_id=3)
             except Exception as exc:
