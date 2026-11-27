@@ -1,6 +1,6 @@
 # had-scanner - VERA
 
-Herramienta de accesibilidad para documentos docentes (VERA).
+Herramienta de accesibilidad para materiales educativos docentes (VERA).
 
 ## Estructura
 
@@ -8,11 +8,11 @@ Herramienta de accesibilidad para documentos docentes (VERA).
 had-scanner/
 ├── frontend/          # Vite + React + TypeScript + Tailwind
 ├── backend/           # FastAPI + Docker
-├── docs/              # architecture, deploy
+├── docs/              # arquitectura, deploy, demo
 └── .github/           # Configuración de la org
 ```
 
-Docs: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./docs/deploy.md)
+Documentación: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./docs/deploy.md)
 
 ## Stack
 
@@ -20,7 +20,7 @@ Docs: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./d
 - **Backend:** Docker, FastAPI (Python)
 - **IA:** Gemini API (vía backend FastAPI)
 
-## Getting Started (Frontend)
+## Primeros pasos (Frontend)
 
 Requisitos: [Node.js](https://nodejs.org/) 20+ y pnpm vía Corepack (viene con Node). No uses npm/yarn.
 
@@ -38,15 +38,15 @@ pnpm dev:vite
 
 Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/readme/`](./frontend/readme/). Nix/direnv es opcional y solo para quien lo use.
 
-## Getting Started (Backend)
+## Primeros pasos (Backend)
 
-### Requerimientos
+### Requisitos
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose incluido)
 
 > **Importante:** Docker Desktop debe estar abierto antes de usar los comandos de Docker.
 
-### Ejecutando el proyecto
+### Cómo levantar el proyecto
 
 ```bash
 cd backend
@@ -55,17 +55,21 @@ docker compose up --build
 
 Documentación de la API: [http://localhost:8000/docs](http://localhost:8000/docs).
 
-## Deployed Demo
+## Demo desplegada
 
-The backend is deployed and available for testing.
+El backend está desplegado y disponible para pruebas.
 
-- **API Base URL:** https://had-scanner-rk7u.onrender.com
+- **URL base de la API:** https://had-scanner-rk7u.onrender.com
 - **Swagger UI:** https://had-scanner-rk7u.onrender.com/docs#/
-- **Health Check:** https://had-scanner-rk7u.onrender.com/health
+- **Health check:** https://had-scanner-rk7u.onrender.com/health
 
-Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
+Usá el Swagger UI para explorar los endpoints, revisar esquemas de request/response y ejecutar pedidos.
 
-**Note:** The service is hosted on Render and may take a few moments to respond to the first request if it has been inactive.
+**Nota:** El servicio está en Render y puede tardar unos segundos en responder al primer request si estuvo inactivo.
+
+## Demo de producto
+
+[Recorrido de ~60 s](./docs/vera-demoday.webm)
 
 ## Licencia
 
