@@ -22,7 +22,7 @@ from app.services.document_classifier import (
     text_poor_page_numbers,
 )
 from app.services.evidence_matcher import associate_evidence_elements
-from app.services.ocr_service import ocr_pdf
+from app.services.ocr_service import ocr_pdf, persist_ocr_artifact
 from app.utils.object_storage import resolve_material_path
 from app.utils.pdf_parser import extract_document
 
@@ -70,6 +70,10 @@ def analyze_material(
             local_path,
             page_count=int(document.get("page_count") or 1),
             force=force_ocr,
+        )
+        working_path = persist_ocr_artifact(
+            ocr_path=working_path,
+            source_file_path=local_path,
         )
         logger.info(
             "Step ocr finished in %sms → %s (force=%s, sparse_pages=%s)",

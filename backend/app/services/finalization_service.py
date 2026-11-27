@@ -16,13 +16,13 @@ from app.repositories import (
     finalization_repository,
 )
 from app.repositories import material_repository
+from app.services.ocr_service import resolve_analyzed_pdf_path
 from app.utils.pdf_parser import extract_document
 from app.utils.pdf_generator import generate_pdf, extract_document_title
 from app.utils.object_storage import (
     delete_stored_file,
     is_storage_uri,
     material_storage_enabled,
-    resolve_material_path,
     upload_finalized_file,
 )
 from app.models.finalized_document import FinalizedDocument
@@ -205,8 +205,8 @@ def finalize_material(
         statuses=["accepted"],
     )
 
-    # 4. Resolve storage:// (or local) to an on-disk path, then parse.
-    local_path = str(resolve_material_path(material.file_path))
+    # 4. Prefer OCR working copy when analysis produced one, then parse.
+    local_path = str(resolve_analyzed_pdf_path(material.file_path))
     document = extract_document(local_path)
 
     document_title = extract_document_title(document)

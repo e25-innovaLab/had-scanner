@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.models.analysis import Analysis
 from app.models.barrier import Barrier
 from app.models.material import Material
+from app.services.ocr_service import resolve_analyzed_pdf_path
 from app.utils.pdf_parser import extract_document
-from app.utils.object_storage import resolve_material_path
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -300,7 +300,9 @@ def _get_barrier_original_content(
         )
 
     try:
-        local_path = str(resolve_material_path(material.file_path))
+        local_path = str(
+            resolve_analyzed_pdf_path(material.file_path)
+        )
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

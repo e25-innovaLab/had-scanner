@@ -5,7 +5,13 @@ from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
 from app.ai.errors import GeminiAnalysisError
-from app.services.ocr_service import ocr_pdf, ocr_sidecar_path, prefer_ocr_pdf
+from app.services.ocr_service import (
+    ocr_pdf,
+    ocr_sidecar_path,
+    persist_ocr_artifact,
+    prefer_ocr_pdf,
+    resolve_analyzed_pdf_path,
+)
 
 
 class TestOcrService(unittest.TestCase):
@@ -174,6 +180,69 @@ class TestOcrService(unittest.TestCase):
             sidecar = ocr_sidecar_path(source)
             sidecar.write_bytes(b"%PDF-ocr")
             self.assertEqual(prefer_ocr_pdf(source), sidecar)
+
+    def test_prefer_ocr_pdf_falls_back_to_source(self):
+        with TemporaryDirectory() as tmp:
+            source = Path(tmp) / "scan.pdf"
+            source.write_bytes(b"%PDF-1.4")
+            self.assertEqual(prefer_ocr_pdf(source), source)
+
+    def test_prefer_ocr_pdf_uses_durable_copy(self):
+        with TemporaryDirectory() as tmp:
+            source = Path(tmp) / "scan.pdf"
+            source.write_bytes(b"%PDF-1.4")
+            ocr_dir = Path(tmp) / "ocr"
+            ocr_dir.mkdir()
+            durable = ocr_dir / "scan_ocr.pdf"
+            durable.write_bytes(b"%PDF-ocr")
+            with patch(
+                "app.services.ocr_service.STORAGE_DIR",
+                Path(tmp),
+            ):
+                self.assertEqual(prefer_ocr_pdf(source), durable)
+
+    def test_persist_ocr_artifact_copies_to_storage_dir(self):
+        with TemporaryDirectory() as tmp:
+            ocr = Path(tmp) / "scan_ocr.pdf"
+            ocr.write_bytes(b"%PDF-ocr")
+            stable = Path(tmp) / "stable"
+            with patch(
+                "app.services.ocr_service.STORAGE_DIR",
+                stable,
+            ):
+                result = persist_ocr_artifact(
+                    ocr_path=str(ocr),
+                    source_file_path=str(Path(tmp) / "scan.pdf"),
+                )
+
+            dest = Path(result)
+            self.assertTrue(dest.is_file())
+            self.assertEqual(dest.parent, stable / "ocr")
+
+    def test_resolve_analyzed_pdf_path_prefers_coverage_path(self):
+        with TemporaryDirectory() as tmp:
+            original = Path(tmp) / "scan.pdf"
+            preferred = Path(tmp) / "scan_ocr.pdf"
+            original.write_bytes(b"%PDF-1.4")
+            preferred.write_bytes(b"%PDF-ocr")
+            self.assertEqual(
+                resolve_analyzed_pdf_path(
+                    str(original),
+                    preferred_path=str(preferred),
+                ),
+                preferred,
+            )
+
+    def test_resolve_analyzed_pdf_path_uses_sidecar(self):
+        with TemporaryDirectory() as tmp:
+            original = Path(tmp) / "scan.pdf"
+            sidecar = Path(tmp) / "scan_ocr.pdf"
+            original.write_bytes(b"%PDF-1.4")
+            sidecar.write_bytes(b"%PDF-ocr")
+            self.assertEqual(
+                resolve_analyzed_pdf_path(str(original)),
+                sidecar,
+            )
 
 
 if __name__ == "__main__":
