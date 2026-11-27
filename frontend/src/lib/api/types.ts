@@ -154,7 +154,7 @@ export type BackendAnalysis = {
   material_id: number;
   material_name?: string;
   status: string; // processing | completed | failed
-  current_step: string; // queued | parsing | ... | completed | failed
+  current_step: string; // queued | parsing | ocr | ... | completed | failed
   score: number;
   error_message?: string | null;
   barriers: BackendBarrier[];

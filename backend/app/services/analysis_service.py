@@ -1,19 +1,30 @@
 
 import logging
 import threading
+import time
 
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
-from app.repositories import analysis_repository, material_repository
-from app.services.analysis_persistence_service import persist_analysis
-from app.utils.pdf_parser import extract_document
-from app.utils.object_storage import resolve_material_path
+from app.ai.errors import GeminiAnalysisError
 from app.ai.gemini_client import analyze_pdf_with_gemini
 from app.ai.gemini_errors import analysis_error_message
-from app.services.evidence_matcher import associate_evidence_elements
-from app.models.analysis import Analysis
+from app.core.config import OCR_MIN_CHARS_PER_PAGE
 from app.core.exceptions import AnalysisCancelledException
+from app.database.session import SessionLocal
+from app.models.analysis import Analysis
+from app.repositories import analysis_repository, material_repository
+from app.services.analysis_persistence_service import persist_analysis
+from app.services.document_classifier import (
+    classify_document,
+    count_extractable_chars,
+    is_text_poor,
+    needs_ocr,
+    text_poor_page_numbers,
+)
+from app.services.evidence_matcher import associate_evidence_elements
+from app.services.ocr_service import ocr_pdf
+from app.utils.object_storage import resolve_material_path
+from app.utils.pdf_parser import extract_document
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +43,83 @@ def analyze_material(
         on_step("parsing")
 
     document = extract_document(local_path)
+    chars_before = count_extractable_chars(document)
+    document_class = classify_document(document)
+    logger.info(
+        "Step parsing finished (pages=%s, chars=%s, class=%s)",
+        document.get("page_count"),
+        chars_before,
+        document_class,
+    )
+
+    if check_cancelled:
+        check_cancelled()
+
+    working_path = local_path
+    ocr_used = False
+    if needs_ocr(document):
+        poor_pages = text_poor_page_numbers(document)
+        # Fully sparse docs (typical scans) need --force-ocr; hybrid
+        # --skip-text is enough when only some pages are sparse.
+        force_ocr = is_text_poor(document)
+        if on_step:
+            on_step("ocr")
+
+        ocr_started = time.perf_counter()
+        working_path = ocr_pdf(
+            local_path,
+            page_count=int(document.get("page_count") or 1),
+            force=force_ocr,
+        )
+        logger.info(
+            "Step ocr finished in %sms → %s (force=%s, sparse_pages=%s)",
+            int((time.perf_counter() - ocr_started) * 1000),
+            working_path,
+            force_ocr,
+            poor_pages,
+        )
+
+        if check_cancelled:
+            check_cancelled()
+
+        document = extract_document(working_path)
+        chars_after = count_extractable_chars(document)
+        logger.info(
+            "Re-parse after OCR (pages=%s, chars_before=%s, chars_after=%s)",
+            document.get("page_count"),
+            chars_before,
+            chars_after,
+        )
+
+        # After OCR, judge the document as a whole — a cover/blank page
+        # must not fail an otherwise readable scan.
+        if is_text_poor(document):
+            logger.error(
+                "OCR insufficient text for %s "
+                "(chars_before=%s, chars_after=%s, pages=%s, "
+                "sparse_pages_after=%s)",
+                local_path,
+                chars_before,
+                chars_after,
+                document.get("page_count"),
+                text_poor_page_numbers(document),
+            )
+            raise GeminiAnalysisError(
+                "ocr_insufficient_text",
+                (
+                    "El OCR no recuperó texto suficiente para analizar "
+                    "este PDF escaneado."
+                ),
+            )
+
+        pages = max(int(document.get("page_count") or 1), 1)
+        logger.info(
+            "OCR text density: %.1f chars/page (threshold %s)",
+            chars_after / pages,
+            OCR_MIN_CHARS_PER_PAGE,
+        )
+        ocr_used = True
+        document_class = classify_document(document)
 
     if check_cancelled:
         check_cancelled()
@@ -39,7 +127,7 @@ def analyze_material(
     if on_step:
         on_step("accessibility_analysis")
 
-    gemini_result = analyze_pdf_with_gemini(local_path)
+    gemini_result = analyze_pdf_with_gemini(working_path)
 
     # Gemini terminó, pero el usuario pudo cancelar
     # el análisis mientras se procesaba la solicitud.
@@ -59,6 +147,9 @@ def analyze_material(
 
     return {
         **document,
+        "source_file_path": working_path,
+        "document_class": document_class,
+        "ocr_used": ocr_used,
         "accessibility_analysis": accessibility_analysis,
     }
 

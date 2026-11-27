@@ -43,3 +43,24 @@ FINALIZED_RETENTION_CLEANUP_SECONDS = _non_negative_int_env(
     "FINALIZED_RETENTION_CLEANUP_SECONDS",
     3600,
 )
+
+
+def _env_bool(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+# OCR for scanned / text-poor PDFs (ocrmypdf + tesseract).
+OCR_MIN_CHARS_PER_PAGE = int(os.getenv("OCR_MIN_CHARS_PER_PAGE", "40"))
+OCR_MIN_TOTAL_CHARS = int(os.getenv("OCR_MIN_TOTAL_CHARS", "120"))
+OCR_LANGUAGE = os.getenv("OCR_LANGUAGE", "spa+eng")
+OCR_TIMEOUT_SECONDS = int(os.getenv("OCR_TIMEOUT_SECONDS", "600"))
+# When true, OCR every page (--force-ocr). Default hybrid: skip pages
+# that already have selectable text (--skip-text).
+OCR_FORCE_ALL = _env_bool("OCR_FORCE_ALL", "false")
+OCR_DESKEW = _env_bool("OCR_DESKEW", "true")
+OCR_ROTATE_PAGES = _env_bool("OCR_ROTATE_PAGES", "true")

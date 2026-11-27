@@ -8,6 +8,7 @@ from unittest import mock
 
 import httpx
 
+from app.ai.errors import GeminiAnalysisError
 from app.ai.gemini_errors import (
     MSG_QUOTA,
     MSG_TIMEOUT,
@@ -77,6 +78,13 @@ class TestGeminiErrors(unittest.TestCase):
         status, detail = proposal_http_error(exc)
         self.assertEqual(status, 503)
         self.assertEqual(detail, MSG_UNAVAILABLE)
+
+    def test_ocr_analysis_error_keeps_spanish_message(self):
+        exc = GeminiAnalysisError(
+            "ocr_unavailable",
+            "OCR no está disponible en el servidor (falta ocrmypdf/tesseract).",
+        )
+        self.assertEqual(analysis_error_message(exc), exc.message)
 
 
 if __name__ == "__main__":

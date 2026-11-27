@@ -124,6 +124,11 @@ def classify_gemini_failure(exc: BaseException) -> tuple[str, str, int]:
 
 
 def analysis_error_message(exc: BaseException) -> str:
+    from app.ai.errors import GeminiAnalysisError
+
+    if isinstance(exc, GeminiAnalysisError):
+        return exc.user_message()
+
     _code, message, _status = classify_gemini_failure(exc)
     return message
 
