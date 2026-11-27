@@ -19,14 +19,19 @@ function formatCreatedAt(value: string | undefined) {
 export function MaterialsHistory({
   disabled = false,
   onUseMaterial,
+  allowDelete = false,
+  onDeleted,
 }: {
   disabled?: boolean;
-  onUseMaterial: (material: Material) => void;
+  onUseMaterial?: (material: Material) => void | Promise<void>;
+  allowDelete?: boolean;
+  onDeleted?: () => void;
 }) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingId, setUsingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,7 +64,9 @@ export function MaterialsHistory({
   }, []);
 
   async function handleUse(material: Material) {
-    if (disabled || usingId != null) return;
+    if (!onUseMaterial || disabled || usingId != null || deletingId != null) {
+      return;
+    }
     setUsingId(material.id);
     try {
       await onUseMaterial(material);
@@ -68,8 +75,35 @@ export function MaterialsHistory({
     }
   }
 
+  async function handleDelete(material: Material) {
+    if (!allowDelete || disabled || deletingId != null || usingId != null) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `¿Quitar “${material.name}” del historial? También se ocultarán sus PDF adaptados. El original queda en el servidor hasta una limpieza en Supabase; los adaptados hasta la retención automática o esa limpieza.`,
+    );
+    if (!confirmed) return;
+    setDeletingId(material.id);
+    setError(null);
+    try {
+      await api.deleteMaterial(material.id);
+      setMaterials((current) =>
+        current.filter((item) => item.id !== material.id),
+      );
+      onDeleted?.();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo eliminar el material.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
-    <Card className="mt-6">
+    <Card className="mt-6 w-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium">
           Historial de materiales
@@ -89,7 +123,8 @@ export function MaterialsHistory({
         ) : null}
         {!loading && !error && materials.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Todavía no hay materiales cargados.
+            Todavía no hay materiales cargados. Subí un PDF o pegá texto desde
+            “Nuevo análisis” / Cargar.
           </p>
         ) : null}
         {!loading && materials.length > 0 ? (
@@ -105,17 +140,36 @@ export function MaterialsHistory({
                     Id {material.id} · {formatCreatedAt(material.created_at)}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={disabled || usingId != null}
-                  onClick={() => void handleUse(material)}
-                >
-                  {usingId === material.id
-                    ? "Iniciando…"
-                    : "Analizar de nuevo"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {allowDelete ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        disabled || deletingId != null || usingId != null
+                      }
+                      onClick={() => void handleDelete(material)}
+                    >
+                      {deletingId === material.id ? "Eliminando…" : "Eliminar"}
+                    </Button>
+                  ) : null}
+                  {onUseMaterial ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        disabled || usingId != null || deletingId != null
+                      }
+                      onClick={() => void handleUse(material)}
+                    >
+                      {usingId === material.id
+                        ? "Iniciando…"
+                        : "Analizar de nuevo"}
+                    </Button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

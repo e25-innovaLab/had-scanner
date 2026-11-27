@@ -1,6 +1,6 @@
 # had-scanner - VERA
 
-Herramienta de accesibilidad para documentos docentes (VERA).
+Herramienta de accesibilidad para materiales educativos docentes (VERA).
 
 ## Estructura
 
@@ -8,11 +8,11 @@ Herramienta de accesibilidad para documentos docentes (VERA).
 had-scanner/
 ├── frontend/          # Vite + React + TypeScript + Tailwind
 ├── backend/           # FastAPI + Docker
-├── docs/              # architecture, deploy; archive/kickoff histórico
+├── docs/              # arquitectura, deploy, demo
 └── .github/           # Configuración de la org
 ```
 
-Docs: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./docs/deploy.md)
+Documentación: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./docs/deploy.md)
 
 ## Stack
 
@@ -20,7 +20,7 @@ Docs: [`docs/architecture.md`](./docs/architecture.md) · [`docs/deploy.md`](./d
 - **Backend:** Docker, FastAPI (Python)
 - **IA:** Gemini API (vía backend FastAPI)
 
-## Getting Started (Frontend)
+## Primeros pasos (Frontend)
 
 Requisitos: [Node.js](https://nodejs.org/) 20+ y pnpm vía Corepack (viene con Node). No uses npm/yarn.
 
@@ -32,24 +32,21 @@ pnpm dev:vite
 ```
 
 - UI: [http://localhost:5173](http://localhost:5173)
-- **Demo (mock):** corre en el browser (localStorage). No hace falta el Express en `:3001`.
-- **API real (local o Render):** creá `frontend/.env` con, por ejemplo:
+- Creá `frontend/.env` con la API, por ejemplo:
   `VITE_API_BASE_URL=https://had-scanner-rk7u.onrender.com`
   (o `http://localhost:8000` si levantás el backend local).
 
-`pnpm dev` también arranca un mock Express opcional en `:3001` (proxy Vite `/api`); el camino Demo del SPA ya no depende de él.
-
 Más detalle: [`frontend/README.md`](./frontend/README.md) y [`frontend/readme/`](./frontend/readme/). Nix/direnv es opcional y solo para quien lo use.
 
-## Getting Started (Backend)
+## Primeros pasos (Backend)
 
-### Requerimientos
+### Requisitos
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose incluido)
 
 > **Importante:** Docker Desktop debe estar abierto antes de usar los comandos de Docker.
 
-### Ejecutando el proyecto
+### Cómo levantar el proyecto
 
 ```bash
 cd backend
@@ -58,19 +55,21 @@ docker compose up --build
 
 Documentación de la API: [http://localhost:8000/docs](http://localhost:8000/docs).
 
-El camino **API real** (PDF) usa FastAPI async; el camino **Demo** del front usa el mock in-browser (texto/archivo).
+## Demo desplegada
 
-## Deployed Demo
+El backend está desplegado y disponible para pruebas.
 
-The backend is deployed and available for testing.
-
-- **API Base URL:** https://had-scanner-rk7u.onrender.com
+- **URL base de la API:** https://had-scanner-rk7u.onrender.com
 - **Swagger UI:** https://had-scanner-rk7u.onrender.com/docs#/
-- **Health Check:** https://had-scanner-rk7u.onrender.com/health
+- **Health check:** https://had-scanner-rk7u.onrender.com/health
 
-Use the Swagger UI to explore the available endpoints, review request and response schemas, and execute API requests.
+Usá el Swagger UI para explorar los endpoints, revisar esquemas de request/response y ejecutar pedidos.
 
-**Note:** The service is hosted on Render and may take a few moments to respond to the first request if it has been inactive.
+**Nota:** El servicio está en Render y puede tardar unos segundos en responder al primer request si estuvo inactivo.
+
+## Demo de producto
+
+[Recorrido de ~60 s](./docs/vera-demoday.webm)
 
 ## Licencia
 

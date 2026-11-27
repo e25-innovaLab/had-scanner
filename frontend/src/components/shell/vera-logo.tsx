@@ -8,20 +8,20 @@ function diamond(cx: number, cy: number, size: number) {
 export function VeraMark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 40 36"
-      className={cn("size-7 shrink-0", className)}
+      viewBox="0 0 48 40"
+      className={cn("h-7 w-auto shrink-0", className)}
       aria-hidden="true"
     >
       <polygon
-        points={diamond(11, 12, 8.5)}
+        points={diamond(12.5, 13.5, 10.5)}
         className="fill-vera-mark-lime"
       />
       <polygon
-        points={diamond(29, 12, 8.5)}
+        points={diamond(35.5, 13.5, 10.5)}
         className="fill-vera-mark-forest"
       />
       <polygon
-        points={diamond(20, 23, 8.5)}
+        points={diamond(24, 25, 10.5)}
         className="fill-vera-mark-olive"
       />
     </svg>
@@ -31,12 +31,31 @@ export function VeraMark({ className }: { className?: string }) {
 export function VeraLogo({
   to = "/inicio",
   compact = false,
+  size = "default",
   className,
 }: {
   to?: string;
   compact?: boolean;
+  size?: "default" | "lg";
   className?: string;
 }) {
+  if (size === "lg") {
+    return (
+      <Link
+        to={to}
+        className={cn(
+          "inline-flex h-[40px] w-[180px] aspect-[9/2] shrink-0 items-center gap-3 select-none",
+          className,
+        )}
+      >
+        <VeraMark className="h-[40px] w-[48px]" />
+        <span className="font-sans text-[34px] leading-none font-extrabold tracking-[0.04em] text-vera-wordmark">
+          VERA
+        </span>
+      </Link>
+    );
+  }
+
   return (
     <Link
       to={to}

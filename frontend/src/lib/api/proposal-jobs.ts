@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { api } from '@/lib/api/client';
+import { api, ApiError } from '@/lib/api/client';
 import { isBackendId } from '@/lib/api/ids';
 import { proposalGenerationMessage } from '@/lib/api/proposal-errors';
 import type { ApiBarrier } from '@/lib/api/types';
@@ -32,14 +32,31 @@ export type StartProposalOptions = {
   dimensionId?: string;
 };
 
-const jobs = new Map<string, ProposalJob>();
+type InternalJob = ProposalJob & {
+  abortController: AbortController | null;
+};
+
+const jobs = new Map<string, InternalJob>();
 const listeners = new Set<() => void>();
 
 let jobsSnapshot: ProposalJob[] = [];
 let pendingSnapshot: ProposalJob[] = [];
 
+function toPublicJob(job: InternalJob): ProposalJob {
+  return {
+    analysisId: job.analysisId,
+    barrierId: job.barrierId,
+    barrierTitle: job.barrierTitle,
+    dimensionId: job.dimensionId,
+    status: job.status,
+    barrier: job.barrier,
+    error: job.error,
+    variant: job.variant,
+  };
+}
+
 function rebuildSnapshots() {
-  jobsSnapshot = Array.from(jobs.values());
+  jobsSnapshot = Array.from(jobs.values()).map(toPublicJob);
   pendingSnapshot = jobsSnapshot.filter(
     (job) => job.status === PROPOSAL_JOB_STATUS.PENDING
   );
@@ -70,14 +87,36 @@ export function getPendingProposalJobsSnapshot() {
 }
 
 export function getProposalJob(analysisId: string, barrierId: string) {
-  return jobs.get(proposalJobKey(analysisId, barrierId)) ?? null;
+  const job = jobs.get(proposalJobKey(analysisId, barrierId));
+  return job ? toPublicJob(job) : null;
 }
 
 export function clearProposalJob(analysisId: string, barrierId: string) {
   const key = proposalJobKey(analysisId, barrierId);
-  if (!jobs.has(key)) return;
+  const existing = jobs.get(key);
+  if (!existing) return;
+  existing.abortController?.abort();
   jobs.delete(key);
   emit();
+}
+
+export function cancelProposal(analysisId: string, barrierId: string) {
+  const key = proposalJobKey(analysisId, barrierId);
+  const existing = jobs.get(key);
+  if (!existing || existing.status !== PROPOSAL_JOB_STATUS.PENDING) {
+    return;
+  }
+
+  existing.abortController?.abort();
+  jobs.delete(key);
+  emit();
+
+  if (isBackendId(analysisId) && isBackendId(barrierId)) {
+    void api.cancelProposalGeneration(Number(barrierId)).catch((err) => {
+      if (err instanceof ApiError && err.status === 404) return;
+      console.warn('No se pudo cancelar la generación en el servidor', err);
+    });
+  }
 }
 
 export function startProposal(
@@ -92,6 +131,7 @@ export function startProposal(
   }
 
   const previous = existing;
+  const abortController = new AbortController();
   jobs.set(key, {
     analysisId,
     barrierId,
@@ -101,6 +141,7 @@ export function startProposal(
     barrier: null,
     error: null,
     variant: options.variant ?? null,
+    abortController,
   });
   emit();
 
@@ -109,14 +150,23 @@ export function startProposal(
   void (async () => {
     try {
       if (!isBackendId(analysisId) && DEMO_PROPOSAL_JOB_DELAY_MS > 0) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, DEMO_PROPOSAL_JOB_DELAY_MS);
+        await new Promise<void>((resolve, reject) => {
+          const timer = window.setTimeout(resolve, DEMO_PROPOSAL_JOB_DELAY_MS);
+          abortController.signal.addEventListener(
+            'abort',
+            () => {
+              window.clearTimeout(timer);
+              reject(new DOMException('Aborted', 'AbortError'));
+            },
+            { once: true }
+          );
         });
       }
       const { barrier } = await api.createProposal(
         analysisId,
         barrierId,
-        body
+        body,
+        { signal: abortController.signal }
       );
       const current = jobs.get(key);
       if (!current || current.status !== PROPOSAL_JOB_STATUS.PENDING) {
@@ -127,6 +177,7 @@ export function startProposal(
         status: PROPOSAL_JOB_STATUS.SUCCESS,
         barrier,
         error: null,
+        abortController: null,
       });
       emit();
     } catch (err) {
@@ -134,11 +185,20 @@ export function startProposal(
       if (!current || current.status !== PROPOSAL_JOB_STATUS.PENDING) {
         return;
       }
+      if (
+        (err instanceof DOMException && err.name === 'AbortError') ||
+        (err instanceof ApiError && err.status === 409)
+      ) {
+        jobs.delete(key);
+        emit();
+        return;
+      }
       jobs.set(key, {
         ...current,
         status: PROPOSAL_JOB_STATUS.ERROR,
         barrier: null,
         error: proposalGenerationMessage(err),
+        abortController: null,
       });
       emit();
     }

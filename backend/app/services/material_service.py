@@ -108,7 +108,7 @@ def create_material(
             name=saved_file_path.name,
             file_path=stored_path,
             file_hash=file_hash,
-            status="uploaded",
+            status=material_repository.MATERIAL_STATUS_UPLOADED,
         )
 
         return material_repository.create(
@@ -179,3 +179,27 @@ def get_material_by_id(
         )
 
     return material
+
+
+def delete_material(
+    db: Session,
+    material_id: int,
+) -> None:
+    from app.services.finalization_service import (
+        soft_delete_finalized_documents_for_material,
+    )
+
+    material = material_repository.get_by_id(
+        db=db,
+        material_id=material_id,
+    )
+    if material is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Material with id {material_id} not found",
+        )
+
+    soft_delete_finalized_documents_for_material(db=db, material_id=material_id)
+    material_repository.soft_delete(db=db, material=material, commit=False)
+    db.commit()
+    db.refresh(material)

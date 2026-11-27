@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.models.material import Material
 
+MATERIAL_STATUS_UPLOADED = "uploaded"
+MATERIAL_STATUS_DELETED = "deleted"
+
 
 def get_active_by_hash(
     db: Session,
@@ -10,7 +13,7 @@ def get_active_by_hash(
 ) -> Material | None:
     statement = select(Material).where(
         Material.file_hash == file_hash,
-        Material.status == "uploaded",
+        Material.status == MATERIAL_STATUS_UPLOADED,
     )
 
     return db.scalar(statement)
@@ -27,9 +30,14 @@ def create(
     return material
 
 def get_all(db: Session) -> list[Material]:
-    statement = select(Material).order_by(Material.id)
+    statement = (
+        select(Material)
+        .where(Material.status == MATERIAL_STATUS_UPLOADED)
+        .order_by(Material.created_at.desc(), Material.id.desc())
+    )
 
     return list(db.scalars(statement).all())
+
 
 def get_by_id(
     db: Session,
@@ -37,7 +45,23 @@ def get_by_id(
 ) -> Material | None:
     statement = select(Material).where(
         Material.id == material_id,
-        Material.status == "uploaded",
+        Material.status == MATERIAL_STATUS_UPLOADED,
     )
 
     return db.scalar(statement)
+
+
+def soft_delete(
+    db: Session,
+    material: Material,
+    *,
+    commit: bool = True,
+) -> Material:
+    material.status = MATERIAL_STATUS_DELETED
+    db.add(material)
+    if commit:
+        db.commit()
+        db.refresh(material)
+    else:
+        db.flush()
+    return material

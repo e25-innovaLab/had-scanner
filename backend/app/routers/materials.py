@@ -12,6 +12,7 @@ from app.schemas.material import (
 from app.services.material_service import (
     create_material,
     create_material_from_text,
+    delete_material,
     get_all_materials,
     get_material_by_id,
 )
@@ -79,6 +80,36 @@ def get_materials(
         "total": len(materials),
     }
 
+
+# Static path must be registered before /{material_id} or FastAPI treats
+# "finalized-documents" as a material_id and returns 422.
+@router.get(
+    "/finalized-documents",
+)
+def list_finalized_documents(
+    db: Session = Depends(get_db),
+):
+    from app.services.finalization_service import list_all_finalized_documents
+
+    documents = list_all_finalized_documents(db=db)
+    return [
+        {
+            "id": document.id,
+            "material_id": document.material_id,
+            "material_name": (
+                document.material.name if document.material else None
+            ),
+            "filename": document.filename,
+            "created_at": document.created_at,
+            "download_url": (
+                f"/materials/{document.material_id}/finalized-documents/"
+                f"{document.id}/download"
+            ),
+        }
+        for document in documents
+    ]
+
+
 @router.get(
     "/{material_id}",
     response_model=MaterialResponse,
@@ -92,3 +123,14 @@ def get_material(
         db=db,
         material_id=material_id,
     )
+
+
+@router.delete(
+    "/{material_id}",
+    status_code=204,
+)
+def remove_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+):
+    delete_material(db=db, material_id=material_id)

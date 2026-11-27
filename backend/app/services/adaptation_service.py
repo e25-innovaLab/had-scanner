@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 from app.ai.adaptation_generator import generate_adaptation
 from app.ai.gemini_errors import proposal_http_error
-from app.repositories import proposal_repository
+from app.core.exceptions import ProposalCancelledException
+from app.repositories import proposal_generation_repository, proposal_repository
 
 import logging
 
@@ -141,11 +142,22 @@ def create_adaptation_proposal(
     db: Session,
     barrier_id: int,
 ):
+    generation_token = proposal_generation_repository.begin_generation(
+        db=db,
+        barrier_id=barrier_id,
+    )
     try:
         barrier, original_content = _get_barrier_original_content(
             db=db,
             barrier_id=barrier_id,
         )
+
+        if proposal_generation_repository.is_cancellation_requested(
+            db=db,
+            barrier_id=barrier_id,
+            generation_token=generation_token,
+        ):
+            raise ProposalCancelledException()
 
         adaptation = generate_adaptation(
             barrier_type=barrier.type,
@@ -156,6 +168,13 @@ def create_adaptation_proposal(
             original_content=original_content,
         )
 
+        if proposal_generation_repository.is_cancellation_requested(
+            db=db,
+            barrier_id=barrier_id,
+            generation_token=generation_token,
+        ):
+            raise ProposalCancelledException()
+
         return proposal_repository.create(
             db,
             barrier_id=barrier.id,
@@ -163,6 +182,16 @@ def create_adaptation_proposal(
             proposed_content=adaptation["proposed_content"],
             explanation=adaptation["explanation"],
         )
+
+    except ProposalCancelledException:
+        logger.info(
+            "Proposal generation cancelled for barrier_id=%s",
+            barrier_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Generación de propuesta cancelada.",
+        ) from None
 
     except HTTPException:
         raise
@@ -179,6 +208,29 @@ def create_adaptation_proposal(
             status_code=status_code,
             detail=detail,
         ) from exc
+
+    finally:
+        proposal_generation_repository.finish_generation(
+            db=db,
+            barrier_id=barrier_id,
+            generation_token=generation_token,
+        )
+
+
+def cancel_adaptation_proposal_generation(
+    db: Session,
+    barrier_id: int,
+) -> bool:
+    barrier = db.query(Barrier).filter(Barrier.id == barrier_id).first()
+    if barrier is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Barrier not found.",
+        )
+    return proposal_generation_repository.request_cancellation(
+        db=db,
+        barrier_id=barrier_id,
+    )
 
 
 def update_adaptation_proposal_status(

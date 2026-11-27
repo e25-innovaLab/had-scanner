@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { api } from '@/lib/api/client';
 import {
   clearFlowResume,
   readFlowResume,
@@ -23,22 +21,23 @@ import {
 import { DEFAULT_VERA_SOURCE, writeVeraSource } from '@/lib/api/vera-source';
 import { cn } from '@/lib/utils';
 
-const CONNECTION_SEGMENTS = 8;
-const HEALTH_ATTEMPT_TIMEOUT_MS = 8000;
-const HEALTH_RETRY_GAP_MS = 2000;
-const HEALTH_MAX_WAIT_MS = 180_000;
-
-function ConnectionProgress({ filled }: { filled: number }) {
+function ConnectionProgress({
+  filled,
+  segments,
+}: {
+  filled: number;
+  segments: number;
+}) {
   return (
     <div
       className="flex gap-1.5"
       role="progressbar"
       aria-valuemin={0}
-      aria-valuemax={CONNECTION_SEGMENTS}
+      aria-valuemax={segments}
       aria-valuenow={filled}
       aria-label="Conectando con Vera"
     >
-      {Array.from({ length: CONNECTION_SEGMENTS }, (_, index) => (
+      {Array.from({ length: segments }, (_, index) => (
         <span
           key={index}
           className={cn(
@@ -51,70 +50,19 @@ function ConnectionProgress({ filled }: { filled: number }) {
   );
 }
 
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-export function HomeStart() {
+export function HomeStart({
+  backendUp,
+  connectionFilled,
+  connectionSegments,
+}: {
+  backendUp: boolean | null;
+  connectionFilled: number;
+  connectionSegments: number;
+}) {
   const navigate = useNavigate();
   const [resume, setResume] = useState<FlowResume | null>(() =>
     readFlowResume()
   );
-  const [backendUp, setBackendUp] = useState<boolean | null>(null);
-  const [connectionFilled, setConnectionFilled] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    const startedAt = Date.now();
-
-    void (async () => {
-      while (!cancelled) {
-        const ok = await api.isBackendHealthy({
-          timeoutMs: HEALTH_ATTEMPT_TIMEOUT_MS,
-        });
-        if (cancelled) return;
-
-        if (ok) {
-          setBackendUp(true);
-          return;
-        }
-
-        if (Date.now() - startedAt >= HEALTH_MAX_WAIT_MS) {
-          setBackendUp(false);
-          return;
-        }
-
-        await sleep(HEALTH_RETRY_GAP_MS);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (backendUp === true) {
-      setConnectionFilled(CONNECTION_SEGMENTS);
-      return;
-    }
-    if (backendUp === false) {
-      return;
-    }
-
-    setConnectionFilled(1);
-    const timer = window.setInterval(() => {
-      setConnectionFilled((current) =>
-        current >= CONNECTION_SEGMENTS - 1 ? 1 : current + 1
-      );
-    }, 450);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [backendUp]);
 
   function startAnalysis() {
     if (backendUp !== true) return;
@@ -131,9 +79,9 @@ export function HomeStart() {
   const apiChecking = backendUp === null;
 
   return (
-    <div className="space-y-4">
+    <div className="flex w-full flex-col gap-6">
       {resume && continueHref ? (
-        <Card className="shadow-sm ring-1 ring-primary/30">
+        <Card className="border-primary/30 shadow-none">
           <CardHeader>
             <CardTitle>Continuar análisis</CardTitle>
             <CardDescription>
@@ -146,7 +94,7 @@ export function HomeStart() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2 sm:flex-row">
             <Button
-              className="h-10 rounded-xl px-4 font-semibold"
+              className="rounded-[12px] font-semibold"
               nativeButton={false}
               render={<Link to={continueHref} />}
             >
@@ -155,7 +103,7 @@ export function HomeStart() {
             <Button
               type="button"
               variant="outline"
-              className="h-10 rounded-xl px-4"
+              className="rounded-[12px]"
               onClick={() => {
                 clearFlowResume();
                 setResume(null);
@@ -167,7 +115,7 @@ export function HomeStart() {
         </Card>
       ) : null}
 
-      <Card className="shadow-sm ring-1 ring-border/70">
+      <Card className="shadow-none">
         <CardHeader className="gap-2">
           <CardTitle className="flex items-center gap-2 text-xl">
             <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
@@ -182,7 +130,10 @@ export function HomeStart() {
         <CardContent className="space-y-4">
           {apiChecking ? (
             <div className="space-y-2">
-              <ConnectionProgress filled={connectionFilled} />
+              <ConnectionProgress
+                filled={connectionFilled}
+                segments={connectionSegments}
+              />
               <p className="text-xs leading-5 text-muted-foreground">
                 Preparando Vera…
               </p>
@@ -197,7 +148,7 @@ export function HomeStart() {
           <Button
             type="button"
             size="lg"
-            className="h-11 rounded-xl px-5 font-semibold"
+            className="rounded-[12px] font-semibold"
             disabled={apiDisabled}
             onClick={startAnalysis}
           >

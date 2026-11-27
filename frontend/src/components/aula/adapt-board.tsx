@@ -12,6 +12,7 @@ import { api } from "@/lib/api/client";
 import { isBackendId } from "@/lib/api/ids";
 import {
   PROPOSAL_JOB_STATUS,
+  cancelProposal,
   clearProposalJob,
   startProposal,
   useProposalJobs,
@@ -140,6 +141,34 @@ export function AdaptBoard({
       cancelled = true;
     };
   }, [analysisId, load, pathname]);
+
+  useEffect(() => {
+    if (!analysisId) return;
+    const pendingIds = new Set(
+      proposalJobs
+        .filter(
+          (job) =>
+            job.analysisId === analysisId &&
+            job.status === PROPOSAL_JOB_STATUS.PENDING,
+        )
+        .map((job) => job.barrierId),
+    );
+    setStateById((current) => {
+      let changed = false;
+      const next: Record<string, BarrierState> = { ...current };
+      for (const [barrierId, state] of Object.entries(current)) {
+        if (state.mode === "generating" && !pendingIds.has(barrierId)) {
+          next[barrierId] = {
+            ...state,
+            mode: "empty",
+            generateFail: null,
+          };
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [analysisId, proposalJobs]);
 
   const dimensions = useMemo(() => {
     const order: string[] = [];
@@ -759,33 +788,50 @@ export function AdaptBoard({
                           : "○ "}
                     {statusLabel}
                   </span>
-                  <Button
-                    type="button"
-                    variant={
-                      isNext || state.generateFail ? "default" : "outline"
-                    }
-                    className={cn(
-                      "h-9 rounded-xl px-3",
-                      (isNext || state.generateFail) &&
-                        "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
-                    )}
-                    disabled={isOpeningEdit || state.mode === "generating"}
-                    onClick={() => openBarrier(entry)}
-                  >
-                    {state.mode === "generating" ? (
+                  {state.mode === "generating" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 rounded-xl px-3"
+                      disabled={isOpeningEdit || !analysisId}
+                      onClick={() => {
+                        if (!analysisId) return;
+                        cancelProposal(analysisId, entry.id);
+                        setStateById((current) => ({
+                          ...current,
+                          [entry.id]: {
+                            ...current[entry.id],
+                            mode: "empty",
+                            generateFail: null,
+                          },
+                        }));
+                      }}
+                    >
                       <span className="inline-flex items-center gap-1.5">
                         <Sparkles
                           className="size-3.5 animate-pulse"
                           aria-hidden="true"
                         />
-                        Generando…
+                        Cancelar
                       </span>
-                    ) : state.generateFail ? (
-                      "Reintentar"
-                    ) : (
-                      actionLabel
-                    )}
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant={
+                        isNext || state.generateFail ? "default" : "outline"
+                      }
+                      className={cn(
+                        "h-9 rounded-xl px-3",
+                        (isNext || state.generateFail) &&
+                          "bg-ink text-sidebar-primary-foreground hover:bg-ink/90",
+                      )}
+                      disabled={isOpeningEdit}
+                      onClick={() => openBarrier(entry)}
+                    >
+                      {state.generateFail ? "Reintentar" : actionLabel}
+                    </Button>
+                  )}
                 </div>
               </Card>
             );

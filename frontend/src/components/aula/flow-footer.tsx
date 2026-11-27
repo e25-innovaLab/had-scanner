@@ -24,7 +24,7 @@ export function FlowFooter({
           to={backHref}
           className={cn(
             buttonVariants({ variant: 'outline', size: 'lg' }),
-            'h-11 rounded-xl px-4'
+            'rounded-[12px]'
           )}
         >
           {backLabel}
@@ -33,7 +33,7 @@ export function FlowFooter({
           <span
             className={cn(
               buttonVariants({ size: 'lg' }),
-              'h-11 cursor-not-allowed rounded-xl px-4 opacity-45'
+              'cursor-not-allowed rounded-[12px] opacity-45'
             )}
             aria-disabled="true"
           >
@@ -44,7 +44,7 @@ export function FlowFooter({
             to={nextHref}
             className={cn(
               buttonVariants({ size: 'lg' }),
-              'h-11 rounded-xl px-4 font-semibold'
+              'rounded-[12px] font-semibold'
             )}
           >
             {nextLabel}

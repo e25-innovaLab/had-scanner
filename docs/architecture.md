@@ -7,21 +7,18 @@
 - Persistencia: Postgres (Supabase) + Storage bucket `vera-materials`
 - Deploy: API en Render, front en Vercel (Production → `main`)
 
-## Flujos del frontend
-| Modo | Qué usa | Dónde |
-|------|---------|--------|
-| Demo (mock) | `service.ts` + localStorage | Home → “Demo (mock)” |
-| API real | FastAPI vía `VITE_API_BASE_URL` | Home → “API real” (PDF) |
+## Flujo del frontend
+El home arranca siempre contra la API real (`VITE_API_BASE_URL`). El usuario sube un PDF, revisa barreras/propuestas y genera un PDF adaptado. El progreso del análisis en curso vive en la sesión del navegador; materiales y PDF finalizados quedan en el servidor (historial en home).
 
 ## Dónde vive qué
 - UI / rutas: `frontend/src/pages`, `frontend/src/components`
 - Cliente HTTP: `frontend/src/lib/api/client.ts`
-- Demo store: `frontend/src/lib/api/store-browser.ts`
 - API: `backend/app/routers`, servicios en `backend/app/services`
 - Gemini: `backend/app/ai/`
-- PDFs durables: `backend/app/utils/object_storage.py` → `storage://materials/<hash>/…`
+- PDFs durables: `backend/app/utils/object_storage.py`
+  - originales: `storage://materials/<hash>/…`
+  - adaptados: `storage://finalized/<material_id>/…`
 
 ## Docs relacionadas
 - Deploy y env: [deploy.md](./deploy.md)
-- Kickoff histórico: [archive/kickoff/](./archive/kickoff/)
 - UI detalle: `frontend/readme/`

@@ -57,8 +57,40 @@ def build_object_key(file_hash: str, filename: str) -> str:
     return f"materials/{file_hash}/{safe}"
 
 
+def build_finalized_object_key(material_id: int, filename: str) -> str:
+    safe = ascii_safe_filename(Path(filename).name)
+    return f"finalized/{material_id}/{safe}"
+
+
 def cache_path_for(object_key: str) -> Path:
     return STORAGE_DIR / "cache" / object_key
+
+
+def _upload_bytes(
+    *,
+    object_key: str,
+    data: bytes,
+    content_type: str,
+    local_path: Path | None = None,
+) -> str:
+    ensure_bucket()
+    client = _client()
+    client.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+        path=object_key,
+        file=data,
+        file_options={
+            "content-type": content_type,
+            "upsert": "true",
+        },
+    )
+
+    cached = cache_path_for(object_key)
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    if local_path is None or local_path.resolve() != cached.resolve():
+        cached.write_bytes(data)
+    elif not cached.is_file():
+        cached.write_bytes(data)
+    return make_storage_uri(object_key)
 
 
 @lru_cache(maxsize=1)
@@ -100,7 +132,6 @@ def upload_material_file(
     filename: str | None = None,
 ) -> str:
     """Upload local file; returns storage:// URI for material.file_path."""
-    ensure_bucket()
     object_key = build_object_key(
         file_hash,
         filename or local_path.name,
@@ -108,22 +139,34 @@ def upload_material_file(
     content_type = (
         mimetypes.guess_type(local_path.name)[0] or "application/octet-stream"
     )
-    data = local_path.read_bytes()
-    client = _client()
-    client.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
-        path=object_key,
-        file=data,
-        file_options={
-            "content-type": content_type,
-            "upsert": "true",
-        },
+    return _upload_bytes(
+        object_key=object_key,
+        data=local_path.read_bytes(),
+        content_type=content_type,
+        local_path=local_path,
     )
 
-    cached = cache_path_for(object_key)
-    cached.parent.mkdir(parents=True, exist_ok=True)
-    if local_path.resolve() != cached.resolve():
-        cached.write_bytes(data)
-    return make_storage_uri(object_key)
+
+def upload_finalized_file(
+    *,
+    local_path: Path,
+    material_id: int,
+    filename: str | None = None,
+) -> str:
+    """Upload finalized PDF; returns storage:// URI for finalized_document.file_path."""
+    object_key = build_finalized_object_key(
+        material_id,
+        filename or local_path.name,
+    )
+    content_type = (
+        mimetypes.guess_type(local_path.name)[0] or "application/pdf"
+    )
+    return _upload_bytes(
+        object_key=object_key,
+        data=local_path.read_bytes(),
+        content_type=content_type,
+        local_path=local_path,
+    )
 
 
 def download_material_file(storage_uri: str) -> Path:
@@ -146,7 +189,7 @@ def resolve_material_path(file_path: str) -> Path:
     if is_storage_uri(file_path):
         if not material_storage_enabled():
             raise FileNotFoundError(
-                "Material stored in Supabase Storage but "
+                "File stored in Supabase Storage but "
                 "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not configured."
             )
         return download_material_file(file_path)
@@ -161,3 +204,49 @@ def resolve_material_path(file_path: str) -> Path:
     if data_alt.is_file():
         return data_alt
     raise FileNotFoundError(file_path)
+
+
+# Alias for finalized / any stored path resolution.
+resolve_stored_path = resolve_material_path
+
+
+def delete_storage_object(
+    storage_uri: str,
+    *,
+    strict: bool = False,
+) -> None:
+    """Remove a Supabase Storage object. Best-effort unless strict=True."""
+    if not is_storage_uri(storage_uri) or not material_storage_enabled():
+        return
+    object_key = storage_object_key(storage_uri)
+    try:
+        ensure_bucket()
+        client = _client()
+        client.storage.from_(SUPABASE_STORAGE_BUCKET).remove([object_key])
+    except Exception:
+        logger.exception("Could not delete storage object %s", object_key)
+        if strict:
+            raise
+
+    cached = cache_path_for(object_key)
+    if cached.is_file():
+        cached.unlink(missing_ok=True)
+
+
+def delete_stored_file(
+    file_path: str,
+    *,
+    strict: bool = False,
+) -> None:
+    """Remove a storage:// object or a local finalized/material file."""
+    if is_storage_uri(file_path):
+        delete_storage_object(file_path, strict=strict)
+        return
+    path = Path(file_path)
+    if path.is_file():
+        path.unlink(missing_ok=True)
+        return
+    alt = Path("/app") / file_path
+    if alt.is_file():
+        alt.unlink(missing_ok=True)
+

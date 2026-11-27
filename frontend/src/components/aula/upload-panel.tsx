@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type DragEvent, type ChangeEvent } from 'react';
-import { FileUp, AlertCircle, X } from 'lucide-react';
+import { CloudUpload, FileText, FileUp, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -164,52 +164,68 @@ export function UploadPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-6">
       {!pdfOnly ? (
         <div
-          className="flex flex-wrap gap-2"
+          className="inline-flex items-start gap-1 rounded-[16px] border border-[rgba(226,232,240,0.70)] bg-white/70 p-1 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] backdrop-blur-[6px]"
           role="tablist"
           aria-label="Forma de carga"
         >
-          <Button
+          <button
             type="button"
             role="tab"
             aria-selected={effectiveMode === 'archivo'}
-            variant="ghost"
             className={cn(
-              'h-9 rounded-xl px-4',
+              'inline-flex h-[34px] items-center gap-2 rounded-[12px] px-3.5 text-[13px] font-semibold transition-colors',
               effectiveMode === 'archivo'
-                ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
-                : 'bg-card text-muted-foreground ring-1 ring-border'
+                ? 'bg-ink text-sidebar-primary-foreground'
+                : 'bg-transparent text-muted-foreground hover:text-foreground'
             )}
             onClick={() => changeMode('archivo')}
           >
+            <CloudUpload
+              className={cn(
+                'size-4 shrink-0',
+                effectiveMode === 'archivo'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
+              )}
+              aria-hidden="true"
+            />
             Subir archivo
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
             role="tab"
             aria-selected={effectiveMode === 'texto'}
-            variant="ghost"
             className={cn(
-              'h-9 rounded-xl px-4',
+              'inline-flex h-[34px] items-center gap-2 rounded-[12px] px-3.5 text-[13px] font-semibold transition-colors',
               effectiveMode === 'texto'
-                ? 'bg-ink text-sidebar-primary-foreground hover:bg-ink/90 hover:text-sidebar-primary-foreground'
-                : 'bg-card text-muted-foreground ring-1 ring-border'
+                ? 'bg-ink text-sidebar-primary-foreground'
+                : 'bg-transparent text-muted-foreground hover:text-foreground'
             )}
             onClick={() => changeMode('texto')}
           >
+            <FileText
+              className={cn(
+                'size-4 shrink-0',
+                effectiveMode === 'texto'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
+              )}
+              aria-hidden="true"
+            />
             Pegar texto
-          </Button>
+          </button>
         </div>
       ) : null}
 
       {effectiveMode === 'archivo' ? (
-        <div className="space-y-3">
+        <div className="w-full space-y-3">
           <Card
             className={cn(
-              'relative flex flex-col items-center justify-center border border-dashed bg-white py-12 text-center transition-colors ring-0',
-              dragging ? 'border-primary bg-primary/5' : 'border-border',
+              'relative flex w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed bg-white/60 p-[56px] text-center transition-colors ring-0',
+              dragging ? 'border-primary bg-primary/5' : 'border-[#CBD5E1]',
               fileError && 'border-destructive/50'
             )}
             onDragEnter={handleDragEnter}
@@ -217,19 +233,21 @@ export function UploadPanel({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <CardContent className="flex flex-col items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-xl bg-primary/25 text-foreground">
-                <FileUp className="size-5" aria-hidden="true" />
+            <CardContent className="flex flex-col items-center gap-3 p-0">
+              <span className="grid size-14 place-items-center rounded-[16px] border border-[#E2E8F0] bg-white shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+                <span className="grid size-9 place-items-center rounded-full bg-primary/35 text-foreground">
+                  <FileUp className="size-4" aria-hidden="true" />
+                </span>
               </span>
               <div className="space-y-1">
-                <p className="font-medium">
+                <p className="font-heading text-[18px] font-bold text-[#0F172A]">
                   {selectedFile
                     ? selectedFile.name
                     : pdfOnly
                       ? 'Arrastrá tu PDF aquí'
                       : 'Arrastra tu archivo aquí'}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-[14px] font-medium text-muted-foreground">
                   {pdfOnly
                     ? 'Solo PDF — máx. 50 MB'
                     : 'PDF, Word, PowerPoint — máx. 50 MB'}
@@ -245,11 +263,11 @@ export function UploadPanel({
                 onChange={handleFileChange}
               />
 
-              <div className="flex items-center gap-2">
+              <div className="mt-1 flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10 px-4"
+                  className="rounded-[12px] px-4 py-2.5 font-semibold"
                   onClick={() => inputRef.current?.click()}
                 >
                   {selectedFile
@@ -274,6 +292,10 @@ export function UploadPanel({
                   </Button>
                 )}
               </div>
+
+              <p className="mt-1 text-xs font-medium text-muted-foreground/80">
+                Formatos compatibles: .pdf, .docx, .doc, .pptx, .ppt
+              </p>
             </CardContent>
           </Card>
 

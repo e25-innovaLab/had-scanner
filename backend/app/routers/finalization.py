@@ -1,4 +1,3 @@
-import os
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,11 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.services.finalization_service import (
-    finalize_material,
     NoCompletedAnalysisError,
     ProposalEvidenceError,
+    delete_finalized_document,
+    finalize_material,
 )
 from app.repositories import finalization_repository, material_repository
+from app.utils.object_storage import resolve_stored_path
 
 
 logger = logging.getLogger(__name__)
@@ -123,6 +124,28 @@ def get_finalized_documents_endpoint(
     ]
 
 
+@router.delete(
+    "/{material_id}/finalized-documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_finalized_document_endpoint(
+    material_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_finalized_document(
+            db=db,
+            material_id=material_id,
+            document_id=document_id,
+        )
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Finalized document not found",
+        ) from None
+
+
 @router.get(
     "/{material_id}/finalized-documents/{document_id}/download",
     response_class=FileResponse,
@@ -134,7 +157,7 @@ def download_finalized_document_endpoint(
 ):
 
     document = (
-        finalization_repository.get_finalized_document_by_id(
+        finalization_repository.get_downloadable_finalized_document(
             db=db,
             material_id=material_id,
             document_id=document_id,
@@ -147,14 +170,19 @@ def download_finalized_document_endpoint(
             detail="Finalized document not found",
         )
 
-    if not os.path.isfile(document.file_path):
+    try:
+        local_path = resolve_stored_path(document.file_path)
+    except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="PDF file not found",
-        )
+            detail=(
+                "No se pudo encontrar el PDF adaptado. "
+                "Puede haber expirado o el almacenamiento no está disponible."
+            ),
+        ) from None
 
     return FileResponse(
-        path=document.file_path,
+        path=str(local_path),
         media_type="application/pdf",
         filename=document.filename,
     )
@@ -170,7 +198,7 @@ def download_finalized_material_endpoint(
 ):
     try:
         finalized_document = (
-            finalization_repository.get_latest_finalized_document(
+            finalization_repository.get_latest_downloadable_finalized_document(
                 db=db,
                 material_id=material_id,
             )
@@ -182,14 +210,19 @@ def download_finalized_material_endpoint(
                 detail="No se encontró un PDF generado para este material.",
             )
 
-        if not os.path.isfile(finalized_document.file_path):
+        try:
+            local_path = resolve_stored_path(finalized_document.file_path)
+        except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="El archivo PDF no existe.",
-            )
+                detail=(
+                    "No se pudo encontrar el PDF adaptado. "
+                    "Puede haber expirado o el almacenamiento no está disponible."
+                ),
+            ) from None
 
         return FileResponse(
-            path=finalized_document.file_path,
+            path=str(local_path),
             media_type="application/pdf",
             filename=finalized_document.filename,
         )
