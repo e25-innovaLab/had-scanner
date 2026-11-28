@@ -202,3 +202,111 @@ def associate_evidence_elements(
             result["barriers"].append(single_barrier)
 
     return result
+
+
+def _get_element_text(element: dict[str, Any]) -> str:
+    return str(element.get("text", "") or "").strip()
+
+
+def rank_anchor_matches(
+    *,
+    anchor: str,
+    evidence_type: str | None,
+    page_elements: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    expected = normalize_text(anchor)
+    if not expected:
+        return []
+
+    candidates: list[dict[str, Any]] = []
+    for element in page_elements:
+        actual = normalize_text(_get_element_text(element))
+        if not actual:
+            continue
+        similarity = calculate_similarity(expected, actual)
+        compatible = types_are_compatible(
+            evidence_type,
+            element.get("type"),
+        )
+        score = similarity + (0.03 if compatible else 0.0)
+        candidates.append({
+            "element": element,
+            "similarity": similarity,
+            "score": score,
+        })
+
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    return candidates
+
+
+def pick_best_match(
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not candidates:
+        return None
+    best = candidates[0]
+    if best["similarity"] < MIN_SIMILARITY:
+        return None
+    if len(candidates) > 1:
+        second = candidates[1]
+        if best["score"] - second["score"] < MIN_SCORE_DIFFERENCE:
+            return None
+    return best["element"]
+
+
+def find_evidence_element(
+    evidence: Any,
+    elements_by_id: dict[str, dict[str, Any]],
+    elements_by_page: dict[int, list[dict[str, Any]]],
+) -> dict[str, Any] | None:
+    """Locate a document element for stored evidence (OCR-tolerant)."""
+    element_id = getattr(evidence, "element_id", None)
+    if element_id:
+        element = elements_by_id.get(element_id)
+        if element is not None:
+            return element
+        if isinstance(evidence, dict):
+            element = elements_by_id.get(evidence.get("element_id"))
+            if element is not None:
+                return element
+
+    page = getattr(evidence, "page", None)
+    anchor = getattr(evidence, "anchor", None)
+    evidence_type = getattr(evidence, "element_type", None)
+    if isinstance(evidence, dict):
+        page = evidence.get("page", page)
+        anchor = evidence.get("anchor", anchor)
+        evidence_type = evidence.get("element_type", evidence_type)
+
+    if page is None or not anchor:
+        return None
+
+    page_number = int(page)
+    page_order = [page_number, page_number - 1, page_number + 1]
+    seen_pages: set[int] = set()
+    for candidate_page in page_order:
+        if candidate_page < 1 or candidate_page in seen_pages:
+            continue
+        seen_pages.add(candidate_page)
+        match = pick_best_match(
+            rank_anchor_matches(
+                anchor=str(anchor),
+                evidence_type=evidence_type,
+                page_elements=elements_by_page.get(candidate_page, []),
+            )
+        )
+        if match is not None:
+            return match
+
+    all_elements = [
+        element
+        for page_elements in elements_by_page.values()
+        for element in page_elements
+    ]
+    return pick_best_match(
+        rank_anchor_matches(
+            anchor=str(anchor),
+            evidence_type=evidence_type,
+            page_elements=all_elements,
+        )
+    )

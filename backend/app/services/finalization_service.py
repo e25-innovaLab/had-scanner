@@ -44,6 +44,39 @@ class ProposalEvidenceError(Exception):
     pass
 
 
+def _resolve_evidence_element_ids(
+    document: dict,
+    evidences: list,
+) -> list[str]:
+    """Map barrier evidences to current document element ids (OCR-tolerant)."""
+    from app.services.evidence_matcher import find_evidence_element
+
+    elements_by_id: dict[str, dict] = {}
+    elements_by_page: dict[int, list[dict]] = {}
+    for page in document.get("pages", []):
+        page_number = int(page.get("page_number") or 1)
+        page_elements = page.get("elements", [])
+        elements_by_page[page_number] = page_elements
+        for element in page_elements:
+            element_id = element.get("element_id")
+            if element_id:
+                elements_by_id[element_id] = element
+
+    resolved: list[str] = []
+    for evidence in evidences:
+        if evidence.element_id and evidence.element_id in elements_by_id:
+            resolved.append(evidence.element_id)
+            continue
+        match = find_evidence_element(
+            evidence,
+            elements_by_id,
+            elements_by_page,
+        )
+        if match and match.get("element_id"):
+            resolved.append(match["element_id"])
+    return list(dict.fromkeys(resolved))
+
+
 def _collect_replacements(
     document: dict,
     barriers: list,
@@ -75,11 +108,10 @@ def _collect_replacements(
         if barrier is None:
             continue
 
-        element_ids = list(dict.fromkeys(
-            evidence.element_id
-            for evidence in barrier.evidences
-            if evidence.element_id
-        ))
+        element_ids = _resolve_evidence_element_ids(
+            document,
+            list(barrier.evidences),
+        )
 
         if not element_ids:
             raise ProposalEvidenceError(

@@ -1,12 +1,4 @@
-from typing import Any
-
-from sqlalchemy.orm import Session
-
-from app.models.analysis import Analysis
-from app.models.barrier import Barrier
-from app.models.material import Material
-from app.services.ocr_service import resolve_analyzed_pdf_path
-from app.utils.pdf_parser import extract_document
+import logging
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -14,74 +6,25 @@ from sqlalchemy.orm import Session
 from app.ai.adaptation_generator import generate_adaptation
 from app.ai.gemini_errors import proposal_http_error
 from app.core.exceptions import ProposalCancelledException
+from app.models.analysis import Analysis
+from app.models.barrier import Barrier
+from app.models.material import Material
 from app.repositories import proposal_generation_repository, proposal_repository
-
-import logging
+from app.services.evidence_matcher import (
+    _get_element_text,
+    find_evidence_element,
+)
+from app.services.ocr_service import resolve_analyzed_pdf_path
+from app.utils.pdf_parser import extract_document
 
 logger = logging.getLogger(__name__)
-
-
-def _normalize_text(text: str) -> str:
-    """Normalize text for evidence matching."""
-    return " ".join(text.casefold().split())
-
-
-def _get_element_text(element: dict) -> str:
-    return str(element.get("text", "")).strip()
-
-
-def _find_evidence_element(
-    evidence,
-    elements_by_id: dict[str, dict],
-    elements_by_page: dict[int, list[dict]],
-) -> dict | None:
-    """Find an element using its ID, then its page and anchor."""
-
-    # 1. Exact element ID match.
-    if evidence.element_id:
-        element = elements_by_id.get(evidence.element_id)
-
-        if element is not None:
-            return element
-
-    # 2. Fallback to the evidence anchor on the same page.
-    if evidence.page is None or not evidence.anchor:
-        return None
-
-    expected = _normalize_text(evidence.anchor)
-    page_elements = elements_by_page.get(evidence.page, [])
-
-    for element in page_elements:
-        actual = _normalize_text(_get_element_text(element))
-
-        if actual == expected:
-            return element
-
-    # 3. Partial match, only if it is unambiguous.
-    matches = []
-
-    for element in page_elements:
-        actual = _normalize_text(_get_element_text(element))
-
-        if actual and (
-            expected in actual or actual in expected
-        ):
-            matches.append(element)
-
-    if len(matches) == 1:
-        return matches[0]
-
-    return None
 
 
 def _extract_original_content(
     document: dict,
     barrier: Barrier,
 ) -> str:
-    """
-    Recover the original content associated with exactly one
-    evidence of a barrier.
-    """
+    """Recover original content for exactly one evidence of a barrier."""
 
     if len(barrier.evidences) != 1:
         raise HTTPException(
@@ -94,48 +37,47 @@ def _extract_original_content(
 
     evidence = barrier.evidences[0]
 
-    elements_by_id = {}
-    elements_by_page = {}
+    elements_by_id: dict[str, dict] = {}
+    elements_by_page: dict[int, list[dict]] = {}
 
     for page in document.get("pages", []):
-        page_number = page.get("page_number", 1)
+        page_number = int(page.get("page_number") or 1)
         page_elements = page.get("elements", [])
-
         elements_by_page[page_number] = page_elements
-
         for element in page_elements:
             element_id = element.get("element_id")
-
             if element_id:
                 elements_by_id[element_id] = element
 
-    element = _find_evidence_element(
+    element = find_evidence_element(
         evidence,
         elements_by_id,
         elements_by_page,
     )
 
-    if element is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "The evidence could not be associated "
-                "with an original document element."
-            ),
+    if element is not None:
+        original_content = _get_element_text(element)
+        if original_content:
+            return original_content
+
+    # After OCR re-parse, element ids/bboxes often drift. The stored Gemini
+    # anchor is still enough to generate a proposal.
+    anchor = str(getattr(evidence, "anchor", "") or "").strip()
+    if anchor:
+        logger.warning(
+            "Barrier %s: using evidence anchor as original content "
+            "(element match failed after re-parse)",
+            barrier.id,
         )
+        return anchor
 
-    original_content = _get_element_text(element)
-
-    if not original_content:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "The original content associated with "
-                "the evidence is empty."
-            ),
-        )
-
-    return original_content
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=(
+            "The evidence could not be associated "
+            "with an original document element."
+        ),
+    )
 
   
 def create_adaptation_proposal(
